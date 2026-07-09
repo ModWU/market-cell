@@ -71,6 +71,7 @@ flowchart TD
 - Parquet/DuckDB 存储适配基础
 - SourceQualityMonitor 数据源质量监控
 - FileSystemDataQualityStore 质量问题持久化
+- SourceHealthSummary 数据源健康摘要
 - Rust market_data_core 行情原语
 - Rust realtime_core 预留
 

@@ -13,6 +13,7 @@ It owns:
 - Static and low-frequency data analysis workflows
 - Candle source quality monitoring and cross-source comparison
 - Data quality issue persistence for source health history
+- Source health summaries by provider, symbol, and horizon
 
 Optional local storage extras:
 

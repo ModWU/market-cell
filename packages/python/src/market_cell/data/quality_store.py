@@ -63,6 +63,7 @@ class DataQualityStore(Protocol):
         *,
         source_provider: str | None = None,
         symbol: str | None = None,
+        horizon: str | None = None,
         code: str | None = None,
         severity: str | None = None,
     ) -> list[DataQualityRecord]:
@@ -132,6 +133,7 @@ class FileSystemDataQualityStore:
         *,
         source_provider: str | None = None,
         symbol: str | None = None,
+        horizon: str | None = None,
         code: str | None = None,
         severity: str | None = None,
     ) -> list[DataQualityRecord]:
@@ -148,12 +150,27 @@ class FileSystemDataQualityStore:
                     continue
                 if symbol is not None and record.issue.symbol != symbol:
                     continue
+                if horizon is not None and record.issue.horizon != horizon:
+                    continue
                 if code is not None and record.issue.code != code:
                     continue
                 if severity is not None and record.issue.severity != severity:
                     continue
                 records.append(record)
         return records
+
+    def summarize(
+        self,
+        *,
+        source_provider: str | None = None,
+        symbol: str | None = None,
+        horizon: str | None = None,
+    ):
+        from market_cell.data.health import summarize_quality_records
+
+        return summarize_quality_records(
+            self.list_records(source_provider=source_provider, symbol=symbol, horizon=horizon)
+        )
 
     def _path_for(self, record: DataQualityRecord) -> Path:
         issue = record.issue

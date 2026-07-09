@@ -28,6 +28,7 @@ packages/python/src/market_cell/data/
 - `SourceComparisonReport`：跨源比较报告。
 - `SourceQualityMonitor`：统一检测入口。
 - `FileSystemDataQualityStore`：把质量问题持久化为 JSONL 时间序列。
+- `SourceHealthSummary`：按 provider / symbol / horizon 聚合质量问题，输出健康评分。
 
 ## 3. 问题码
 
@@ -77,6 +78,12 @@ store.save_comparison_report(comparison)
 records = store.list_records(source_provider="kaiko", symbol="BTC/USD", code="time_gap")
 ```
 
+生成健康摘要：
+
+```python
+summaries = store.summarize(source_provider="kaiko", symbol="BTC/USD")
+```
+
 ## 5. 架构边界
 
 - SourceQualityMonitor 不访问网络。
@@ -114,11 +121,32 @@ context
 - `source_quality`
 - `source_comparison`
 
-## 7. 后续增强
+## 7. 健康评分
+
+`SourceHealthSummary` 当前按已记录问题扣分：
+
+```text
+critical: -20
+warning:  -5
+info:     -1
+```
+
+等级：
+
+| Score | Grade |
+|---|---|
+| `>= 95` | `excellent` |
+| `>= 85` | `good` |
+| `>= 70` | `degraded` |
+| `< 70` | `poor` |
+
+当前评分只代表“已记录质量问题的负担”，不是完整 SLA 可用率。后续接入数据源正常心跳、请求成功率、延迟分布后，才能升级为更完整的 provider reliability score。
+
+## 8. 后续增强
 
 - 把 JSONL 质量记录升级为 Parquet，支持更快查询和聚合。
 - 在 Rust 热路径生成实时 `DataQualityWarning`。
 - 建立跨源价差的动态阈值，而不是固定百分比。
 - 增加交易所维护、停盘、低流动性时段的例外规则。
 - 在报告中标注数据质量对结论可信度的影响。
-- 增加健康评分趋势、告警阈值和 Provider 可靠性排名。
+- 增加告警阈值、心跳成功率、延迟分布和 Provider 可靠性排名。

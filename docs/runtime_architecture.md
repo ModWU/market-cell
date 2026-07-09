@@ -92,6 +92,8 @@ packages/python/src/market_cell/
 
 质量问题持久化通过 `data/quality_store.py` 写入 JSONL 时间序列。它只记录数据健康状况，不参与 Cell 决策聚合。
 
+健康摘要通过 `data/health.py` 聚合已记录问题，帮助选择主源和备源。当前摘要不等于完整 SLA，只作为源质量趋势的早期指标。
+
 ## 5. Storage Layer
 
 Storage Layer 是冷热路径的交接面，不应该让 Python 直接依赖 Rust 内部对象，也不应该让 Rust 直接调用 Python Cell。

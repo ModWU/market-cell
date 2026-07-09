@@ -1,4 +1,10 @@
 from market_cell.data.cache import CandleCache, FileSystemCandleCache
+from market_cell.data.health import (
+    HealthGrade,
+    SourceHealthSummary,
+    rank_source_health,
+    summarize_quality_records,
+)
 from market_cell.data.monitoring import (
     DataQualityIssue,
     SourceComparisonReport,
@@ -50,15 +56,19 @@ __all__ = [
     "DataQualityStore",
     "DuckDBCandleSource",
     "FileSystemDataQualityStore",
+    "HealthGrade",
     "inspect_candles",
     "OptionalStorageDependencyError",
     "ParquetCandleStore",
     "SourceComparisonReport",
+    "SourceHealthSummary",
     "SourceQualityMonitor",
     "SourceQualityReport",
     "batch_to_candle_rows",
     "CANDLE_STORAGE_SCHEMA_VERSION",
     "interval_to_millis",
     "partition_path",
+    "rank_source_health",
+    "summarize_quality_records",
     "timestamp_to_ms",
 ]
