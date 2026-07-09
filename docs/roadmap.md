@@ -24,6 +24,7 @@
 - 多语言 workspace 布局：`packages/python`、`crates`、`contracts`
 - JSON Schema 契约
 - DecisionPolicy 策略层和风险分层
+- GitHub Actions CI，自动运行 Python 和 Rust 测试
 
 ## v0.3 Cell 扩展
 

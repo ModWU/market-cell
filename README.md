@@ -110,6 +110,8 @@ PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --prett
 make test
 ```
 
+GitHub Actions 会在 `main` 分支 push 和 pull request 时自动运行同一组测试。
+
 也可以分别运行：
 
 ```bash
