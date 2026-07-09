@@ -172,6 +172,36 @@ class FileSystemDataQualityStore:
             self.list_records(source_provider=source_provider, symbol=symbol, horizon=horizon)
         )
 
+    def health_trends(
+        self,
+        *,
+        source_provider: str | None = None,
+        symbol: str | None = None,
+        horizon: str | None = None,
+        window="day",
+    ):
+        from market_cell.data.health import build_health_trends
+
+        return build_health_trends(
+            self.list_records(source_provider=source_provider, symbol=symbol, horizon=horizon),
+            window=window,
+        )
+
+    def provider_reliability(
+        self,
+        *,
+        source_provider: str | None = None,
+        symbol: str | None = None,
+        horizon: str | None = None,
+        window="day",
+    ):
+        from market_cell.data.health import summarize_provider_reliability
+
+        return summarize_provider_reliability(
+            self.list_records(source_provider=source_provider, symbol=symbol, horizon=horizon),
+            window=window,
+        )
+
     def _path_for(self, record: DataQualityRecord) -> Path:
         issue = record.issue
         date = _date_part(record.observed_at)

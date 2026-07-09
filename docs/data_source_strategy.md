@@ -87,6 +87,7 @@ packages/python/src/market_cell/data/
 - `SourceQualityMonitor` 可生成缺口、陈旧、异常量价和跨源偏差的结构化质量报告。
 - `FileSystemDataQualityStore` 可把质量问题写入 JSONL，形成数据源健康时间序列。
 - `SourceHealthSummary` 可按 provider / symbol / horizon 聚合问题，输出基础健康评分。
+- `SourceHealthTrendPoint` 和 `ProviderReliabilitySummary` 可形成按时间窗口的健康趋势和 provider 排名输入。
 - 测试只使用本地文件和假源，不依赖外部 API。
 
 ## 4. 生产建议
@@ -118,7 +119,7 @@ packages/python/src/market_cell/data/
 2. Realtime / Batch Contracts：用 Protobuf 描述实时事件，用 Parquet schema 描述历史 K 线。
 3. Feature Layer：把 K 线转成稳定特征快照。
 4. Parquet/DuckDB Cache Hardening：补齐去重、upsert、批量压缩和查询窗口。
-5. Source Health Trend：把健康摘要按时间窗口聚合，形成 Provider 健康评分趋势。
+5. Provider Selection Policy：基于健康趋势和业务优先级选择主源/备源。
 6. Professional Provider Adapter：优先接 CoinAPI 或 Kaiko。
 7. Realtime Stream Worker：独立于分析内核处理 WebSocket。
 

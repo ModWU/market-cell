@@ -37,6 +37,7 @@
 - SourceQualityMonitor：K 线缺口、陈旧、异常量价和跨源偏差监控
 - FileSystemDataQualityStore：质量问题 JSONL 持久化
 - SourceHealthSummary：按 provider / symbol / horizon 聚合质量评分
+- SourceHealthTrendPoint / ProviderReliabilitySummary：按时间窗口聚合趋势和 provider 基础排名
 
 ## v0.3 Cell 扩展
 
@@ -53,7 +54,8 @@
 - EventBus 使用场景扩展
 - ReportAnalyzer 接口草案
 - Parquet / DuckDB 去重、upsert 和查询窗口增强
-- 数据源健康评分趋势、心跳成功率和 Provider 可靠性排名
+- ProviderSelectionPolicy：结合数据健康、业务优先级和源等级选择主备源
+- 数据源心跳成功率和延迟分布
 
 ## v0.4 多周期分析
 

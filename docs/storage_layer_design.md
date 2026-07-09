@@ -83,7 +83,8 @@ date=<YYYY-MM-DD>/
 - 批量写入去重和 upsert 策略。
 - 数据修复版本记录。
 - 跨源价差和缺口监控。
-- 数据源质量问题 Parquet 化和健康评分聚合。
+- 数据源质量问题 Parquet 化。
+- Provider 健康趋势的长期存储和查询优化。
 - DuckDB 查询窗口、分页和多条件过滤。
 - FeatureSnapshot 的 Parquet 化。
 - 大规模压缩、分区合并和生命周期管理。

@@ -29,6 +29,8 @@ packages/python/src/market_cell/data/
 - `SourceQualityMonitor`：统一检测入口。
 - `FileSystemDataQualityStore`：把质量问题持久化为 JSONL 时间序列。
 - `SourceHealthSummary`：按 provider / symbol / horizon 聚合质量问题，输出健康评分。
+- `SourceHealthTrendPoint`：按小时或天生成健康评分趋势点。
+- `ProviderReliabilitySummary`：按 provider 聚合趋势点，输出基础可靠性排名输入。
 
 ## 3. 问题码
 
@@ -82,6 +84,13 @@ records = store.list_records(source_provider="kaiko", symbol="BTC/USD", code="ti
 
 ```python
 summaries = store.summarize(source_provider="kaiko", symbol="BTC/USD")
+```
+
+生成健康趋势和 provider 可靠性摘要：
+
+```python
+trends = store.health_trends(source_provider="kaiko", symbol="BTC/USD", window="day")
+providers = store.provider_reliability(window="day")
 ```
 
 ## 5. 架构边界
@@ -142,11 +151,59 @@ info:     -1
 
 当前评分只代表“已记录质量问题的负担”，不是完整 SLA 可用率。后续接入数据源正常心跳、请求成功率、延迟分布后，才能升级为更完整的 provider reliability score。
 
-## 8. 后续增强
+## 8. 健康趋势和可靠性摘要
+
+`SourceHealthTrendPoint` 支持按 `hour` 或 `day` 聚合：
+
+```text
+source_provider
+symbol
+horizon
+window
+window_start
+record_count
+health_score
+health_grade
+severity_counts
+issue_counts
+dominant_issue_codes
+```
+
+`ProviderReliabilitySummary` 聚合多个趋势点：
+
+```text
+source_provider
+trend_point_count
+record_count
+average_health_score
+latest_health_score
+worst_health_score
+health_grade
+affected_symbols
+affected_horizons
+severity_counts
+issue_counts
+first_window_start
+last_window_start
+```
+
+当前 provider 排名依据：
+
+```text
+average_health_score desc
+latest_health_score desc
+worst_health_score desc
+record_count asc
+source_provider asc
+```
+
+这能用于早期主备源选择，但不能替代真实 SLA、延迟分布和请求成功率。
+
+## 9. 后续增强
 
 - 把 JSONL 质量记录升级为 Parquet，支持更快查询和聚合。
 - 在 Rust 热路径生成实时 `DataQualityWarning`。
 - 建立跨源价差的动态阈值，而不是固定百分比。
 - 增加交易所维护、停盘、低流动性时段的例外规则。
 - 在报告中标注数据质量对结论可信度的影响。
-- 增加告警阈值、心跳成功率、延迟分布和 Provider 可靠性排名。
+- 增加告警阈值、心跳成功率和延迟分布。

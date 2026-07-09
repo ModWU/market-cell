@@ -1,8 +1,14 @@
 from market_cell.data.cache import CandleCache, FileSystemCandleCache
 from market_cell.data.health import (
     HealthGrade,
+    ProviderReliabilitySummary,
     SourceHealthSummary,
+    SourceHealthTrendPoint,
+    TrendWindow,
+    build_health_trends,
     rank_source_health,
+    rank_provider_reliability,
+    summarize_provider_reliability,
     summarize_quality_records,
 )
 from market_cell.data.monitoring import (
@@ -60,15 +66,21 @@ __all__ = [
     "inspect_candles",
     "OptionalStorageDependencyError",
     "ParquetCandleStore",
+    "ProviderReliabilitySummary",
     "SourceComparisonReport",
     "SourceHealthSummary",
+    "SourceHealthTrendPoint",
     "SourceQualityMonitor",
     "SourceQualityReport",
+    "TrendWindow",
     "batch_to_candle_rows",
+    "build_health_trends",
     "CANDLE_STORAGE_SCHEMA_VERSION",
     "interval_to_millis",
     "partition_path",
+    "rank_provider_reliability",
     "rank_source_health",
+    "summarize_provider_reliability",
     "summarize_quality_records",
     "timestamp_to_ms",
 ]
