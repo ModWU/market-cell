@@ -37,6 +37,32 @@ class RunStoreTests(unittest.TestCase):
         self.assertIn("analysis.saved", [event.name for event in event_bus.events])
         self.assertIn("analysis.completed", [event.name for event in event_bus.events])
 
+    def test_engine_persists_runtime_metadata(self):
+        request = AnalysisRequest(
+            target="BTC/USD",
+            horizon="1h",
+            candles=[
+                Candle("t1", 100, 102, 99, 101, 1000),
+                Candle("t2", 101, 104, 100, 103, 1200),
+                Candle("t3", 103, 106, 102, 105, 1400),
+                Candle("t4", 105, 108, 104, 107, 2200),
+            ],
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = FileSystemReportStore(Path(temp_dir))
+            report = AnalysisEngine(
+                report_store=store,
+                run_metadata={"data_sources": {"router_plan": {"entries": []}}},
+            ).run(
+                request,
+                metadata={"data_quality": {"score": 98}},
+            )
+            saved_run = store.load_run(report.run_id or "")
+
+        self.assertEqual(saved_run["metadata"]["data_sources"]["router_plan"]["entries"], [])
+        self.assertEqual(saved_run["metadata"]["data_quality"]["score"], 98)
+
     def test_report_store_lists_saved_reports(self):
         request = AnalysisRequest(
             target="BTC/USD",

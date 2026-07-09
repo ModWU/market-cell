@@ -8,6 +8,7 @@ from market_cell.data.provider_selection import (
     ProviderSelectionPlan,
     ProviderSelectionPolicy,
     ProviderSelectionPreference,
+    ProviderRole,
 )
 from market_cell.data.health import ProviderReliabilitySummary
 from market_cell.data.sources import CandleSource, MarketDataRouter
@@ -16,7 +17,7 @@ from market_cell.data.sources import CandleSource, MarketDataRouter
 @dataclass(frozen=True)
 class RouterPlanEntry:
     provider: str
-    role: str
+    role: ProviderRole
     selection_score: float
     reason_codes: list[str]
     source: CandleSource
@@ -39,6 +40,7 @@ class RouterPlan:
     disabled: list[ProviderSelectionCandidate]
     missing_providers: list[str]
     ignored_providers: list[str]
+    selection_plan: ProviderSelectionPlan | None = None
 
     @property
     def ordered_sources(self) -> list[CandleSource]:
@@ -55,6 +57,16 @@ class RouterPlan:
             "disabled": [candidate.to_dict() for candidate in self.disabled],
             "missing_providers": list(self.missing_providers),
             "ignored_providers": list(self.ignored_providers),
+        }
+
+    def to_run_metadata(self) -> dict[str, Any]:
+        return {
+            "data_sources": {
+                "provider_selection_plan": (
+                    self.selection_plan.to_dict() if self.selection_plan is not None else None
+                ),
+                "router_plan": self.to_dict(),
+            }
         }
 
 
@@ -97,6 +109,7 @@ class RouterPlanBuilder:
             disabled=selection_plan.disabled,
             missing_providers=sorted(missing_providers),
             ignored_providers=ignored_providers,
+            selection_plan=selection_plan,
         )
 
     def build_from_sources(

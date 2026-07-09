@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from copy import deepcopy
 from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 from uuid import uuid4
@@ -46,7 +47,12 @@ class AnalysisRun:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def start(cls, request: AnalysisRequest, manifests: list[CellManifest]) -> "AnalysisRun":
+    def start(
+        cls,
+        request: AnalysisRequest,
+        manifests: list[CellManifest],
+        metadata: dict[str, Any] | None = None,
+    ) -> "AnalysisRun":
         snapshot = request_to_snapshot(request)
         return cls(
             run_id=uuid4().hex,
@@ -59,6 +65,7 @@ class AnalysisRun:
             cell_manifests=manifests_to_dicts(manifests),
             status="running",
             started_at=utc_now_iso(),
+            metadata=deepcopy(metadata or {}),
         )
 
     def complete(self, report_id: str) -> "AnalysisRun":

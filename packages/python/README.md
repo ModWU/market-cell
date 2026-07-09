@@ -17,6 +17,7 @@ It owns:
 - Source health trends and provider reliability summaries
 - Provider selection plans for primary, backup, and disabled market data sources
 - Auditable router plans that map provider selection plans to concrete candle sources
+- Run metadata persistence for provider selection and router plan audits
 
 Optional local storage extras:
 

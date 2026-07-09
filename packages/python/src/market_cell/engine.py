@@ -1,4 +1,6 @@
+from copy import deepcopy
 from dataclasses import replace
+from typing import Any
 
 from market_cell import __version__
 from market_cell.events import EventBus
@@ -15,14 +17,24 @@ class AnalysisEngine:
         registry: CellRegistry | None = None,
         event_bus: EventBus | None = None,
         report_store: ReportStore | None = None,
+        run_metadata: dict[str, Any] | None = None,
     ) -> None:
         self.registry = registry or default_registry()
         self.event_bus = event_bus or EventBus()
         self.report_store = report_store
+        self.run_metadata = dict(run_metadata or {})
 
-    def run(self, request: AnalysisRequest) -> AnalysisReport:
+    def run(
+        self,
+        request: AnalysisRequest,
+        metadata: dict[str, Any] | None = None,
+    ) -> AnalysisReport:
         validate_request(request)
-        run = AnalysisRun.start(request, self.registry.manifests())
+        run = AnalysisRun.start(
+            request,
+            self.registry.manifests(),
+            metadata=_merge_metadata(self.run_metadata, metadata),
+        )
         self.event_bus.emit(
             "analysis.started",
             {"run_id": run.run_id, "target": request.target, "horizon": request.horizon},
@@ -71,3 +83,12 @@ class AnalysisEngine:
                 {"run_id": failed_run.run_id, "target": request.target, "error": failed_run.error},
             )
             raise
+
+
+def _merge_metadata(
+    base: dict[str, Any],
+    override: dict[str, Any] | None,
+) -> dict[str, Any]:
+    payload = deepcopy(base)
+    payload.update(deepcopy(override or {}))
+    return payload

@@ -92,6 +92,7 @@ packages/python/src/market_cell/data/
 - `SourceHealthTrendPoint` 和 `ProviderReliabilitySummary` 可形成按时间窗口的健康趋势和 provider 排名输入。
 - `ProviderSelectionPolicy` 可根据源等级、健康趋势、业务偏好、实时/历史能力和 API key 可用性输出 primary / backups / disabled 计划。
 - `RouterPlanBuilder` 可把 `ProviderSelectionPlan` 映射到实际 `CandleSource` 实例，记录缺失 provider、禁用 provider 和未进入计划的 source。
+- `RouterPlan.to_run_metadata()` 可把选择计划和实际路由计划写入 `AnalysisRun.metadata`，为报告复盘保留数据源审计链。
 - 测试只使用本地文件和假源，不依赖外部 API。
 
 ## 4. 生产建议
@@ -124,7 +125,7 @@ packages/python/src/market_cell/data/
 3. Feature Layer：把 K 线转成稳定特征快照。
 4. Parquet/DuckDB Cache Hardening：补齐去重、upsert、批量压缩和查询窗口。
 5. Professional Provider Adapter：优先接 CoinAPI 或 Kaiko。
-6. Router Plan Persistence：把 ProviderSelectionPlan 和 RouterPlan 写入 AnalysisRun，方便复盘。
+6. Replay Source Audit：回放时展示数据源计划变化。
 7. Realtime Stream Worker：独立于分析内核处理 WebSocket。
 
 ## 6. 官方资料入口

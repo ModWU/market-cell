@@ -28,6 +28,30 @@ class RouterPlanTests(unittest.TestCase):
         )
 
         self.assertEqual([entry.provider for entry in plan.entries], ["kaiko", "binance_spot"])
+        self.assertIsNotNone(plan.selection_plan)
+
+    def test_router_plan_exports_run_metadata(self):
+        plan = RouterPlanBuilder().build_from_sources(
+            [
+                _source("binance_spot", "exchange_direct"),
+                _source("kaiko", "professional"),
+            ],
+            reliabilities=[
+                _reliability("binance_spot", 96),
+                _reliability("kaiko", 94),
+            ],
+        )
+
+        metadata = plan.to_run_metadata()
+
+        self.assertEqual(
+            metadata["data_sources"]["router_plan"]["entries"][0]["provider"],
+            "kaiko",
+        )
+        self.assertEqual(
+            metadata["data_sources"]["provider_selection_plan"]["primary"]["provider"],
+            "kaiko",
+        )
 
     def test_router_uses_ordered_sources_and_falls_back(self):
         empty_primary = _source("kaiko", "professional", candles=[])

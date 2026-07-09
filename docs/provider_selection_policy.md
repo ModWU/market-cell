@@ -27,6 +27,8 @@ ProviderSelectionPlan         primary / backups / disabled
 RouterPlanBuilder            映射到实际 CandleSource 实例
         ↓
 RouterPlan                   可审计路由顺序
+        ↓
+AnalysisRun.metadata         持久化选择和路由审计
 ```
 
 当前策略位于：
@@ -183,6 +185,15 @@ ignored_providers  传入了 source 实例但没有进入 selection plan 的 pro
 
 `RouterPlan.to_router()` 会显式生成 `MarketDataRouter`。如果没有任何可路由 source，会抛出错误，而不是静默回退到未经过策略选择的 source。
 
+`RouterPlan.to_run_metadata()` 会输出可直接传给 `AnalysisEngine.run(..., metadata=...)` 的审计信息：
+
+```text
+data_sources.provider_selection_plan
+data_sources.router_plan
+```
+
+保存报告时，这些信息会进入 `AnalysisRun.metadata`，不会进入 `AnalysisReport` 主体，也不会改变 Cell 输出结构。
+
 ## 7. 使用示例
 
 ```python
@@ -221,6 +232,17 @@ router_plan = RouterPlanBuilder().build_from_sources(
 )
 ```
 
+保存到运行记录：
+
+```python
+from market_cell.engine import AnalysisEngine
+
+report = AnalysisEngine(report_store=store).run(
+    request,
+    metadata=router_plan.to_run_metadata(),
+)
+```
+
 ## 8. 边界
 
 当前策略只负责生成选择计划。
@@ -234,6 +256,7 @@ router_plan = RouterPlanBuilder().build_from_sources(
 - 自动切换正在运行的数据源
 - 影响 Cell 输出协议
 - 替代实时热路径里的连接状态和延迟监控
+- 把数据源审计信息混入 `AnalysisReport` 决策字段
 
 `ProviderSelectionPolicy` 不能持有 source 实例，`RouterPlanBuilder` 不能重新计算健康分，`MarketDataRouter` 不能理解业务优先级。三者分开，才能保证策略、配置和运行时行为都可测试。
 
@@ -242,6 +265,5 @@ router_plan = RouterPlanBuilder().build_from_sources(
 - 引入请求成功率、延迟分布和心跳状态。
 - 区分历史数据源选择和实时数据源选择。
 - 加入 symbol / horizon / venue 级别的可靠性评分。
-- 把 provider 选择计划保存到 AnalysisRun，便于复盘。
-- 把 RouterPlan 保存到 AnalysisRun，记录真实路由顺序、缺失 provider 和禁用原因。
+- 在回放比较中展示数据源计划变化，但不把数据源变化误判成 Cell 公式漂移。
 - 将 Rust 热路径产出的实时质量 warning 汇入同一套 reliability 聚合。
