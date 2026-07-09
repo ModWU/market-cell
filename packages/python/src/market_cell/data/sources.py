@@ -99,3 +99,20 @@ class MarketDataRouter:
                 return batch
             failures.append(f"{source.profile.provider}: {', '.join(quality_report.issues)}")
         raise CandleSourceError("所有 K 线数据源都失败：" + "; ".join(failures))
+
+
+class CachedCandleSource:
+    def __init__(self, source: CandleSource, cache) -> None:
+        self.source = source
+        self.cache = cache
+        self.profile = source.profile
+
+    def fetch_candles(self, query: CandleQuery) -> CandleBatch:
+        cached = self.cache.load(query, self.source.profile)
+        if cached is not None:
+            return cached
+        batch = self.source.fetch_candles(query)
+        quality_report = inspect_candles(batch.candles)
+        if quality_report.is_usable:
+            self.cache.save(batch)
+        return batch

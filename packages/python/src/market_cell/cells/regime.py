@@ -1,4 +1,5 @@
 from market_cell.cells.base import MarketCell
+from market_cell.features import FEATURE_VERSION, build_feature_snapshot
 from market_cell.models import AnalysisRequest, CellResult, Evidence
 from market_cell.scoring import clamp, score
 
@@ -33,17 +34,11 @@ class MarketRegimeCell(MarketCell):
                 metadata={"market_regime": "unknown"},
             )
 
-        closes = [item.close for item in candles]
-        total_move_pct = (closes[-1] - closes[0]) / closes[0] * 100
-        step_moves = [
-            abs((current - previous) / previous * 100)
-            for previous, current in zip(closes, closes[1:])
-            if previous
-        ]
-        path_distance = sum(step_moves)
-        trend_efficiency = clamp(abs(total_move_pct) / path_distance, maximum=1.0) if path_distance else 0
-        ranges = [(item.high - item.low) / item.close * 100 for item in candles if item.close]
-        average_range_pct = sum(ranges) / len(ranges)
+        features = build_feature_snapshot(candles)
+        total_move_pct = features.total_move_pct
+        path_distance = features.path_distance_pct
+        trend_efficiency = features.trend_efficiency
+        average_range_pct = features.average_range_pct
 
         if average_range_pct >= 2.8 and trend_efficiency < 0.45:
             market_regime = "volatile_range"
@@ -94,5 +89,6 @@ class MarketRegimeCell(MarketCell):
                 "total_move_pct": round(total_move_pct, 4),
                 "trend_efficiency": round(trend_efficiency, 4),
                 "average_range_pct": round(average_range_pct, 4),
+                "feature_version": FEATURE_VERSION,
             },
         )

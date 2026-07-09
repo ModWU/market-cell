@@ -2,7 +2,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from market_cell.data import CandleBatch, CandleQuery, CandleSourceError, FileCandleSource, MarketDataRouter
+from market_cell.data import (
+    CachedCandleSource,
+    CandleBatch,
+    CandleQuery,
+    CandleSourceError,
+    FileCandleSource,
+    FileSystemCandleCache,
+    MarketDataRouter,
+)
+from market_cell.data.cache import safe_path_part
 from market_cell.data.binance import normalize_binance_symbol, parse_binance_kline
 from market_cell.data.quality import inspect_candles
 from market_cell.models import Candle
@@ -89,6 +98,34 @@ class DataSourceTests(unittest.TestCase):
     def test_binance_symbol_normalization(self):
         self.assertEqual(normalize_binance_symbol("BTC/USDT"), "BTCUSDT")
         self.assertEqual(normalize_binance_symbol("BTC-USDT"), "BTCUSDT")
+
+    def test_cached_candle_source_saves_and_reuses_batch(self):
+        class CountingSource:
+            profile = FileCandleSource.profile
+
+            def __init__(self):
+                self.calls = 0
+
+            def fetch_candles(self, query):
+                self.calls += 1
+                return FileCandleSource(Path("examples/btc_usd_sample.json")).fetch_candles(query)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = CountingSource()
+            cached_source = CachedCandleSource(source, FileSystemCandleCache(Path(temp_dir)))
+            query = CandleQuery(symbol="BTC/USDT", horizon="1h", limit=2)
+
+            first = cached_source.fetch_candles(query)
+            second = cached_source.fetch_candles(query)
+
+        self.assertEqual(source.calls, 1)
+        self.assertEqual(len(first.candles), 2)
+        self.assertEqual(len(second.candles), 2)
+        self.assertTrue(second.metadata["cache_hit"])
+
+    def test_safe_path_part_normalizes_symbols(self):
+        self.assertEqual(safe_path_part("BTC/USDT"), "btc_usdt")
+        self.assertEqual(safe_path_part(""), "unknown")
 
 
 if __name__ == "__main__":

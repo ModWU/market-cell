@@ -1,4 +1,5 @@
 from market_cell.cells.base import MarketCell
+from market_cell.features import FEATURE_VERSION, build_feature_snapshot
 from market_cell.models import AnalysisRequest, CellResult, Evidence
 from market_cell.scoring import clamp, score
 
@@ -35,9 +36,10 @@ class TrendCell(MarketCell):
                 explanation="K 线数量不足，无法判断趋势。",
             )
 
-        first = candles[0].close
-        last = candles[-1].close
-        change_pct = (last - first) / first * 100
+        features = build_feature_snapshot(candles)
+        first = features.first_close or 0
+        last = features.last_close or 0
+        change_pct = features.close_change_pct
         direction = "bullish" if change_pct > 1 else "bearish" if change_pct < -1 else "neutral"
         strength = clamp(abs(change_pct) * 6)
         confidence = _confidence_from_candle_count(len(candles))
@@ -62,7 +64,7 @@ class TrendCell(MarketCell):
                     summary=f"first_close={first:.2f}, last_close={last:.2f}, change={change_pct:.2f}%",
                 )
             ],
-            metadata={"change_pct": round(change_pct, 4)},
+            metadata={"change_pct": round(change_pct, 4), "feature_version": FEATURE_VERSION},
         )
 
 
@@ -95,11 +97,11 @@ class VolumeCell(MarketCell):
                 explanation="K 线数量不足，无法判断成交量结构。",
             )
 
-        previous = candles[:-1]
-        avg_volume = sum(item.volume for item in previous) / len(previous)
+        features = build_feature_snapshot(candles)
+        avg_volume = features.previous_average_volume
         latest = candles[-1]
-        ratio = latest.volume / avg_volume if avg_volume else 1
-        price_change = latest.close - candles[-2].close
+        ratio = features.latest_volume_ratio
+        price_change = features.latest_close_change
 
         if ratio > 1.25 and price_change > 0:
             direction = "bullish"
@@ -132,7 +134,7 @@ class VolumeCell(MarketCell):
                     summary=f"latest_volume={latest.volume:.2f}, average_volume={avg_volume:.2f}, ratio={ratio:.2f}",
                 )
             ],
-            metadata={"volume_ratio": round(ratio, 4)},
+            metadata={"volume_ratio": round(ratio, 4), "feature_version": FEATURE_VERSION},
         )
 
 
@@ -165,8 +167,8 @@ class VolatilityCell(MarketCell):
                 explanation="K 线数量不足，无法判断波动率。",
             )
 
-        ranges = [(item.high - item.low) / item.close * 100 for item in candles if item.close]
-        avg_range = sum(ranges) / len(ranges)
+        features = build_feature_snapshot(candles)
+        avg_range = features.average_range_pct
         volatility_risk = clamp(avg_range * 16)
         direction = "conflict" if volatility_risk > 55 else "neutral"
         confidence = _confidence_from_candle_count(len(candles))
@@ -191,5 +193,5 @@ class VolatilityCell(MarketCell):
                     summary=f"average_range={avg_range:.2f}%, volatility_risk={volatility_risk:.1f}",
                 )
             ],
-            metadata={"average_range_pct": round(avg_range, 4)},
+            metadata={"average_range_pct": round(avg_range, 4), "feature_version": FEATURE_VERSION},
         )

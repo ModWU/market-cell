@@ -1,5 +1,7 @@
+from market_cell.data.cache import CandleCache, FileSystemCandleCache
 from market_cell.data.quality import CandleQualityReport, inspect_candles
 from market_cell.data.sources import (
+    CachedCandleSource,
     CandleBatch,
     CandleQuery,
     CandleSource,
@@ -11,10 +13,13 @@ from market_cell.data.sources import (
 
 __all__ = [
     "CandleBatch",
+    "CandleCache",
     "CandleQuery",
     "CandleSource",
     "CandleSourceError",
+    "CachedCandleSource",
     "FileCandleSource",
+    "FileSystemCandleCache",
     "MarketDataRouter",
     "SourceProfile",
     "CandleQualityReport",

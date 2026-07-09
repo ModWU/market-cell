@@ -1,4 +1,5 @@
 from market_cell.cells.base import MarketCell
+from market_cell.features import FEATURE_VERSION, build_feature_snapshot
 from market_cell.models import AnalysisRequest, CellResult, Evidence
 from market_cell.scoring import clamp, score
 
@@ -32,14 +33,10 @@ class ManipulationRiskCell(MarketCell):
                 explanation="K 线数量不足，无法判断操纵风险。",
             )
 
-        latest = candles[-1]
-        prev = candles[:-1]
-        avg_volume = sum(item.volume for item in prev) / len(prev)
-        volume_ratio = latest.volume / avg_volume if avg_volume else 1
-        latest_range = (latest.high - latest.low) / latest.close * 100 if latest.close else 0
-        body = abs(latest.close - latest.open)
-        wick_total = max((latest.high - latest.low) - body, 0)
-        wick_ratio = wick_total / (latest.high - latest.low) if latest.high != latest.low else 0
+        features = build_feature_snapshot(candles)
+        volume_ratio = features.latest_volume_ratio
+        latest_range = features.latest_range_pct
+        wick_ratio = features.latest_wick_ratio
 
         risk = 0.0
         evidence: list[Evidence] = []
@@ -97,5 +94,6 @@ class ManipulationRiskCell(MarketCell):
                 "volume_ratio": round(volume_ratio, 4),
                 "latest_range_pct": round(latest_range, 4),
                 "wick_ratio": round(wick_ratio, 4),
+                "feature_version": FEATURE_VERSION,
             },
         )
