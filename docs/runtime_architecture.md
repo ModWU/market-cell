@@ -96,6 +96,8 @@ packages/python/src/market_cell/
 
 健康趋势同样位于 `data/health.py`，按小时或天聚合 JSONL 质量记录。后续 ProviderSelectionPolicy 可以读取这些趋势，但仍必须把最终 K 线数据转回 `CandleBatch` 和 `AnalysisRequest`。
 
+数据源选择策略位于 `data/provider_selection.py`。它只生成 `ProviderSelectionPlan`，用于表达 primary / backups / disabled 的建议，不直接持有网络连接，也不直接改变 `MarketDataRouter` 的运行顺序。这样可以让策略可测试、可审计，也避免把 Python 冷路径策略和后续 Rust 实时热路径耦合在一起。
+
 ## 5. Storage Layer
 
 Storage Layer 是冷热路径的交接面，不应该让 Python 直接依赖 Rust 内部对象，也不应该让 Rust 直接调用 Python Cell。
@@ -134,7 +136,8 @@ Analysis output  -> contracts/json_schema/analysis_report.schema.json
 2. 建立 Protobuf / Parquet / JSON Schema 三类契约。
 3. 建立 Rust market data domain primitives。
 4. 建立 Python ReplayRunner，验证静态快照能稳定重跑。
-5. 再推进 Parquet / DuckDB 和专业数据商 adapter。
+5. 建立数据源健康趋势和 provider 选择计划。
+6. 再推进 Parquet / DuckDB 和专业数据商 adapter。
 
 暂不做：
 

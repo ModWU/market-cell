@@ -17,6 +17,13 @@ from market_cell.data.monitoring import (
     SourceQualityMonitor,
     SourceQualityReport,
 )
+from market_cell.data.provider_selection import (
+    ProviderRole,
+    ProviderSelectionCandidate,
+    ProviderSelectionPlan,
+    ProviderSelectionPolicy,
+    ProviderSelectionPreference,
+)
 from market_cell.data.quality import CandleQualityReport, inspect_candles
 from market_cell.data.quality_store import (
     DataQualityRecord,
@@ -67,6 +74,11 @@ __all__ = [
     "OptionalStorageDependencyError",
     "ParquetCandleStore",
     "ProviderReliabilitySummary",
+    "ProviderRole",
+    "ProviderSelectionCandidate",
+    "ProviderSelectionPlan",
+    "ProviderSelectionPolicy",
+    "ProviderSelectionPreference",
     "SourceComparisonReport",
     "SourceHealthSummary",
     "SourceHealthTrendPoint",

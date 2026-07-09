@@ -15,14 +15,15 @@
 11. `data_source_strategy.md`：理解 K 线和行情数据源如何分层、降级和缓存。
 12. `storage_layer_design.md`：理解 Parquet/DuckDB 存储适配和分区策略。
 13. `source_quality_monitoring.md`：理解 K 线缺口、延迟、异常和跨源偏差监控。
-14. `feature_layer_design.md`：理解 K 线基础特征如何统一计算和版本化。
-15. `evaluation_strategy.md`：理解如何判断 Cell 和分析报告是否可靠。
-16. `stability_design.md`：理解分析结构、Cell 输出和风险解释如何保持稳定。
-17. `risk_and_governance.md`：风险边界、自动交易隔离和合规原则。
-18. `roadmap.md`：阶段路线。
-19. `cell_dictionary.md`：Cell 分类字典。
-20. `glossary.md`：统一术语。
-21. `design_review.md`：设计完善记录。
+14. `provider_selection_policy.md`：理解如何根据健康趋势、源等级和业务偏好选择主源/备源。
+15. `feature_layer_design.md`：理解 K 线基础特征如何统一计算和版本化。
+16. `evaluation_strategy.md`：理解如何判断 Cell 和分析报告是否可靠。
+17. `stability_design.md`：理解分析结构、Cell 输出和风险解释如何保持稳定。
+18. `risk_and_governance.md`：风险边界、自动交易隔离和合规原则。
+19. `roadmap.md`：阶段路线。
+20. `cell_dictionary.md`：Cell 分类字典。
+21. `glossary.md`：统一术语。
+22. `design_review.md`：设计完善记录。
 
 ## 文档层次
 
@@ -31,7 +32,7 @@ L0 文档入口：README.md
 L1 产品层：product_design.md
 L2 架构层：system_architecture.md
 L3 后端工程层：backend_design.md / backend_architecture.md
-L4 协议契约层：cell_protocol.md / data_contract.md / data_source_strategy.md / storage_layer_design.md / source_quality_monitoring.md / feature_layer_design.md / polyglot_architecture.md / runtime_architecture.md / contracts/
+L4 协议契约层：cell_protocol.md / data_contract.md / data_source_strategy.md / storage_layer_design.md / source_quality_monitoring.md / provider_selection_policy.md / feature_layer_design.md / polyglot_architecture.md / runtime_architecture.md / contracts/
 L5 验证治理层：evaluation_strategy.md / stability_design.md / risk_and_governance.md
 L6 研究规划字典层：external_architecture_research.md / roadmap.md / cell_dictionary.md / glossary.md
 L7 历史记录层：design_review.md
@@ -68,6 +69,7 @@ L7 历史记录层：design_review.md
 | `data_source_strategy.md` | K 线和行情数据源策略 | v0.1 |
 | `storage_layer_design.md` | Parquet/DuckDB 存储适配和分区策略 | v0.1 |
 | `source_quality_monitoring.md` | K 线缺口、延迟、异常和跨源偏差监控 | v0.1 |
+| `provider_selection_policy.md` | 主源/备源选择策略 | v0.1 |
 | `feature_layer_design.md` | K 线基础特征层设计 | v0.1 |
 | `evaluation_strategy.md` | Cell 和报告的验证方法 | v0.1 |
 | `stability_design.md` | 分析结构、Cell 输出和风险解释稳定性设计 | v0.1 |

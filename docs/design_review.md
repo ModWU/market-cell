@@ -209,3 +209,23 @@ Cell 输出稳定
 ```
 
 这三件事稳定后，后面接 AI、界面、自动交易都会顺。
+
+## 9. 数据源选择补充
+
+K 线数据源不能只靠配置顺序决定主备。系统已经开始把选择逻辑抽成独立策略：
+
+```text
+SourceProfile
++ ProviderReliabilitySummary
++ ProviderSelectionPreference
+→ ProviderSelectionPlan
+```
+
+这个策略目前只输出 primary / backups / disabled 建议，不直接修改 `MarketDataRouter`。这样做的好处是：
+
+- 数据源选择可以被测试和复盘。
+- 专业数据商、交易所直连、本地回放源可以按不同角色管理。
+- API key、实时/历史能力、最近健康下滑这些运行条件不会混进 Cell。
+- 后续 Rust 热路径可以产出同类健康信号，而不用改 Python Cell 协议。
+
+下一步更适合做 `RouterPlanBuilder` 或专业数据商 adapter，而不是让 policy 直接控制网络源实例。

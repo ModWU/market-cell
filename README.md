@@ -47,6 +47,7 @@ market-cell/
 │   ├── data_source_strategy.md # K 线和行情数据源策略
 │   ├── storage_layer_design.md # Parquet/DuckDB 存储适配
 │   ├── source_quality_monitoring.md # 数据源质量监控
+│   ├── provider_selection_policy.md # 主源/备源选择策略
 │   ├── feature_layer_design.md # K 线基础特征层设计
 │   ├── evaluation_strategy.md # 评估和验证策略
 │   ├── stability_design.md    # 分析结构、Cell 输出和风险解释稳定性
@@ -154,4 +155,5 @@ MarketCell 输出的是分析结果和风险解释，不是投资建议，也不
 - 每次分析可以复盘
 - 每套公式可以版本化
 - 每次保存的输入快照可以重新执行并比较漂移
+- 数据源选择可以根据健康趋势、源等级和业务偏好审计
 - 后期可以接入真实数据、AI、可视化和自动交易模块

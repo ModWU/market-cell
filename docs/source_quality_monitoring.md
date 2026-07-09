@@ -31,6 +31,7 @@ packages/python/src/market_cell/data/
 - `SourceHealthSummary`：按 provider / symbol / horizon 聚合质量问题，输出健康评分。
 - `SourceHealthTrendPoint`：按小时或天生成健康评分趋势点。
 - `ProviderReliabilitySummary`：按 provider 聚合趋势点，输出基础可靠性排名输入。
+- `ProviderSelectionPolicy`：读取 provider 可靠性摘要和源画像，输出主源/备源/禁用源建议。
 
 ## 3. 问题码
 
@@ -199,6 +200,13 @@ source_provider asc
 
 这能用于早期主备源选择，但不能替代真实 SLA、延迟分布和请求成功率。
 
+`ProviderSelectionPolicy` 在这个基础上进一步加入：
+
+- 源等级：专业数据商、交易所直连、开发源。
+- 最近健康分：最近质量下滑的数据源不能继续做主源。
+- API key 可用性：专业数据商密钥未配置时不能被推荐为可用源。
+- 业务偏好：允许显式偏好、禁用和优先级调整。
+
 ## 9. 后续增强
 
 - 把 JSONL 质量记录升级为 Parquet，支持更快查询和聚合。
@@ -206,4 +214,4 @@ source_provider asc
 - 建立跨源价差的动态阈值，而不是固定百分比。
 - 增加交易所维护、停盘、低流动性时段的例外规则。
 - 在报告中标注数据质量对结论可信度的影响。
-- 增加告警阈值、心跳成功率和延迟分布。
+- 增加告警阈值、心跳成功率和延迟分布，并纳入 provider selection score。

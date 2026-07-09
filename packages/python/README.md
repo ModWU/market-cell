@@ -15,6 +15,7 @@ It owns:
 - Data quality issue persistence for source health history
 - Source health summaries by provider, symbol, and horizon
 - Source health trends and provider reliability summaries
+- Provider selection plans for primary, backup, and disabled market data sources
 
 Optional local storage extras:
 
