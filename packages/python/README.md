@@ -11,6 +11,7 @@ It owns:
 - Report and run metadata handling
 - Replay comparison from saved input snapshots
 - Static and low-frequency data analysis workflows
+- Candle source quality monitoring and cross-source comparison
 
 Optional local storage extras:
 

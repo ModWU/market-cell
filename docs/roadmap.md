@@ -34,6 +34,7 @@
 - Rust market_data_core 行情原语和质量函数
 - ReplayRunner：基于 input_snapshot 重新执行并比较结果漂移
 - Parquet/DuckDB 存储适配基础：CandleRow、分区路径、可选读写适配器
+- SourceQualityMonitor：K 线缺口、陈旧、异常量价和跨源偏差监控
 
 ## v0.3 Cell 扩展
 
@@ -50,6 +51,7 @@
 - EventBus 使用场景扩展
 - ReportAnalyzer 接口草案
 - Parquet / DuckDB 去重、upsert 和查询窗口增强
+- 数据源质量问题持久化和健康评分趋势
 
 ## v0.4 多周期分析
 

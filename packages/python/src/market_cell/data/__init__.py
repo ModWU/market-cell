@@ -1,4 +1,10 @@
 from market_cell.data.cache import CandleCache, FileSystemCandleCache
+from market_cell.data.monitoring import (
+    DataQualityIssue,
+    SourceComparisonReport,
+    SourceQualityMonitor,
+    SourceQualityReport,
+)
 from market_cell.data.quality import CandleQualityReport, inspect_candles
 from market_cell.data.sources import (
     CachedCandleSource,
@@ -17,10 +23,9 @@ from market_cell.data.storage import (
     OptionalStorageDependencyError,
     ParquetCandleStore,
     batch_to_candle_rows,
-    interval_to_millis,
     partition_path,
-    timestamp_to_ms,
 )
+from market_cell.data.timeframes import interval_to_millis, timestamp_to_ms
 
 __all__ = [
     "CandleBatch",
@@ -35,10 +40,14 @@ __all__ = [
     "SourceProfile",
     "CandleQualityReport",
     "CandleRow",
+    "DataQualityIssue",
     "DuckDBCandleSource",
     "inspect_candles",
     "OptionalStorageDependencyError",
     "ParquetCandleStore",
+    "SourceComparisonReport",
+    "SourceQualityMonitor",
+    "SourceQualityReport",
     "batch_to_candle_rows",
     "CANDLE_STORAGE_SCHEMA_VERSION",
     "interval_to_millis",

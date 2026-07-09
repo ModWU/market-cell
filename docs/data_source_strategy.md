@@ -71,6 +71,7 @@ packages/python/src/market_cell/data/
 ├── cache.py        # CandleCache 协议和文件缓存实现
 ├── storage.py      # Parquet/DuckDB 存储适配基础
 ├── quality.py      # K 线质量检查
+├── monitoring.py   # 数据源质量监控和跨源比较
 └── binance.py      # Binance Spot Kline 开发/备份适配器
 ```
 
@@ -83,6 +84,7 @@ packages/python/src/market_cell/data/
 - Router 会检查 K 线质量，拒绝空数据、重复时间戳、乱序和非法 OHLCV。
 - `CachedCandleSource` 可包装任意数据源，减少重复外部请求。
 - `ParquetCandleStore` 和 `DuckDBCandleSource` 为本地历史缓存和研究查询提供可选扩展。
+- `SourceQualityMonitor` 可生成缺口、陈旧、异常量价和跨源偏差的结构化质量报告。
 - 测试只使用本地文件和假源，不依赖外部 API。
 
 ## 4. 生产建议
@@ -114,8 +116,8 @@ packages/python/src/market_cell/data/
 2. Realtime / Batch Contracts：用 Protobuf 描述实时事件，用 Parquet schema 描述历史 K 线。
 3. Feature Layer：把 K 线转成稳定特征快照。
 4. Parquet/DuckDB Cache Hardening：补齐去重、upsert、批量压缩和查询窗口。
-5. Professional Provider Adapter：优先接 CoinAPI 或 Kaiko。
-6. Source Quality Monitor：监控缺口、重复、延迟和跨源偏差。
+5. Source Quality Persistence：把质量问题写入本地存储，形成数据源健康时间序列。
+6. Professional Provider Adapter：优先接 CoinAPI 或 Kaiko。
 7. Realtime Stream Worker：独立于分析内核处理 WebSocket。
 
 ## 6. 官方资料入口

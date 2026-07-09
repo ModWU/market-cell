@@ -46,6 +46,7 @@ market-cell/
 │   ├── data_contract.md       # 输入输出数据契约
 │   ├── data_source_strategy.md # K 线和行情数据源策略
 │   ├── storage_layer_design.md # Parquet/DuckDB 存储适配
+│   ├── source_quality_monitoring.md # 数据源质量监控
 │   ├── feature_layer_design.md # K 线基础特征层设计
 │   ├── evaluation_strategy.md # 评估和验证策略
 │   ├── stability_design.md    # 分析结构、Cell 输出和风险解释稳定性

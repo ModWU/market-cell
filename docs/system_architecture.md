@@ -69,6 +69,7 @@ flowchart TD
 - Protobuf 行情事件契约
 - Parquet K 线批量存储契约
 - Parquet/DuckDB 存储适配基础
+- SourceQualityMonitor 数据源质量监控
 - Rust market_data_core 行情原语
 - Rust realtime_core 预留
 
