@@ -69,6 +69,7 @@ Local Cache / Replay         本地缓存、回放、测试和断网降级
 packages/python/src/market_cell/data/
 ├── sources.py      # CandleSource 协议、CandleQuery、CandleBatch、MarketDataRouter
 ├── cache.py        # CandleCache 协议和文件缓存实现
+├── storage.py      # Parquet/DuckDB 存储适配基础
 ├── quality.py      # K 线质量检查
 └── binance.py      # Binance Spot Kline 开发/备份适配器
 ```
@@ -81,6 +82,7 @@ packages/python/src/market_cell/data/
 - Router 支持主备降级。
 - Router 会检查 K 线质量，拒绝空数据、重复时间戳、乱序和非法 OHLCV。
 - `CachedCandleSource` 可包装任意数据源，减少重复外部请求。
+- `ParquetCandleStore` 和 `DuckDBCandleSource` 为本地历史缓存和研究查询提供可选扩展。
 - 测试只使用本地文件和假源，不依赖外部 API。
 
 ## 4. 生产建议
@@ -111,7 +113,7 @@ packages/python/src/market_cell/data/
 1. Runtime Architecture：把 Rust 动态热路径、Python 静态冷路径和存储交接写清楚。
 2. Realtime / Batch Contracts：用 Protobuf 描述实时事件，用 Parquet schema 描述历史 K 线。
 3. Feature Layer：把 K 线转成稳定特征快照。
-4. Parquet/DuckDB Cache：替换当前文件缓存实现，提高历史查询性能。
+4. Parquet/DuckDB Cache Hardening：补齐去重、upsert、批量压缩和查询窗口。
 5. Professional Provider Adapter：优先接 CoinAPI 或 Kaiko。
 6. Source Quality Monitor：监控缺口、重复、延迟和跨源偏差。
 7. Realtime Stream Worker：独立于分析内核处理 WebSocket。

@@ -10,6 +10,17 @@ from market_cell.data.sources import (
     MarketDataRouter,
     SourceProfile,
 )
+from market_cell.data.storage import (
+    CANDLE_STORAGE_SCHEMA_VERSION,
+    CandleRow,
+    DuckDBCandleSource,
+    OptionalStorageDependencyError,
+    ParquetCandleStore,
+    batch_to_candle_rows,
+    interval_to_millis,
+    partition_path,
+    timestamp_to_ms,
+)
 
 __all__ = [
     "CandleBatch",
@@ -23,5 +34,14 @@ __all__ = [
     "MarketDataRouter",
     "SourceProfile",
     "CandleQualityReport",
+    "CandleRow",
+    "DuckDBCandleSource",
     "inspect_candles",
+    "OptionalStorageDependencyError",
+    "ParquetCandleStore",
+    "batch_to_candle_rows",
+    "CANDLE_STORAGE_SCHEMA_VERSION",
+    "interval_to_millis",
+    "partition_path",
+    "timestamp_to_ms",
 ]

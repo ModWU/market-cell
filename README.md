@@ -45,6 +45,7 @@ market-cell/
 │   ├── cell_protocol.md       # Cell 开发协议
 │   ├── data_contract.md       # 输入输出数据契约
 │   ├── data_source_strategy.md # K 线和行情数据源策略
+│   ├── storage_layer_design.md # Parquet/DuckDB 存储适配
 │   ├── feature_layer_design.md # K 线基础特征层设计
 │   ├── evaluation_strategy.md # 评估和验证策略
 │   ├── stability_design.md    # 分析结构、Cell 输出和风险解释稳定性
@@ -88,6 +89,12 @@ market-cell analyze examples/btc_usd_sample.json --pretty
 
 ```bash
 PYTHONPATH=packages/python/src python3 -m market_cell analyze examples/btc_usd_sample.json --pretty
+```
+
+如果要启用 Parquet/DuckDB 本地行情存储扩展：
+
+```bash
+python3 -m pip install -e 'packages/python[storage]'
 ```
 
 查看当前已经注册的 Cell：

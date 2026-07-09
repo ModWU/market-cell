@@ -51,7 +51,7 @@ flowchart TD
 | `policies/` | 可替换策略，例如决策权重、风险分层和行动姿态 |
 | `reports/` | 报告保存、读取和列表查询 |
 | `replay/` | 基于保存的 input snapshot 重新执行分析，并比较结果漂移 |
-| `data/` | K 线数据源协议、质量检查、路由和缓存 |
+| `data/` | K 线数据源协议、质量检查、路由、缓存和可选 Parquet/DuckDB 存储适配 |
 | `features/` | K 线基础特征快照和版本化计算 |
 | `cells/` | 具体分析 Cell |
 | `contracts/` | 跨语言共享 JSON Schema 契约，位于仓库根目录 |

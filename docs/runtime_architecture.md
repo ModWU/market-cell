@@ -86,6 +86,8 @@ packages/python/src/market_cell/
 └── cells/      # Cell 参考实现
 ```
 
+本地历史查询通过 `data/storage.py` 提供可选 Parquet/DuckDB 适配。它仍然输出 `CandleBatch`，不会绕过 `AnalysisRequest` 和 Cell 协议。
+
 ## 5. Storage Layer
 
 Storage Layer 是冷热路径的交接面，不应该让 Python 直接依赖 Rust 内部对象，也不应该让 Rust 直接调用 Python Cell。

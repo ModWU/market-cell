@@ -12,4 +12,10 @@ It owns:
 - Replay comparison from saved input snapshots
 - Static and low-frequency data analysis workflows
 
+Optional local storage extras:
+
+```bash
+python3 -m pip install -e 'packages/python[storage]'
+```
+
 Repository-level contracts live in `../../contracts/`.

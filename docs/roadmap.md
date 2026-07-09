@@ -33,6 +33,7 @@
 - Parquet K 线批量存储契约
 - Rust market_data_core 行情原语和质量函数
 - ReplayRunner：基于 input_snapshot 重新执行并比较结果漂移
+- Parquet/DuckDB 存储适配基础：CandleRow、分区路径、可选读写适配器
 
 ## v0.3 Cell 扩展
 
@@ -48,7 +49,7 @@
 
 - EventBus 使用场景扩展
 - ReportAnalyzer 接口草案
-- Parquet / DuckDB 行情缓存实现
+- Parquet / DuckDB 去重、upsert 和查询窗口增强
 
 ## v0.4 多周期分析
 

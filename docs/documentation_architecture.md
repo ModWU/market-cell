@@ -20,7 +20,7 @@ flowchart TD
     L1["L1 产品层<br/>product_design.md"]
     L2["L2 系统架构层<br/>system_architecture.md"]
     L3["L3 后端工程层<br/>backend_design.md<br/>backend_architecture.md"]
-    L4["L4 协议和契约层<br/>cell_protocol.md<br/>data_contract.md<br/>polyglot_architecture.md<br/>runtime_architecture.md<br/>contracts/"]
+    L4["L4 协议和契约层<br/>cell_protocol.md<br/>data_contract.md<br/>storage_layer_design.md<br/>polyglot_architecture.md<br/>runtime_architecture.md<br/>contracts/"]
     L5["L5 方法论层<br/>evaluation_strategy.md<br/>stability_design.md<br/>risk_and_governance.md"]
     L6["L6 研究、规划和字典层<br/>external_architecture_research.md<br/>roadmap.md<br/>cell_dictionary.md<br/>glossary.md"]
     L7["L7 历史记录层<br/>design_review.md"]
@@ -71,6 +71,7 @@ flowchart LR
 | 冷热运行时怎么分工 | `runtime_architecture.md` | 已补 |
 | Cell 怎么写 | `cell_protocol.md` | 已有 |
 | 数据怎么传 | `data_contract.md` | 已有 |
+| 行情怎么缓存和查询 | `storage_layer_design.md` | 已补 |
 | Cell 怎么评估 | `evaluation_strategy.md` | 已补 |
 | 三个核心稳定性怎么守住 | `stability_design.md` | 已有 |
 | 风险边界是什么 | `risk_and_governance.md` | 已有 |

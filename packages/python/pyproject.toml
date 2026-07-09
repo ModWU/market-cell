@@ -10,6 +10,12 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
 
+[project.optional-dependencies]
+storage = [
+  "duckdb>=1.0",
+  "pyarrow>=15",
+]
+
 [project.scripts]
 market-cell = "market_cell.cli:main"
 
