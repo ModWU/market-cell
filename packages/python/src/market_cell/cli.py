@@ -6,6 +6,7 @@ from pathlib import Path
 from market_cell.engine import AnalysisEngine
 from market_cell.models import AnalysisRequest
 from market_cell.registry import default_registry
+from market_cell.replay import ReplayRunner
 from market_cell.reports import FileSystemReportStore
 
 
@@ -26,9 +27,10 @@ def create_parser() -> argparse.ArgumentParser:
     reports.add_argument("--report-dir", type=Path, default=Path("reports"), help="Report storage directory.")
     reports.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
 
-    replay = subparsers.add_parser("replay", help="Print a saved report by report ID.")
+    replay = subparsers.add_parser("replay", help="Replay a saved report from its input snapshot.")
     replay.add_argument("report_id", help="Saved report ID.")
     replay.add_argument("--report-dir", type=Path, default=Path("reports"), help="Report storage directory.")
+    replay.add_argument("--stored-only", action="store_true", help="Only print the stored report without rerunning.")
     replay.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
 
     return parser
@@ -69,14 +71,18 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "replay":
+        store = FileSystemReportStore(args.report_dir)
         try:
-            report = FileSystemReportStore(args.report_dir).load_report(args.report_id)
+            if args.stored_only:
+                output = store.load_report(args.report_id)
+            else:
+                output = ReplayRunner(store).replay(args.report_id).to_dict()
         except Exception as exc:
-            print(f"读取报告失败：{exc}", file=sys.stderr)
+            print(f"回放报告失败：{exc}", file=sys.stderr)
             return 1
 
         indent = 2 if args.pretty else None
-        print(json.dumps(report, ensure_ascii=False, indent=indent))
+        print(json.dumps(output, ensure_ascii=False, indent=indent))
         return 0
 
     parser.print_help()

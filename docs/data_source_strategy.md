@@ -108,11 +108,13 @@ packages/python/src/market_cell/data/
 
 ## 5. 后续实现顺序
 
-1. Feature Layer：把 K 线转成稳定特征快照。
-2. Parquet/DuckDB Cache：替换当前文件缓存实现，提高历史查询性能。
-3. Professional Provider Adapter：优先接 CoinAPI 或 Kaiko。
-4. Source Quality Monitor：监控缺口、重复、延迟和跨源偏差。
-5. Realtime Stream Worker：独立于分析内核处理 WebSocket。
+1. Runtime Architecture：把 Rust 动态热路径、Python 静态冷路径和存储交接写清楚。
+2. Realtime / Batch Contracts：用 Protobuf 描述实时事件，用 Parquet schema 描述历史 K 线。
+3. Feature Layer：把 K 线转成稳定特征快照。
+4. Parquet/DuckDB Cache：替换当前文件缓存实现，提高历史查询性能。
+5. Professional Provider Adapter：优先接 CoinAPI 或 Kaiko。
+6. Source Quality Monitor：监控缺口、重复、延迟和跨源偏差。
+7. Realtime Stream Worker：独立于分析内核处理 WebSocket。
 
 ## 6. 官方资料入口
 

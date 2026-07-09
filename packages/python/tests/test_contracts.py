@@ -20,6 +20,16 @@ class ContractTests(unittest.TestCase):
                 self.assertEqual(data["$schema"], "https://json-schema.org/draft/2020-12/schema")
                 self.assertIn("title", data)
 
+    def test_market_data_contracts_exist_for_realtime_and_batch_paths(self):
+        proto = (ROOT / "contracts" / "protobuf" / "market_data.proto").read_text(encoding="utf-8")
+        parquet = (ROOT / "contracts" / "parquet" / "candle_schema.md").read_text(encoding="utf-8")
+
+        self.assertIn("package market_cell.market_data.v1", proto)
+        self.assertIn("message MarketDataEvent", proto)
+        self.assertIn("message CandleClosed", proto)
+        self.assertIn("source_provider", parquet)
+        self.assertIn("quality_flags", parquet)
+
     def test_analysis_report_contains_contract_required_fields(self):
         schema = json.loads(
             (ROOT / "contracts" / "json_schema" / "analysis_report.schema.json").read_text(encoding="utf-8")

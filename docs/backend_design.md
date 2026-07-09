@@ -50,6 +50,9 @@ flowchart TD
 | `scoring.py` | 评分和方向转换 |
 | `policies/` | 可替换策略，例如决策权重、风险分层和行动姿态 |
 | `reports/` | 报告保存、读取和列表查询 |
+| `replay/` | 基于保存的 input snapshot 重新执行分析，并比较结果漂移 |
+| `data/` | K 线数据源协议、质量检查、路由和缓存 |
+| `features/` | K 线基础特征快照和版本化计算 |
 | `cells/` | 具体分析 Cell |
 | `contracts/` | 跨语言共享 JSON Schema 契约，位于仓库根目录 |
 
@@ -104,17 +107,23 @@ PYTHONPATH=packages/python/src python3 -m market_cell analyze examples/btc_usd_s
 PYTHONPATH=packages/python/src python3 -m market_cell reports --pretty
 ```
 
-回放报告：
+回放报告并比较当前公式结果：
 
 ```bash
 PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --pretty
+```
+
+只查看已保存报告：
+
+```bash
+PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --stored-only --pretty
 ```
 
 ## 6. 后端扩展顺序
 
 建议按这个顺序扩展：
 
-1. 报告保存：`reports/`
+1. 报告保存和回放比较：`reports/`、`replay/`
 2. 多周期输入：`MultiHorizonRequest`
 3. 本地数据读取：CSV / JSON / Parquet
 4. 数据缓存：DuckDB

@@ -28,6 +28,11 @@
 - Data Source 协议、K 线主备路由和 Binance 开发适配器
 - Feature Layer 初版：统一量价基础特征
 - CandleCache 协议和文件缓存实现
+- 运行时冷热路径文档：Rust 动态数据，Python 静态分析
+- Protobuf 实时行情事件契约
+- Parquet K 线批量存储契约
+- Rust market_data_core 行情原语和质量函数
+- ReplayRunner：基于 input_snapshot 重新执行并比较结果漂移
 
 ## v0.3 Cell 扩展
 
@@ -41,7 +46,6 @@
 
 同时补齐轻量骨架：
 
-- ReplayRunner 接口草案
 - EventBus 使用场景扩展
 - ReportAnalyzer 接口草案
 - Parquet / DuckDB 行情缓存实现

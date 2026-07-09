@@ -20,7 +20,7 @@ flowchart TD
     L1["L1 产品层<br/>product_design.md"]
     L2["L2 系统架构层<br/>system_architecture.md"]
     L3["L3 后端工程层<br/>backend_design.md<br/>backend_architecture.md"]
-    L4["L4 协议和契约层<br/>cell_protocol.md<br/>data_contract.md<br/>polyglot_architecture.md<br/>contracts/"]
+    L4["L4 协议和契约层<br/>cell_protocol.md<br/>data_contract.md<br/>polyglot_architecture.md<br/>runtime_architecture.md<br/>contracts/"]
     L5["L5 方法论层<br/>evaluation_strategy.md<br/>stability_design.md<br/>risk_and_governance.md"]
     L6["L6 研究、规划和字典层<br/>external_architecture_research.md<br/>roadmap.md<br/>cell_dictionary.md<br/>glossary.md"]
     L7["L7 历史记录层<br/>design_review.md"]
@@ -68,6 +68,7 @@ flowchart LR
 | 后端怎么组织 | `backend_design.md` | 已有 |
 | 后端未来怎么服务化 | `backend_architecture.md` | 已有 |
 | 多语言怎么协作 | `polyglot_architecture.md`, `contracts/` | 已有 |
+| 冷热运行时怎么分工 | `runtime_architecture.md` | 已补 |
 | Cell 怎么写 | `cell_protocol.md` | 已有 |
 | 数据怎么传 | `data_contract.md` | 已有 |
 | Cell 怎么评估 | `evaluation_strategy.md` | 已补 |
@@ -104,6 +105,7 @@ roadmap.md
 system_architecture.md
 backend_architecture.md
 polyglot_architecture.md
+runtime_architecture.md
 ```
 
 ### 后端模块变化
@@ -171,7 +173,6 @@ backend_architecture.md
 | `data_source_strategy.md` | 开始接真实交易所、新闻、链上数据时 |
 | `factor_graph_design.md` | 开始实现因子图时 |
 | `multi_horizon_design.md` | 开始做多周期分析时 |
-| `report_replay_design.md` | 开始保存和回放报告时 |
 | `ai_explainer_design.md` | 开始接 AI 解释层时 |
 | `trading_gateway_design.md` | 开始做自动交易前置系统时 |
 | `adr/` | 出现重大技术取舍时 |

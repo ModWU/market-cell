@@ -63,15 +63,18 @@ flowchart TD
 - EventBus
 - AnalysisRun / Recorder 初版
 - FileSystemReportStore
+- ReplayRunner
 - JSON Report v1
 - JSON Schema 契约
+- Protobuf 行情事件契约
+- Parquet K 线批量存储契约
+- Rust market_data_core 行情原语
 - Rust realtime_core 预留
 
 未来实现：
 
 - Analysis Planner
 - Factor Graph
-- Replay Runner
 - Data Connector / Feature Store
 - AI Explainer
 - Visualization
@@ -549,7 +552,9 @@ flowchart LR
 当前策略：
 
 - Python 实现分析系统主体
-- Rust 先保留高性能模块
+- Python 负责静态分析、研究、回放和报告解释
+- Rust 负责动态数据、实时聚合和性能热点
+- Rust 先以 `market_data_core` 稳定行情原语，再演进实时 worker
 - 不急着跨语言调用
 
 未来 Rust 适合迁移：
@@ -559,6 +564,8 @@ flowchart LR
 - 实时数据流
 - 大规模指标热点
 - 自动交易风控核心
+
+更详细的冷热路径边界见 `runtime_architecture.md`。
 
 ## 12. 存储架构规划
 
@@ -621,7 +628,9 @@ market-cell/
 │       │   ├── scoring.py
 │       │   └── validation.py
 │       └── tests/
-└── crates/realtime_core/
+└── crates/
+    ├── market_data_core/
+    └── realtime_core/
 ```
 
 Python 包内部后期结构：
@@ -635,6 +644,7 @@ packages/python/src/market_cell/
 ├── features/
 ├── graph/
 ├── runtime/
+├── replay/
 ├── reports/
 ├── storage/
 └── ai/

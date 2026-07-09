@@ -1,4 +1,4 @@
-# MarketCell 多语言架构文档 v0.1
+# MarketCell 多语言架构文档 v0.2
 
 ## 1. 为什么提前设计多语言边界
 
@@ -17,6 +17,7 @@ MarketCell 后期可能同时包含：
 
 ```text
 packages/python/          Python 包，内部采用 src-layout
+crates/market_data_core/  Rust 行情领域原语和质量函数
 crates/realtime_core/     Rust crate，采用 Cargo workspace 习惯
 contracts/                跨语言共享契约
 ```
@@ -36,9 +37,13 @@ contracts/                跨语言共享契约
 
 ```text
 contracts/
-└── json_schema/
-    ├── analysis_request.schema.json
-    └── analysis_report.schema.json
+├── json_schema/
+│   ├── analysis_request.schema.json
+│   └── analysis_report.schema.json
+├── protobuf/
+│   └── market_data.proto
+└── parquet/
+    └── candle_schema.md
 ```
 
 所有语言模块都必须围绕 `contracts/` 对齐输入输出。
@@ -47,6 +52,7 @@ contracts/
 
 - Python dataclass 是参考实现，不是唯一契约。
 - Rust / TypeScript / API 服务不能私自定义不兼容字段。
+- 实时行情事件走 Protobuf，历史批量 K 线走 Parquet schema，分析输入输出走 JSON Schema。
 - 报告必须带 `schema_version`，避免历史报告无法解释。
 - 公式版本和引擎版本必须进入报告或运行记录。
 
@@ -68,6 +74,7 @@ market-cell/
 │       │   └── ...
 │       └── tests/
 ├── crates/                      # Rust 性能模块
+│   ├── market_data_core/
 │   └── realtime_core/
 ├── examples/                    # 语言无关示例输入
 ├── docs/                        # 架构和产品文档
@@ -98,8 +105,9 @@ packages/
 
 | 语言 / 层 | 主要职责 | 不应该承担 |
 |---|---|---|
-| Python `packages/python` | Cell 协议、编排、报告、研究验证 | 低延迟实时计算 |
-| Rust `crates/*` | 高性能特征、实时数据核心、热点函数 | 决策报告文案和产品策略 |
+| Python `packages/python` | Cell 协议、编排、报告、研究验证、静态回放 | 低延迟实时计算 |
+| Rust `crates/market_data_core` | 行情领域原语、K 线质量函数、热点小函数 | 决策报告文案和产品策略 |
+| Rust `crates/realtime_core` | 后续实时 worker、聚合器、数据流状态 | 研究报告和 Cell 策略 |
 | TypeScript `apps/web` | 可视化、交互、报告查看 | 重新实现决策逻辑 |
 | SQL / DuckDB | 历史查询、特征回放 | 领域决策聚合 |
 

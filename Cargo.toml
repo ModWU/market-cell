@@ -1,3 +1,6 @@
 [workspace]
-members = ["crates/realtime_core"]
+members = [
+    "crates/market_data_core",
+    "crates/realtime_core",
+]
 resolver = "3"

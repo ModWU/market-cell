@@ -68,6 +68,7 @@ flowchart TD
 - `FileSystemReportStore`
 - CLI `reports`
 - CLI `replay`
+- `ReplayRunner`
 
 当前不立即实现复杂消息队列，但命名和模块边界已经为 EventBus 预留空间。
 
@@ -162,6 +163,7 @@ GET  /cells
 GET  /cells/{cell_id}
 GET  /reports/{report_id}
 POST /replay/{report_id}
+GET  /replay/{report_id}/diff
 ```
 
 第一阶段不实现这些接口，只作为架构目标。
@@ -194,7 +196,7 @@ flowchart LR
 
 | 方式 | 适用场景 |
 |---|---|
-| 文件交换 | 批量计算结果 |
+| 文件交换 | 批量计算结果、Parquet 历史缓存 |
 | 子进程 | 简单高性能任务 |
 | HTTP 服务 | 独立实时服务 |
 | 消息队列 | 数据流和任务流 |
@@ -204,8 +206,8 @@ flowchart LR
 
 ```text
 先 Python
-再找性能热点
-最后把热点迁到 Rust
+再用 Rust 稳定动态数据和热点原语
+最后只把证明有效的热点嵌入 Python 或服务化
 ```
 
 ## 8. 可观测性规划

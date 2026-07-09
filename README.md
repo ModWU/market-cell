@@ -30,7 +30,9 @@ v0.1 提供一个最小闭环：
 ```text
 market-cell/
 ├── contracts/
-│   └── json_schema/            # 跨语言共享 JSON Schema 契约
+│   ├── json_schema/            # 跨语言共享 JSON Schema 契约
+│   ├── protobuf/               # 实时行情事件契约
+│   └── parquet/                # 历史 K 线批量存储契约
 ├── docs/
 │   ├── product_design.md      # 产品设计文档 v0.2
 │   ├── system_architecture.md # 系统架构文档 v0.2
@@ -39,6 +41,7 @@ market-cell/
 │   ├── backend_design.md      # 后端模块设计
 │   ├── backend_architecture.md # 后端服务化架构
 │   ├── polyglot_architecture.md # 多语言仓库和契约边界
+│   ├── runtime_architecture.md # Rust 热路径和 Python 冷路径
 │   ├── cell_protocol.md       # Cell 开发协议
 │   ├── data_contract.md       # 输入输出数据契约
 │   ├── data_source_strategy.md # K 线和行情数据源策略
@@ -60,12 +63,15 @@ market-cell/
 │       │   ├── features/       # K 线基础特征快照
 │       │   ├── models.py       # 核心数据结构
 │       │   ├── policies/       # 决策策略和风险分层
-│       │   ├── reports/        # 报告保存和回放
+│       │   ├── replay/         # 基于 input_snapshot 的回放和漂移比较
+│       │   ├── reports/        # 报告保存
 │       │   └── cells/          # 第一批分析 Cell
 │       └── tests/              # Python 测试
 ├── examples/
 │   └── btc_usd_sample.json    # 示例输入
-└── crates/realtime_core/      # Rust 高性能模块预留
+└── crates/
+    ├── market_data_core/       # Rust 行情领域原语和质量函数
+    └── realtime_core/          # Rust 实时模块预留
 ```
 
 ## 运行
@@ -102,10 +108,16 @@ PYTHONPATH=packages/python/src python3 -m market_cell analyze examples/btc_usd_s
 PYTHONPATH=packages/python/src python3 -m market_cell reports --pretty
 ```
 
-回放某个报告：
+回放某个报告，并比较当前公式结果是否漂移：
 
 ```bash
 PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --pretty
+```
+
+只查看已保存报告：
+
+```bash
+PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --stored-only --pretty
 ```
 
 ## 测试
@@ -133,4 +145,5 @@ MarketCell 输出的是分析结果和风险解释，不是投资建议，也不
 - 每个 Cell 可以独立测试
 - 每次分析可以复盘
 - 每套公式可以版本化
+- 每次保存的输入快照可以重新执行并比较漂移
 - 后期可以接入真实数据、AI、可视化和自动交易模块

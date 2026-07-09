@@ -3,5 +3,9 @@
 version = 4
 
 [[package]]
+name = "marketcell-market-data-core"
+version = "0.1.0"
+
+[[package]]
 name = "marketcell-realtime-core"
 version = "0.1.0"

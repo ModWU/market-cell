@@ -24,6 +24,7 @@ AnalysisRequest
 → DecisionCell
 → AnalysisReport
 → ReportStore / JSON output
+→ ReplayRunner / drift comparison
 ```
 
 稳定点：
@@ -32,6 +33,7 @@ AnalysisRequest
 - `CellRegistry` 统一管理 Cell 列表，调用方不依赖具体 Cell 类。
 - `AnalysisRun` 保存输入快照、公式版本和 Cell Manifest。
 - `AnalysisReport` 带 `schema_version`、`engine_version`、`formula_versions`。
+- `ReplayRunner` 使用 `input_snapshot` 重新执行分析，比较决策方向、风险姿态、分数和公式版本漂移。
 - 多语言模块通过 `contracts/` 共享 JSON Schema。
 
 后续扩展原则：
@@ -104,6 +106,7 @@ MarketCell 必须长期保持“方向和风险分离”：
 
 - `test_stability.py`: 分析结构、Cell 输出和风险解释稳定性。
 - `test_contracts.py`: JSON Schema 和报告顶层字段。
+- `test_replay.py`: 历史输入快照可重跑，并能发现公式版本变化。
 - `test_decision_policy.py`: 方向和风险分层分离。
 - `test_registry_validation.py`: 输入契约边界。
 

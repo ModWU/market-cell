@@ -9,17 +9,18 @@
 5. `backend_design.md`：理解后端模块、边界和第一阶段实现方式。
 6. `backend_architecture.md`：理解后端未来服务化、数据流和部署演进。
 7. `polyglot_architecture.md`：理解多语言目录、共享契约和语言职责边界。
-8. `cell_protocol.md`：以后新增 Cell 必须遵守的协议。
-9. `data_contract.md`：输入输出数据结构和校验规则。
-10. `data_source_strategy.md`：理解 K 线和行情数据源如何分层、降级和缓存。
-11. `feature_layer_design.md`：理解 K 线基础特征如何统一计算和版本化。
-12. `evaluation_strategy.md`：理解如何判断 Cell 和分析报告是否可靠。
-13. `stability_design.md`：理解分析结构、Cell 输出和风险解释如何保持稳定。
-14. `risk_and_governance.md`：风险边界、自动交易隔离和合规原则。
-15. `roadmap.md`：阶段路线。
-16. `cell_dictionary.md`：Cell 分类字典。
-17. `glossary.md`：统一术语。
-18. `design_review.md`：设计完善记录。
+8. `runtime_architecture.md`：理解 Rust 热路径、Python 冷路径和存储交接面。
+9. `cell_protocol.md`：以后新增 Cell 必须遵守的协议。
+10. `data_contract.md`：输入输出数据结构和校验规则。
+11. `data_source_strategy.md`：理解 K 线和行情数据源如何分层、降级和缓存。
+12. `feature_layer_design.md`：理解 K 线基础特征如何统一计算和版本化。
+13. `evaluation_strategy.md`：理解如何判断 Cell 和分析报告是否可靠。
+14. `stability_design.md`：理解分析结构、Cell 输出和风险解释如何保持稳定。
+15. `risk_and_governance.md`：风险边界、自动交易隔离和合规原则。
+16. `roadmap.md`：阶段路线。
+17. `cell_dictionary.md`：Cell 分类字典。
+18. `glossary.md`：统一术语。
+19. `design_review.md`：设计完善记录。
 
 ## 文档层次
 
@@ -28,7 +29,7 @@ L0 文档入口：README.md
 L1 产品层：product_design.md
 L2 架构层：system_architecture.md
 L3 后端工程层：backend_design.md / backend_architecture.md
-L4 协议契约层：cell_protocol.md / data_contract.md / data_source_strategy.md / feature_layer_design.md / polyglot_architecture.md / contracts/
+L4 协议契约层：cell_protocol.md / data_contract.md / data_source_strategy.md / feature_layer_design.md / polyglot_architecture.md / runtime_architecture.md / contracts/
 L5 验证治理层：evaluation_strategy.md / stability_design.md / risk_and_governance.md
 L6 研究规划字典层：external_architecture_research.md / roadmap.md / cell_dictionary.md / glossary.md
 L7 历史记录层：design_review.md
@@ -58,7 +59,8 @@ L7 历史记录层：design_review.md
 | `system_architecture.md` | 总体架构、分层、图、数据流 | v0.2 |
 | `backend_design.md` | 后端模块设计和接口边界 | v0.1 |
 | `backend_architecture.md` | 后端服务化架构和演进路线 | v0.1 |
-| `polyglot_architecture.md` | 多语言仓库结构和共享契约边界 | v0.1 |
+| `polyglot_architecture.md` | 多语言仓库结构和共享契约边界 | v0.2 |
+| `runtime_architecture.md` | Rust 热路径、Python 冷路径和存储交接 | v0.1 |
 | `cell_protocol.md` | Cell 开发协议 | v0.1 |
 | `data_contract.md` | 输入输出数据契约 | v0.2 |
 | `data_source_strategy.md` | K 线和行情数据源策略 | v0.1 |
