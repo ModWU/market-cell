@@ -1,0 +1,245 @@
+# MarketCell 后端架构文档 v0.1
+
+## 1. 架构阶段
+
+MarketCell 后端分三阶段演进。
+
+### 阶段一：本地分析内核
+
+```text
+CLI + Python AnalysisEngine + JSON 输入输出 + AnalysisRun + FileSystemReportStore
+```
+
+目标是把 Cell 协议和分析闭环做稳定。
+
+### 阶段二：本地研究平台
+
+```text
+Python AnalysisEngine + DuckDB / Parquet + Report Store
+```
+
+目标是支持真实数据、历史回放和复盘。
+
+### 阶段三：服务化分析系统
+
+```text
+FastAPI + Task Service + Runtime + Storage + AI + Rust Realtime Core
+```
+
+目标是支持后续界面、自动交易前置系统和实时分析。
+
+## 2. 服务化目标架构
+
+```mermaid
+flowchart TD
+    Client["CLI / Web UI / Future Trading Gateway"] --> API["FastAPI Gateway"]
+    API --> Task["Analysis Task Service"]
+    Task --> Planner["Analysis Planner"]
+    Planner --> Runtime["Cell Runtime"]
+    Runtime --> Registry["Cell Registry"]
+    Runtime --> Feature["Feature Service"]
+    Runtime --> Report["Report Service"]
+    Runtime --> AI["AI Explainer"]
+
+    Data["Market Data Service"] --> Feature
+    Storage["DuckDB / Parquet / PostgreSQL"] --> Data
+    Report --> Storage
+
+    Rust["Rust Realtime Core"] --> Data
+    Risk["Future Risk Guard"] -. later .-> API
+```
+
+## 2.1 从成熟系统吸收的后端模式
+
+后端架构需要预留这些模式：
+
+| 模式 | 来源 | 在 MarketCell 中的用途 |
+|---|---|---|
+| EventBus | NautilusTrader、vn.py | 解耦数据事件、分析任务、报告事件 |
+| Connector / Gateway | Hummingbot、vn.py | 接入交易所、新闻、链上、宏观数据 |
+| Analyzer / Observer | Backtrader | 复盘报告、运行状态监控 |
+| Recorder | Qlib | 保存每次 AnalysisRun 和公式版本 |
+| ResultHandler | LEAN | 分离分析执行和报告保存 |
+
+当前已实现轻量版：
+
+- `EventBus`
+- `AnalysisRun`
+- `FileSystemReportStore`
+- CLI `reports`
+- CLI `replay`
+
+当前不立即实现复杂消息队列，但命名和模块边界已经为 EventBus 预留空间。
+
+## 3. 后端分层
+
+```mermaid
+flowchart TB
+    API["API Layer<br/>CLI / FastAPI"]
+    APP["Application Layer<br/>Task / Engine / Planner"]
+    DOMAIN["Domain Layer<br/>Cell / Result / Evidence"]
+    DATA["Data Layer<br/>Candle / Event / Feature"]
+    INFRA["Infrastructure<br/>DB / Cache / Exchange / Rust"]
+
+    API --> APP
+    APP --> DOMAIN
+    DOMAIN --> DATA
+    APP --> INFRA
+    INFRA --> DATA
+```
+
+## 4. 后台任务模型
+
+服务化后，分析不能只靠同步请求。
+
+建议引入任务模型：
+
+```text
+AnalysisTask {
+  task_id
+  target
+  horizons
+  status
+  created_at
+  started_at
+  finished_at
+  input_snapshot
+  report_id
+  error
+}
+```
+
+同时建议引入 `AnalysisRun`：
+
+```text
+AnalysisRun {
+  run_id
+  task_id
+  engine_version
+  input_hash
+  formula_versions
+  cell_manifests
+  started_at
+  finished_at
+  report_id
+}
+```
+
+`AnalysisTask` 关注任务状态，`AnalysisRun` 关注一次可复盘执行。
+
+当前阶段暂不实现 `AnalysisTask`，先实现 `AnalysisRun`。
+
+原因：
+
+```text
+本地 CLI 阶段没有异步任务队列
+但已经需要记录每次分析如何产生报告
+```
+
+任务状态：
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending
+    Pending --> Running
+    Running --> Succeeded
+    Running --> Failed
+    Pending --> Canceled
+    Failed --> Pending: retry
+    Succeeded --> [*]
+    Canceled --> [*]
+```
+
+## 5. 后端 API 草案
+
+后期服务化接口：
+
+```text
+POST /analysis/run
+GET  /analysis/{task_id}
+GET  /analysis/{task_id}/report
+GET  /cells
+GET  /cells/{cell_id}
+GET  /reports/{report_id}
+POST /replay/{report_id}
+```
+
+第一阶段不实现这些接口，只作为架构目标。
+
+## 6. 数据存储规划
+
+```mermaid
+flowchart LR
+    Raw["Raw Data"] --> Parquet["Parquet<br/>历史行情"]
+    Raw --> DuckDB["DuckDB<br/>研究查询"]
+    Report["AnalysisReport"] --> JSON["JSON Files<br/>v0.x"]
+    Report --> PG["PostgreSQL<br/>服务化后"]
+    Task["AnalysisTask"] --> PG
+    Runtime["Runtime State"] --> Redis["Redis<br/>实时状态"]
+```
+
+阶段选择：
+
+- v0.2：本地 JSON 报告保存
+- v0.5：ReportStore 能力增强
+- v0.6：DuckDB / Parquet
+- v0.8：PostgreSQL
+- v1.0：Redis
+
+## 7. Python 与 Rust 协作方式
+
+短期不做跨语言复杂集成。
+
+中期可选方案：
+
+| 方式 | 适用场景 |
+|---|---|
+| 文件交换 | 批量计算结果 |
+| 子进程 | 简单高性能任务 |
+| HTTP 服务 | 独立实时服务 |
+| 消息队列 | 数据流和任务流 |
+| PyO3 | 性能热点函数 |
+
+建议顺序：
+
+```text
+先 Python
+再找性能热点
+最后把热点迁到 Rust
+```
+
+## 8. 可观测性规划
+
+后端后期必须记录：
+
+- task_id
+- cell_id
+- formula_version
+- input_hash
+- execution_time
+- warning
+- error
+- report_id
+
+这会决定系统能不能复盘。
+
+## 9. 部署演进
+
+```text
+本地 CLI
+→ 本地服务
+→ 单机 API + 数据库
+→ 分析任务队列
+→ 实时数据服务
+→ 自动交易前置系统
+```
+
+不要在早期做复杂微服务。
+
+## 10. 架构风险
+
+- 太早服务化会拖慢核心模型设计。
+- 太早接自动交易会污染分析边界。
+- 太早引入复杂数据库会增加维护成本。
+- 太晚定义数据契约会导致 Cell 输出混乱。
+- 太晚做回放会导致历史判断不可验证。

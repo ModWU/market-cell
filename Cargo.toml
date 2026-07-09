@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/realtime_core"]
+resolver = "3"

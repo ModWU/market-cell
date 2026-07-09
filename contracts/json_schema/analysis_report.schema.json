@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/analysis_report.schema.json",
+  "title": "MarketCell AnalysisReport",
+  "type": "object",
+  "required": [
+    "target",
+    "horizon",
+    "decision",
+    "summary",
+    "run_id",
+    "report_id",
+    "schema_version",
+    "engine_version",
+    "formula_versions",
+    "created_at",
+    "disclaimer"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "target": {
+      "type": "string"
+    },
+    "horizon": {
+      "type": "string"
+    },
+    "decision": {
+      "$ref": "#/$defs/cell_result"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": ["string", "null"]
+    },
+    "report_id": {
+      "type": ["string", "null"]
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "engine_version": {
+      "type": ["string", "null"]
+    },
+    "formula_versions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "created_at": {
+      "type": ["string", "null"]
+    },
+    "disclaimer": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "direction": {
+      "enum": ["bullish", "bearish", "neutral", "conflict"]
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["source", "summary", "weight", "freshness", "reliability"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "number"
+        },
+        "freshness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "reliability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "cell_result": {
+      "type": "object",
+      "required": [
+        "cell_id",
+        "name",
+        "category",
+        "target",
+        "horizon",
+        "direction",
+        "strength",
+        "confidence",
+        "volatility_risk",
+        "manipulation_risk",
+        "urgency",
+        "score",
+        "explanation",
+        "risk_level",
+        "action_posture",
+        "evidence",
+        "children",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cell_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "horizon": {
+          "type": "string"
+        },
+        "direction": {
+          "$ref": "#/$defs/direction"
+        },
+        "strength": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "volatility_risk": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "manipulation_risk": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "urgency": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "score": {
+          "type": "number"
+        },
+        "explanation": {
+          "type": "string"
+        },
+        "risk_level": {
+          "type": ["string", "null"],
+          "enum": ["low", "medium", "high", "extreme", null]
+        },
+        "action_posture": {
+          "type": ["string", "null"],
+          "enum": [
+            "observe",
+            "wait_for_confirmation",
+            "cautious_follow",
+            "reduce_exposure",
+            "avoid_chasing",
+            null
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cell_result"
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}
