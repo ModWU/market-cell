@@ -15,7 +15,7 @@
 11. `data_source_strategy.md`：理解 K 线和行情数据源如何分层、降级和缓存。
 12. `storage_layer_design.md`：理解 Parquet/DuckDB 存储适配和分区策略。
 13. `source_quality_monitoring.md`：理解 K 线缺口、延迟、异常和跨源偏差监控。
-14. `provider_selection_policy.md`：理解如何根据健康趋势、源等级和业务偏好选择主源/备源。
+14. `provider_selection_policy.md`：理解如何根据健康趋势、源等级和业务偏好选择主源/备源，并映射成可审计路由顺序。
 15. `feature_layer_design.md`：理解 K 线基础特征如何统一计算和版本化。
 16. `evaluation_strategy.md`：理解如何判断 Cell 和分析报告是否可靠。
 17. `stability_design.md`：理解分析结构、Cell 输出和风险解释如何保持稳定。

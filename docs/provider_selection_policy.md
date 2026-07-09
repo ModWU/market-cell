@@ -23,12 +23,17 @@ ProviderSelectionPreference   业务侧选择偏好
 ProviderSelectionPolicy
         ↓
 ProviderSelectionPlan         primary / backups / disabled
+        ↓
+RouterPlanBuilder            映射到实际 CandleSource 实例
+        ↓
+RouterPlan                   可审计路由顺序
 ```
 
 当前策略位于：
 
 ```text
 packages/python/src/market_cell/data/provider_selection.py
+packages/python/src/market_cell/data/router_plan.py
 ```
 
 它属于 Data Layer 的策略层，不属于 Cell Layer，也不属于 Rust 实时热路径。
@@ -167,6 +172,17 @@ reliability
 
 `score_components` 用来解释分数来源，`reason_codes` 用来解释角色和禁用原因。
 
+`RouterPlanBuilder` 在 `ProviderSelectionPlan` 之后运行，它输出：
+
+```text
+entries            已经映射到实际 CandleSource 的主备顺序
+disabled           被策略禁用的 provider
+missing_providers  策略选中但当前没有 source 实例的 provider
+ignored_providers  传入了 source 实例但没有进入 selection plan 的 provider
+```
+
+`RouterPlan.to_router()` 会显式生成 `MarketDataRouter`。如果没有任何可路由 source，会抛出错误，而不是静默回退到未经过策略选择的 source。
+
 ## 7. 使用示例
 
 ```python
@@ -186,11 +202,32 @@ plan = ProviderSelectionPolicy().select(
 )
 ```
 
+构建可执行路由计划：
+
+```python
+from market_cell.data import RouterPlanBuilder
+
+router_plan = RouterPlanBuilder().build(available_sources, plan)
+router = router_plan.to_router()
+```
+
+如果 source 实例和 profile 来自同一批对象，也可以一步完成：
+
+```python
+router_plan = RouterPlanBuilder().build_from_sources(
+    sources=available_sources,
+    reliabilities=provider_reliability_summaries,
+    preference=preference,
+)
+```
+
 ## 8. 边界
 
 当前策略只负责生成选择计划。
 
-它不会：
+`RouterPlanBuilder` 只负责把选择计划映射到实际 source 实例。
+
+它们都不会：
 
 - 直接修改 `MarketDataRouter`
 - 自动发起网络请求
@@ -198,7 +235,7 @@ plan = ProviderSelectionPolicy().select(
 - 影响 Cell 输出协议
 - 替代实时热路径里的连接状态和延迟监控
 
-后续如果要接入运行时路由，建议新增 `ProviderSelectionPlanner` 或 `RouterPlanBuilder`，把 plan 转成 router source 顺序，而不是让 policy 直接持有 source 实例。
+`ProviderSelectionPolicy` 不能持有 source 实例，`RouterPlanBuilder` 不能重新计算健康分，`MarketDataRouter` 不能理解业务优先级。三者分开，才能保证策略、配置和运行时行为都可测试。
 
 ## 9. 后续增强
 
@@ -206,4 +243,5 @@ plan = ProviderSelectionPolicy().select(
 - 区分历史数据源选择和实时数据源选择。
 - 加入 symbol / horizon / venue 级别的可靠性评分。
 - 把 provider 选择计划保存到 AnalysisRun，便于复盘。
+- 把 RouterPlan 保存到 AnalysisRun，记录真实路由顺序、缺失 provider 和禁用原因。
 - 将 Rust 热路径产出的实时质量 warning 汇入同一套 reliability 聚合。

@@ -16,6 +16,7 @@ It owns:
 - Source health summaries by provider, symbol, and horizon
 - Source health trends and provider reliability summaries
 - Provider selection plans for primary, backup, and disabled market data sources
+- Auditable router plans that map provider selection plans to concrete candle sources
 
 Optional local storage extras:
 

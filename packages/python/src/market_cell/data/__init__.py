@@ -30,6 +30,7 @@ from market_cell.data.quality_store import (
     DataQualityStore,
     FileSystemDataQualityStore,
 )
+from market_cell.data.router_plan import RouterPlan, RouterPlanBuilder, RouterPlanEntry
 from market_cell.data.sources import (
     CachedCandleSource,
     CandleBatch,
@@ -79,6 +80,9 @@ __all__ = [
     "ProviderSelectionPlan",
     "ProviderSelectionPolicy",
     "ProviderSelectionPreference",
+    "RouterPlan",
+    "RouterPlanBuilder",
+    "RouterPlanEntry",
     "SourceComparisonReport",
     "SourceHealthSummary",
     "SourceHealthTrendPoint",

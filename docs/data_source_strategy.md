@@ -73,6 +73,7 @@ packages/python/src/market_cell/data/
 ├── quality.py      # K 线质量检查
 ├── monitoring.py   # 数据源质量监控和跨源比较
 ├── provider_selection.py # 基于健康趋势和业务偏好的主备源选择策略
+├── router_plan.py  # 把主备源选择计划映射成可审计路由顺序
 └── binance.py      # Binance Spot Kline 开发/备份适配器
 ```
 
@@ -90,6 +91,7 @@ packages/python/src/market_cell/data/
 - `SourceHealthSummary` 可按 provider / symbol / horizon 聚合问题，输出基础健康评分。
 - `SourceHealthTrendPoint` 和 `ProviderReliabilitySummary` 可形成按时间窗口的健康趋势和 provider 排名输入。
 - `ProviderSelectionPolicy` 可根据源等级、健康趋势、业务偏好、实时/历史能力和 API key 可用性输出 primary / backups / disabled 计划。
+- `RouterPlanBuilder` 可把 `ProviderSelectionPlan` 映射到实际 `CandleSource` 实例，记录缺失 provider、禁用 provider 和未进入计划的 source。
 - 测试只使用本地文件和假源，不依赖外部 API。
 
 ## 4. 生产建议
@@ -122,7 +124,7 @@ packages/python/src/market_cell/data/
 3. Feature Layer：把 K 线转成稳定特征快照。
 4. Parquet/DuckDB Cache Hardening：补齐去重、upsert、批量压缩和查询窗口。
 5. Professional Provider Adapter：优先接 CoinAPI 或 Kaiko。
-6. Router Plan Builder：把 ProviderSelectionPlan 转成可控的数据源顺序。
+6. Router Plan Persistence：把 ProviderSelectionPlan 和 RouterPlan 写入 AnalysisRun，方便复盘。
 7. Realtime Stream Worker：独立于分析内核处理 WebSocket。
 
 ## 6. 官方资料入口

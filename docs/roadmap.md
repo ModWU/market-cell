@@ -39,6 +39,7 @@
 - SourceHealthSummary：按 provider / symbol / horizon 聚合质量评分
 - SourceHealthTrendPoint / ProviderReliabilitySummary：按时间窗口聚合趋势和 provider 基础排名
 - ProviderSelectionPolicy：结合源等级、健康趋势、业务偏好和 API key 可用性选择主源/备源/禁用源
+- RouterPlanBuilder：把 ProviderSelectionPlan 映射成可审计的数据源路由顺序
 
 ## v0.3 Cell 扩展
 
@@ -55,7 +56,7 @@
 - EventBus 使用场景扩展
 - ReportAnalyzer 接口草案
 - Parquet / DuckDB 去重、upsert 和查询窗口增强
-- Router Plan Builder：把 ProviderSelectionPlan 转成可审计的数据源顺序
+- Provider/Router Plan Persistence：把数据源选择计划和实际路由计划写入 AnalysisRun
 - 数据源心跳成功率和延迟分布
 
 ## v0.4 多周期分析

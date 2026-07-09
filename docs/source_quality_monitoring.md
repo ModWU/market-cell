@@ -32,6 +32,7 @@ packages/python/src/market_cell/data/
 - `SourceHealthTrendPoint`：按小时或天生成健康评分趋势点。
 - `ProviderReliabilitySummary`：按 provider 聚合趋势点，输出基础可靠性排名输入。
 - `ProviderSelectionPolicy`：读取 provider 可靠性摘要和源画像，输出主源/备源/禁用源建议。
+- `RouterPlanBuilder`：把主备源建议映射到实际 `CandleSource` 实例，形成可执行但可审计的路由顺序。
 
 ## 3. 问题码
 
@@ -206,6 +207,13 @@ source_provider asc
 - 最近健康分：最近质量下滑的数据源不能继续做主源。
 - API key 可用性：专业数据商密钥未配置时不能被推荐为可用源。
 - 业务偏好：允许显式偏好、禁用和优先级调整。
+
+`RouterPlanBuilder` 不重新计算健康分，只记录：
+
+- 哪些 provider 成功映射到 source 实例。
+- 哪些 provider 被策略禁用。
+- 哪些 provider 被选中但当前缺少 source 实现。
+- 哪些 source 被传入但没有进入 selection plan。
 
 ## 9. 后续增强
 

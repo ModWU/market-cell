@@ -96,7 +96,7 @@ packages/python/src/market_cell/
 
 健康趋势同样位于 `data/health.py`，按小时或天聚合 JSONL 质量记录。后续 ProviderSelectionPolicy 可以读取这些趋势，但仍必须把最终 K 线数据转回 `CandleBatch` 和 `AnalysisRequest`。
 
-数据源选择策略位于 `data/provider_selection.py`。它只生成 `ProviderSelectionPlan`，用于表达 primary / backups / disabled 的建议，不直接持有网络连接，也不直接改变 `MarketDataRouter` 的运行顺序。这样可以让策略可测试、可审计，也避免把 Python 冷路径策略和后续 Rust 实时热路径耦合在一起。
+数据源选择策略位于 `data/provider_selection.py`。它只生成 `ProviderSelectionPlan`，用于表达 primary / backups / disabled 的建议，不直接持有网络连接。`data/router_plan.py` 再把选择计划映射到实际 `CandleSource` 实例，生成可审计的 `RouterPlan`，最后显式创建 `MarketDataRouter`。这样可以让策略、配置和取数运行时分别测试，也避免把 Python 冷路径策略和后续 Rust 实时热路径耦合在一起。
 
 ## 5. Storage Layer
 
@@ -137,7 +137,8 @@ Analysis output  -> contracts/json_schema/analysis_report.schema.json
 3. 建立 Rust market data domain primitives。
 4. 建立 Python ReplayRunner，验证静态快照能稳定重跑。
 5. 建立数据源健康趋势和 provider 选择计划。
-6. 再推进 Parquet / DuckDB 和专业数据商 adapter。
+6. 建立 RouterPlanBuilder，让 provider 计划能映射成可审计路由顺序。
+7. 再推进 Parquet / DuckDB 和专业数据商 adapter。
 
 暂不做：
 
