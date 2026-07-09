@@ -41,6 +41,7 @@ market-cell/
 │   ├── polyglot_architecture.md # 多语言仓库和契约边界
 │   ├── cell_protocol.md       # Cell 开发协议
 │   ├── data_contract.md       # 输入输出数据契约
+│   ├── data_source_strategy.md # K 线和行情数据源策略
 │   ├── evaluation_strategy.md # 评估和验证策略
 │   ├── stability_design.md    # 分析结构、Cell 输出和风险解释稳定性
 │   ├── cell_dictionary.md     # Cell 分类字典
@@ -53,6 +54,7 @@ market-cell/
 │       ├── pyproject.toml      # Python 包配置
 │       ├── src/market_cell/
 │       │   ├── cli.py          # 命令行入口
+│       │   ├── data/           # K 线数据源协议和适配器
 │       │   ├── engine.py       # 分析执行器
 │       │   ├── models.py       # 核心数据结构
 │       │   ├── policies/       # 决策策略和风险分层

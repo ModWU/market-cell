@@ -11,13 +11,14 @@
 7. `polyglot_architecture.md`：理解多语言目录、共享契约和语言职责边界。
 8. `cell_protocol.md`：以后新增 Cell 必须遵守的协议。
 9. `data_contract.md`：输入输出数据结构和校验规则。
-10. `evaluation_strategy.md`：理解如何判断 Cell 和分析报告是否可靠。
-11. `stability_design.md`：理解分析结构、Cell 输出和风险解释如何保持稳定。
-12. `risk_and_governance.md`：风险边界、自动交易隔离和合规原则。
-13. `roadmap.md`：阶段路线。
-14. `cell_dictionary.md`：Cell 分类字典。
-15. `glossary.md`：统一术语。
-16. `design_review.md`：设计完善记录。
+10. `data_source_strategy.md`：理解 K 线和行情数据源如何分层、降级和缓存。
+11. `evaluation_strategy.md`：理解如何判断 Cell 和分析报告是否可靠。
+12. `stability_design.md`：理解分析结构、Cell 输出和风险解释如何保持稳定。
+13. `risk_and_governance.md`：风险边界、自动交易隔离和合规原则。
+14. `roadmap.md`：阶段路线。
+15. `cell_dictionary.md`：Cell 分类字典。
+16. `glossary.md`：统一术语。
+17. `design_review.md`：设计完善记录。
 
 ## 文档层次
 
@@ -26,7 +27,7 @@ L0 文档入口：README.md
 L1 产品层：product_design.md
 L2 架构层：system_architecture.md
 L3 后端工程层：backend_design.md / backend_architecture.md
-L4 协议契约层：cell_protocol.md / data_contract.md / polyglot_architecture.md / contracts/
+L4 协议契约层：cell_protocol.md / data_contract.md / data_source_strategy.md / polyglot_architecture.md / contracts/
 L5 验证治理层：evaluation_strategy.md / stability_design.md / risk_and_governance.md
 L6 研究规划字典层：external_architecture_research.md / roadmap.md / cell_dictionary.md / glossary.md
 L7 历史记录层：design_review.md
@@ -59,6 +60,7 @@ L7 历史记录层：design_review.md
 | `polyglot_architecture.md` | 多语言仓库结构和共享契约边界 | v0.1 |
 | `cell_protocol.md` | Cell 开发协议 | v0.1 |
 | `data_contract.md` | 输入输出数据契约 | v0.2 |
+| `data_source_strategy.md` | K 线和行情数据源策略 | v0.1 |
 | `evaluation_strategy.md` | Cell 和报告的验证方法 | v0.1 |
 | `stability_design.md` | 分析结构、Cell 输出和风险解释稳定性设计 | v0.1 |
 | `cell_dictionary.md` | Cell 分类字典 | v0.1 |

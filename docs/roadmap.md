@@ -25,6 +25,7 @@
 - JSON Schema 契约
 - DecisionPolicy 策略层和风险分层
 - GitHub Actions CI，自动运行 Python 和 Rust 测试
+- Data Source 协议、K 线主备路由和 Binance 开发适配器
 
 ## v0.3 Cell 扩展
 
@@ -41,6 +42,8 @@
 - ReplayRunner 接口草案
 - EventBus 使用场景扩展
 - ReportAnalyzer 接口草案
+- Feature Layer
+- Parquet / DuckDB 行情缓存草案
 
 ## v0.4 多周期分析
 
