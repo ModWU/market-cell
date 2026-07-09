@@ -6,7 +6,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 target/
-reports/
+/reports/
 dist/
 build/
 *.egg-info/
