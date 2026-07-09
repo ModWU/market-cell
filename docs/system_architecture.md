@@ -66,6 +66,7 @@ flowchart TD
 - ReplayRunner
 - JSON Report v1
 - JSON Schema 契约
+- AnalysisRun JSON Schema 运行审计契约
 - Protobuf 行情事件契约
 - Parquet K 线批量存储契约
 - Parquet/DuckDB 存储适配基础
@@ -213,7 +214,7 @@ flowchart TB
 - 链上数据 API
 - Rust realtime_core
 
-数据源选择策略属于 Infrastructure Layer 与 Data Layer 之间的策略边界。它读取 `SourceProfile` 和 `ProviderReliabilitySummary`，输出 `ProviderSelectionPlan`。`RouterPlanBuilder` 再把选择计划映射到具体 `CandleSource` 实例，生成 `RouterPlan`。`MarketDataRouter` 只执行已确定的 source 顺序和质量降级。选择计划和实际路由计划可以写入 `AnalysisRun.metadata`，用于复盘，不进入 `AnalysisReport` 决策主体，避免策略层、配置层、运行时连接实例和 Cell 输出耦合。
+数据源选择策略属于 Infrastructure Layer 与 Data Layer 之间的策略边界。它读取 `SourceProfile` 和 `ProviderReliabilitySummary`，输出 `ProviderSelectionPlan`。`RouterPlanBuilder` 再把选择计划映射到具体 `CandleSource` 实例，生成 `RouterPlan`。`MarketDataRouter` 只执行已确定的 source 顺序和质量降级。选择计划和实际路由计划可以写入 `AnalysisRun.metadata`，用于复盘，不进入 `AnalysisReport` 决策主体。`AnalysisRun` 本身由 JSON Schema 约束，避免策略层、配置层、运行时连接实例和 Cell 输出耦合。
 
 ## 4. 运行流程
 

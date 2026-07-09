@@ -1,0 +1,383 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/analysis_run.schema.json",
+  "title": "MarketCell AnalysisRun",
+  "type": "object",
+  "required": [
+    "run_id",
+    "target",
+    "horizon",
+    "engine_version",
+    "input_hash",
+    "input_snapshot",
+    "formula_versions",
+    "cell_manifests",
+    "status",
+    "started_at",
+    "schema_version",
+    "finished_at",
+    "report_id",
+    "error",
+    "metadata"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "horizon": {
+      "type": "string",
+      "minLength": 1
+    },
+    "engine_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_hash": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_snapshot": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "formula_versions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "cell_manifests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "status": {
+      "enum": ["running", "succeeded", "failed"]
+    },
+    "started_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schema_version": {
+      "const": "analysis_run.v1"
+    },
+    "finished_at": {
+      "type": ["string", "null"]
+    },
+    "report_id": {
+      "type": ["string", "null"]
+    },
+    "error": {
+      "type": ["string", "null"]
+    },
+    "metadata": {
+      "$ref": "#/$defs/run_metadata"
+    }
+  },
+  "$defs": {
+    "run_metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "data_sources": {
+          "$ref": "#/$defs/data_source_audit"
+        }
+      }
+    },
+    "data_source_audit": {
+      "type": "object",
+      "required": ["provider_selection_plan", "router_plan"],
+      "additionalProperties": true,
+      "properties": {
+        "provider_selection_plan": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/provider_selection_plan"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "router_plan": {
+          "$ref": "#/$defs/router_plan"
+        }
+      }
+    },
+    "provider_selection_plan": {
+      "type": "object",
+      "required": ["primary", "backups", "disabled", "candidates"],
+      "additionalProperties": false,
+      "properties": {
+        "primary": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/provider_selection_candidate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "backups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/provider_selection_candidate"
+          }
+        },
+        "disabled": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/provider_selection_candidate"
+          }
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/provider_selection_candidate"
+          }
+        }
+      }
+    },
+    "provider_selection_candidate": {
+      "type": "object",
+      "required": [
+        "provider",
+        "tier",
+        "role",
+        "selection_score",
+        "health_score",
+        "business_priority",
+        "score_components",
+        "reason_codes",
+        "profile",
+        "reliability"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tier": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "enum": ["primary", "backup", "disabled"]
+        },
+        "selection_score": {
+          "type": "number"
+        },
+        "health_score": {
+          "type": ["number", "null"]
+        },
+        "business_priority": {
+          "type": "number"
+        },
+        "score_components": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "profile": {
+          "$ref": "#/$defs/source_profile"
+        },
+        "reliability": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/provider_reliability"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "router_plan": {
+      "type": "object",
+      "required": ["entries", "disabled", "missing_providers", "ignored_providers"],
+      "additionalProperties": false,
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/router_plan_entry"
+          }
+        },
+        "disabled": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/provider_selection_candidate"
+          }
+        },
+        "missing_providers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ignored_providers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "router_plan_entry": {
+      "type": "object",
+      "required": ["provider", "role", "selection_score", "reason_codes", "profile", "candidate"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "enum": ["primary", "backup", "disabled"]
+        },
+        "selection_score": {
+          "type": "number"
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "profile": {
+          "$ref": "#/$defs/source_profile"
+        },
+        "candidate": {
+          "$ref": "#/$defs/provider_selection_candidate"
+        }
+      }
+    },
+    "source_profile": {
+      "type": "object",
+      "required": [
+        "provider",
+        "tier",
+        "description",
+        "supports_realtime",
+        "supports_history",
+        "requires_api_key"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tier": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "supports_realtime": {
+          "type": "boolean"
+        },
+        "supports_history": {
+          "type": "boolean"
+        },
+        "requires_api_key": {
+          "type": "boolean"
+        }
+      }
+    },
+    "provider_reliability": {
+      "type": "object",
+      "required": [
+        "source_provider",
+        "trend_point_count",
+        "record_count",
+        "average_health_score",
+        "latest_health_score",
+        "worst_health_score",
+        "health_grade",
+        "affected_symbols",
+        "affected_horizons",
+        "severity_counts",
+        "issue_counts",
+        "first_window_start",
+        "last_window_start"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source_provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trend_point_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "record_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "average_health_score": {
+          "type": "number"
+        },
+        "latest_health_score": {
+          "type": "number"
+        },
+        "worst_health_score": {
+          "type": "number"
+        },
+        "health_grade": {
+          "enum": ["excellent", "good", "degraded", "poor"]
+        },
+        "affected_symbols": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "affected_horizons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "severity_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "issue_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "first_window_start": {
+          "type": ["string", "null"]
+        },
+        "last_window_start": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

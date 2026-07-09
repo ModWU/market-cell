@@ -187,13 +187,34 @@ avoid_chasing
   "formula_versions": {},
   "cell_manifests": [],
   "status": "succeeded",
+  "schema_version": "analysis_run.v1",
   "started_at": "2026-07-09T00:00:00+00:00",
   "finished_at": "2026-07-09T00:00:01+00:00",
-  "report_id": "abc123"
+  "report_id": "abc123",
+  "metadata": {
+    "data_sources": {
+      "provider_selection_plan": {},
+      "router_plan": {}
+    }
+  }
 }
 ```
 
 `AnalysisRun` 关注“这次分析如何产生”，`AnalysisReport` 关注“这次分析输出什么”。
+
+`AnalysisRun.metadata` 是运行审计扩展区。当前已经稳定预留：
+
+```text
+metadata.data_sources.provider_selection_plan
+metadata.data_sources.router_plan
+```
+
+规则：
+
+- `AnalysisRun` 必须带 `schema_version = analysis_run.v1`。
+- 数据源选择和实际路由计划只进入 `AnalysisRun.metadata`，不进入 `AnalysisReport.decision`。
+- metadata 可以继续扩展，但已经命名的领域必须保持结构稳定。
+- 回放时应该优先读取 `input_snapshot`、`formula_versions` 和 `metadata`，不要依赖临时日志。
 
 ## 9. 版本策略
 
@@ -203,6 +224,17 @@ avoid_chasing
 schema_version
 engine_version
 formula_versions
+```
+
+当前已经在 `AnalysisRun` 中加入：
+
+```text
+schema_version
+engine_version
+input_hash
+input_snapshot
+formula_versions
+metadata
 ```
 
 跨语言 schema 保存在：

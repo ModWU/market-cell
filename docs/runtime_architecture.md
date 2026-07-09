@@ -96,7 +96,7 @@ packages/python/src/market_cell/
 
 健康趋势同样位于 `data/health.py`，按小时或天聚合 JSONL 质量记录。后续 ProviderSelectionPolicy 可以读取这些趋势，但仍必须把最终 K 线数据转回 `CandleBatch` 和 `AnalysisRequest`。
 
-数据源选择策略位于 `data/provider_selection.py`。它只生成 `ProviderSelectionPlan`，用于表达 primary / backups / disabled 的建议，不直接持有网络连接。`data/router_plan.py` 再把选择计划映射到实际 `CandleSource` 实例，生成可审计的 `RouterPlan`，最后显式创建 `MarketDataRouter`。`RouterPlan.to_run_metadata()` 可把选择计划和实际路由计划写入 `AnalysisRun.metadata`，不改变 `AnalysisReport` 和 Cell 输出结构。这样可以让策略、配置、取数运行时和分析报告分别测试，也避免把 Python 冷路径策略和后续 Rust 实时热路径耦合在一起。
+数据源选择策略位于 `data/provider_selection.py`。它只生成 `ProviderSelectionPlan`，用于表达 primary / backups / disabled 的建议，不直接持有网络连接。`data/router_plan.py` 再把选择计划映射到实际 `CandleSource` 实例，生成可审计的 `RouterPlan`，最后显式创建 `MarketDataRouter`。`RouterPlan.to_run_metadata()` 可把选择计划和实际路由计划写入 `AnalysisRun.metadata`，不改变 `AnalysisReport` 和 Cell 输出结构。`AnalysisRun` 已经有 `analysis_run.v1` JSON Schema，后续服务化和跨语言模块必须按该契约保存运行审计。这样可以让策略、配置、取数运行时和分析报告分别测试，也避免把 Python 冷路径策略和后续 Rust 实时热路径耦合在一起。
 
 ## 5. Storage Layer
 
@@ -120,10 +120,11 @@ Storage Layer 是冷热路径的交接面，不应该让 Python 直接依赖 Rus
 ## 6. 契约边界
 
 ```text
-Realtime events  -> contracts/protobuf/market_data.proto
-Historical batch -> contracts/parquet/candle_schema.md
-Analysis input   -> contracts/json_schema/analysis_request.schema.json
-Analysis output  -> contracts/json_schema/analysis_report.schema.json
+Realtime events   -> contracts/protobuf/market_data.proto
+Historical batch  -> contracts/parquet/candle_schema.md
+Analysis input    -> contracts/json_schema/analysis_request.schema.json
+Analysis output   -> contracts/json_schema/analysis_report.schema.json
+Analysis run/audit -> contracts/json_schema/analysis_run.schema.json
 ```
 
 跨语言模块只能围绕这些契约协作。Python dataclass 和 Rust struct 都是各自语言里的实现，不是跨语言的唯一真相。
@@ -139,7 +140,8 @@ Analysis output  -> contracts/json_schema/analysis_report.schema.json
 5. 建立数据源健康趋势和 provider 选择计划。
 6. 建立 RouterPlanBuilder，让 provider 计划能映射成可审计路由顺序。
 7. 把 provider/router 审计信息写入 AnalysisRun。
-8. 再推进 Parquet / DuckDB 和专业数据商 adapter。
+8. 建立 AnalysisRun JSON Schema，让运行审计可跨语言复用。
+9. 再推进 Parquet / DuckDB 和专业数据商 adapter。
 
 暂不做：
 

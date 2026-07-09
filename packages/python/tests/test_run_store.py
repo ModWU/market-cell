@@ -53,14 +53,15 @@ class RunStoreTests(unittest.TestCase):
             store = FileSystemReportStore(Path(temp_dir))
             report = AnalysisEngine(
                 report_store=store,
-                run_metadata={"data_sources": {"router_plan": {"entries": []}}},
+                run_metadata={"operator": {"source": "unit_test"}},
             ).run(
                 request,
                 metadata={"data_quality": {"score": 98}},
             )
             saved_run = store.load_run(report.run_id or "")
 
-        self.assertEqual(saved_run["metadata"]["data_sources"]["router_plan"]["entries"], [])
+        self.assertEqual(saved_run["schema_version"], "analysis_run.v1")
+        self.assertEqual(saved_run["metadata"]["operator"]["source"], "unit_test")
         self.assertEqual(saved_run["metadata"]["data_quality"]["score"], 98)
 
     def test_report_store_lists_saved_reports(self):

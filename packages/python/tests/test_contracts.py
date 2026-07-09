@@ -1,9 +1,11 @@
 import json
 import unittest
 from pathlib import Path
+import tempfile
 
 from market_cell.engine import AnalysisEngine
 from market_cell.models import AnalysisRequest, Candle
+from market_cell.reports import FileSystemReportStore
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -48,6 +50,29 @@ class ContractTests(unittest.TestCase):
         for field_name in schema["required"]:
             with self.subTest(field_name=field_name):
                 self.assertIn(field_name, report)
+
+    def test_analysis_run_contains_contract_required_fields(self):
+        schema = json.loads(
+            (ROOT / "contracts" / "json_schema" / "analysis_run.schema.json").read_text(encoding="utf-8")
+        )
+        request = AnalysisRequest(
+            target="BTC/USD",
+            horizon="1h",
+            candles=[
+                Candle("t1", open=100, high=101, low=99, close=100, volume=1000),
+                Candle("t2", open=100, high=102, low=99, close=101, volume=1200),
+            ],
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = FileSystemReportStore(Path(temp_dir))
+            report = AnalysisEngine(report_store=store).run(request)
+            run = store.load_run(report.run_id or "")
+
+        for field_name in schema["required"]:
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, run)
+        self.assertEqual(run["schema_version"], "analysis_run.v1")
 
 
 if __name__ == "__main__":

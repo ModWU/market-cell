@@ -194,6 +194,8 @@ data_sources.router_plan
 
 保存报告时，这些信息会进入 `AnalysisRun.metadata`，不会进入 `AnalysisReport` 主体，也不会改变 Cell 输出结构。
 
+`AnalysisRun.metadata` 受 `contracts/json_schema/analysis_run.schema.json` 约束。后续新增数据源审计字段时，应优先扩展该契约，而不是在调用处临时拼接不稳定字段。
+
 ## 7. 使用示例
 
 ```python

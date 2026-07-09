@@ -12,6 +12,9 @@ from market_cell.events import utc_now_iso
 from market_cell.models import AnalysisRequest, CellManifest
 
 
+RUN_SCHEMA_VERSION = "analysis_run.v1"
+
+
 def stable_json_hash(data: dict[str, Any]) -> str:
     raw = json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -41,6 +44,7 @@ class AnalysisRun:
     cell_manifests: list[dict[str, Any]]
     status: str
     started_at: str
+    schema_version: str = RUN_SCHEMA_VERSION
     finished_at: str | None = None
     report_id: str | None = None
     error: str | None = None
@@ -64,6 +68,7 @@ class AnalysisRun:
             formula_versions=formula_versions(manifests),
             cell_manifests=manifests_to_dicts(manifests),
             status="running",
+            schema_version=RUN_SCHEMA_VERSION,
             started_at=utc_now_iso(),
             metadata=deepcopy(metadata or {}),
         )
