@@ -27,6 +27,7 @@ packages/python/src/market_cell/data/
 - `SourceQualityReport`：单源质量报告。
 - `SourceComparisonReport`：跨源比较报告。
 - `SourceQualityMonitor`：统一检测入口。
+- `FileSystemDataQualityStore`：把质量问题持久化为 JSONL 时间序列。
 
 ## 3. 问题码
 
@@ -60,18 +61,64 @@ report = monitor.inspect_batch(batch, now="2026-07-09T05:30:00Z")
 comparison = monitor.compare_sources(primary_batch, reference_batch)
 ```
 
+保存质量问题：
+
+```python
+from market_cell.data import FileSystemDataQualityStore
+
+store = FileSystemDataQualityStore()
+store.save_source_report(report)
+store.save_comparison_report(comparison)
+```
+
+查询历史问题：
+
+```python
+records = store.list_records(source_provider="kaiko", symbol="BTC/USD", code="time_gap")
+```
+
 ## 5. 架构边界
 
 - SourceQualityMonitor 不访问网络。
 - SourceQualityMonitor 不保存数据。
 - SourceQualityMonitor 不生成交易结论。
+- FileSystemDataQualityStore 只保存结构化质量问题，不改变数据源返回值。
 - Router 可以用基础合法性检查做主备降级。
 - 后续监控服务可以持久化 `DataQualityIssue`，但不能改变 Cell 输出协议。
 
-## 6. 后续增强
+## 6. 存储布局
 
-- 把质量报告写入 Parquet/JSONL，形成数据源质量时间序列。
+默认 JSONL 路径：
+
+```text
+.market_cell_cache/data_quality/
+provider=<source_provider>/
+symbol=<symbol>/
+horizon=<horizon>/
+date=<YYYY-MM-DD>/
+issues.jsonl
+```
+
+每行是一个 `DataQualityRecord`：
+
+```text
+record_id
+kind
+observed_at
+issue
+context
+```
+
+`kind` 当前支持：
+
+- `source_quality`
+- `source_comparison`
+
+## 7. 后续增强
+
+- 把 JSONL 质量记录升级为 Parquet，支持更快查询和聚合。
 - 在 Rust 热路径生成实时 `DataQualityWarning`。
 - 建立跨源价差的动态阈值，而不是固定百分比。
 - 增加交易所维护、停盘、低流动性时段的例外规则。
 - 在报告中标注数据质量对结论可信度的影响。
+- 增加健康评分趋势、告警阈值和 Provider 可靠性排名。

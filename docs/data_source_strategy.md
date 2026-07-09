@@ -85,6 +85,7 @@ packages/python/src/market_cell/data/
 - `CachedCandleSource` 可包装任意数据源，减少重复外部请求。
 - `ParquetCandleStore` 和 `DuckDBCandleSource` 为本地历史缓存和研究查询提供可选扩展。
 - `SourceQualityMonitor` 可生成缺口、陈旧、异常量价和跨源偏差的结构化质量报告。
+- `FileSystemDataQualityStore` 可把质量问题写入 JSONL，形成数据源健康时间序列。
 - 测试只使用本地文件和假源，不依赖外部 API。
 
 ## 4. 生产建议
@@ -116,7 +117,7 @@ packages/python/src/market_cell/data/
 2. Realtime / Batch Contracts：用 Protobuf 描述实时事件，用 Parquet schema 描述历史 K 线。
 3. Feature Layer：把 K 线转成稳定特征快照。
 4. Parquet/DuckDB Cache Hardening：补齐去重、upsert、批量压缩和查询窗口。
-5. Source Quality Persistence：把质量问题写入本地存储，形成数据源健康时间序列。
+5. Source Health Summary：聚合质量问题，形成 Provider 健康评分趋势。
 6. Professional Provider Adapter：优先接 CoinAPI 或 Kaiko。
 7. Realtime Stream Worker：独立于分析内核处理 WebSocket。
 

@@ -90,6 +90,8 @@ packages/python/src/market_cell/
 
 数据源健康检查通过 `data/monitoring.py` 输出结构化质量问题，覆盖缺口、陈旧、异常量价和跨源偏差。当前在 Python 冷路径提供参考实现，后续 Rust 热路径可以输出同一类 `DataQualityWarning`。
 
+质量问题持久化通过 `data/quality_store.py` 写入 JSONL 时间序列。它只记录数据健康状况，不参与 Cell 决策聚合。
+
 ## 5. Storage Layer
 
 Storage Layer 是冷热路径的交接面，不应该让 Python 直接依赖 Rust 内部对象，也不应该让 Rust 直接调用 Python Cell。

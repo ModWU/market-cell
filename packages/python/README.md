@@ -12,6 +12,7 @@ It owns:
 - Replay comparison from saved input snapshots
 - Static and low-frequency data analysis workflows
 - Candle source quality monitoring and cross-source comparison
+- Data quality issue persistence for source health history
 
 Optional local storage extras:
 

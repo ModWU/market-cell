@@ -6,6 +6,11 @@ from market_cell.data.monitoring import (
     SourceQualityReport,
 )
 from market_cell.data.quality import CandleQualityReport, inspect_candles
+from market_cell.data.quality_store import (
+    DataQualityRecord,
+    DataQualityStore,
+    FileSystemDataQualityStore,
+)
 from market_cell.data.sources import (
     CachedCandleSource,
     CandleBatch,
@@ -41,7 +46,10 @@ __all__ = [
     "CandleQualityReport",
     "CandleRow",
     "DataQualityIssue",
+    "DataQualityRecord",
+    "DataQualityStore",
     "DuckDBCandleSource",
+    "FileSystemDataQualityStore",
     "inspect_candles",
     "OptionalStorageDependencyError",
     "ParquetCandleStore",
