@@ -100,7 +100,7 @@ packages/python/src/market_cell/
 
 数据源选择策略位于 `data/provider_selection.py`。它只生成 `ProviderSelectionPlan`，用于表达 primary / backups / disabled 的建议，不直接持有网络连接。`data/router_plan.py` 再把选择计划映射到实际 `CandleSource` 实例，生成可审计的 `RouterPlan`，最后显式创建 `MarketDataRouter`。`RouterPlan.to_run_metadata()` 可把选择计划和实际路由计划写入 `AnalysisRun.metadata`，不改变 `AnalysisReport` 和 Cell 输出结构。`AnalysisRun` 已经有 `analysis_run.v1` JSON Schema，后续服务化和跨语言模块必须按该契约保存运行审计。这样可以让策略、配置、取数运行时和分析报告分别测试，也避免把 Python 冷路径策略和后续 Rust 实时热路径耦合在一起。
 
-Cell 执行计划位于 `execution/`，当前提供本地 `build_local_execution_plan`。它把本地单进程 Cell 也表示成 `CellExecutionPlan`，并写入 `AnalysisRun.metadata.cell_execution_plan`。这样当前仍是单服务本地执行，但服务化时可以把同一份计划交给远程 executor、task queue 或 worker pool。
+Cell 执行计划位于 `execution/`，当前提供本地 `build_local_execution_plan`。它把本地单进程 Cell 也表示成 `CellExecutionPlan`，并写入 `AnalysisRun.metadata.cell_execution_plan`。本地执行器还会为每个 Cell 写入 `AnalysisRun.metadata.cell_runtime_traces`，记录实际服务、实现、状态和耗时。这样当前仍是单服务本地执行，但服务化时可以把同一份计划交给远程 executor、task queue 或 worker pool，并让远程 worker 上报同一类 trace。
 
 ## 5. Storage Layer
 
@@ -130,6 +130,7 @@ Analysis input    -> contracts/json_schema/analysis_request.schema.json
 Analysis output   -> contracts/json_schema/analysis_report.schema.json
 Analysis run/audit -> contracts/json_schema/analysis_run.schema.json
 Cell execution   -> contracts/json_schema/cell_execution_plan.schema.json
+Cell trace       -> contracts/json_schema/cell_runtime_trace.schema.json
 ```
 
 跨语言模块只能围绕这些契约协作。Python dataclass 和 Rust struct 都是各自语言里的实现，不是跨语言的唯一真相。
@@ -147,7 +148,8 @@ Cell execution   -> contracts/json_schema/cell_execution_plan.schema.json
 7. 把 provider/router 审计信息写入 AnalysisRun。
 8. 建立 AnalysisRun JSON Schema，让运行审计可跨语言复用。
 9. 建立 CellExecutionPlan JSON Schema，让本地单服务和未来多服务执行使用同一计划契约。
-10. 再推进 Parquet / DuckDB 和专业数据商 adapter。
+10. 建立 CellRuntimeTrace JSON Schema，记录每个 Cell 节点实际执行状态和耗时。
+11. 再推进 Parquet / DuckDB 和专业数据商 adapter。
 
 暂不做：
 

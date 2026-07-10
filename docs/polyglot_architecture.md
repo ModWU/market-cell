@@ -41,7 +41,8 @@ contracts/
 │   ├── analysis_request.schema.json
 │   ├── analysis_report.schema.json
 │   ├── analysis_run.schema.json
-│   └── cell_execution_plan.schema.json
+│   ├── cell_execution_plan.schema.json
+│   └── cell_runtime_trace.schema.json
 ├── protobuf/
 │   └── market_data.proto
 └── parquet/
@@ -56,6 +57,7 @@ contracts/
 - Rust / TypeScript / API 服务不能私自定义不兼容字段。
 - 实时行情事件走 Protobuf，历史批量 K 线走 Parquet schema，分析输入输出走 JSON Schema。
 - Cell 执行计划走 JSON Schema，后续 Python / Rust / API worker 都不能私自定义不兼容调度字段。
+- Cell 运行 trace 走 JSON Schema，后续远程 worker 必须按同一格式上报服务、耗时、错误和重试信息。
 - 报告必须带 `schema_version`，避免历史报告无法解释。
 - 公式版本和引擎版本必须进入报告或运行记录。
 

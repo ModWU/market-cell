@@ -107,8 +107,110 @@
             }
           }
         },
+        "cell_runtime_traces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cell_runtime_trace"
+          }
+        },
         "data_sources": {
           "$ref": "#/$defs/data_source_audit"
+        }
+      }
+    },
+    "cell_runtime_trace": {
+      "type": "object",
+      "required": [
+        "trace_id",
+        "span_id",
+        "run_id",
+        "node_id",
+        "cell_id",
+        "formula_version",
+        "status",
+        "started_at",
+        "finished_at",
+        "duration_ms",
+        "schema_version",
+        "plan_id",
+        "implementation_id",
+        "service_id",
+        "runtime",
+        "retry_count",
+        "error",
+        "parent_span_id",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "trace_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "span_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cell_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "formula_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": ["succeeded", "failed", "skipped"]
+        },
+        "started_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "finished_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "schema_version": {
+          "const": "cell_runtime_trace.v1"
+        },
+        "plan_id": {
+          "type": ["string", "null"]
+        },
+        "implementation_id": {
+          "type": ["string", "null"]
+        },
+        "service_id": {
+          "type": ["string", "null"]
+        },
+        "runtime": {
+          "type": ["string", "null"],
+          "enum": ["python_local", "python_service", "rust_service", "external_service", null]
+        },
+        "retry_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error": {
+          "type": ["string", "null"]
+        },
+        "parent_span_id": {
+          "type": ["string", "null"]
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
         }
       }
     },

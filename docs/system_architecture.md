@@ -59,6 +59,7 @@ flowchart TD
 - Cell Registry
 - 固定 Cell 执行器
 - CellExecutionPlan 执行计划契约和本地计划构建器
+- CellRuntimeTrace 本地执行耗时和服务归属记录
 - Scoring Engine 初版
 - DecisionCell
 - DecisionPolicy 策略层
@@ -70,6 +71,7 @@ flowchart TD
 - JSON Schema 契约
 - AnalysisRun JSON Schema 运行审计契约
 - CellExecutionPlan JSON Schema 本地/多服务执行契约
+- CellRuntimeTrace JSON Schema 执行观测契约
 - Protobuf 行情事件契约
 - Parquet K 线批量存储契约
 - Parquet/DuckDB 存储适配基础
@@ -224,7 +226,7 @@ flowchart TB
 
 数据源选择策略属于 Infrastructure Layer 与 Data Layer 之间的策略边界。它读取 `SourceProfile` 和 `ProviderReliabilitySummary`，输出 `ProviderSelectionPlan`。`RouterPlanBuilder` 再把选择计划映射到具体 `CandleSource` 实例，生成 `RouterPlan`。`MarketDataRouter` 只执行已确定的 source 顺序和质量降级。选择计划和实际路由计划可以写入 `AnalysisRun.metadata`，用于复盘，不进入 `AnalysisReport` 决策主体。`AnalysisRun` 本身由 JSON Schema 约束，避免策略层、配置层、运行时连接实例和 Cell 输出耦合。
 
-Cell 执行同样需要分层：`CellManifest` 描述能力，`CellServiceBinding` 描述服务承载，`CellExecutionPlan` 描述本次分析的 Cell DAG 和服务绑定。当前本地单进程也生成执行计划并写入 `AnalysisRun.metadata`；未来多服务集群只替换 planner / executor，不改变 CellResult 和 AnalysisReport。
+Cell 执行同样需要分层：`CellManifest` 描述能力，`CellServiceBinding` 描述服务承载，`CellExecutionPlan` 描述本次分析的 Cell DAG 和服务绑定。当前本地单进程也生成执行计划并写入 `AnalysisRun.metadata`，同时记录 `CellRuntimeTrace`，追踪每个 Cell 节点的服务、状态和耗时；未来多服务集群只替换 planner / executor，不改变 CellResult 和 AnalysisReport。
 
 ## 4. 运行流程
 

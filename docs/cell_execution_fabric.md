@@ -172,7 +172,7 @@ metadata
 
 ### 4.5 Cell Runtime Trace
 
-后续每个节点执行都应该产生 runtime trace：
+每个节点执行都应该产生 runtime trace：
 
 ```text
 run_id
@@ -191,7 +191,7 @@ trace_id
 span_id
 ```
 
-当前先定义 ExecutionPlan；Trace 后续再落地。
+当前本地 `AnalysisEngine` 已经为每个 Cell 节点生成 `cell_runtime_trace.v1` 记录，并写入 `AnalysisRun.metadata.cell_runtime_traces`。未来远程 worker 也必须上报同一类记录。
 
 ## 5. 单服务和多服务如何兼容
 
@@ -280,7 +280,7 @@ AnalysisRun 可以保存 ExecutionPlan 和后续 runtime trace，用于复盘和
 1. 定义 `CellExecutionPlan` JSON Schema。
 2. 实现 Python 本地 `build_local_execution_plan`。
 3. 把 execution plan 写入 `AnalysisRun.metadata`。
-4. 后续再实现 `CellRuntimeTrace`。
+4. 定义 `CellRuntimeTrace` JSON Schema，并记录本地每个 Cell 节点的耗时、状态和服务归属。
 5. 再考虑 Task Queue、服务发现、远程执行。
 
 ## 9. 官方参考

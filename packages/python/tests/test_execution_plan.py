@@ -44,6 +44,24 @@ class CellExecutionPlanTests(unittest.TestCase):
         self.assertEqual(plan["schema_version"], "cell_execution_plan.v1")
         self.assertEqual(plan["root_node_id"], "cell:root.decision")
 
+    def test_cell_runtime_traces_are_persisted_in_run_metadata(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = FileSystemReportStore(Path(temp_dir))
+            report = AnalysisEngine(report_store=store).run(_request())
+            run = store.load_run(report.run_id or "")
+
+        traces = run["metadata"]["cell_runtime_traces"]
+        plan = run["metadata"]["cell_execution_plan"]
+
+        self.assertEqual(len(traces), len(default_registry().all_cells()))
+        self.assertEqual({trace["trace_id"] for trace in traces}, {traces[0]["trace_id"]})
+        self.assertEqual({trace["status"] for trace in traces}, {"succeeded"})
+        self.assertEqual({trace["schema_version"] for trace in traces}, {"cell_runtime_trace.v1"})
+        self.assertEqual({trace["service_id"] for trace in traces}, {"python-local"})
+        self.assertEqual({trace["runtime"] for trace in traces}, {"python_local"})
+        self.assertEqual({trace["plan_id"] for trace in traces}, {plan["plan_id"]})
+        self.assertTrue(all(trace["duration_ms"] >= 0 for trace in traces))
+
     def test_engine_can_disable_execution_plan_metadata(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = FileSystemReportStore(Path(temp_dir))
@@ -51,6 +69,8 @@ class CellExecutionPlanTests(unittest.TestCase):
             run = store.load_run(report.run_id or "")
 
         self.assertNotIn("cell_execution_plan", run["metadata"])
+        self.assertIn("cell_runtime_traces", run["metadata"])
+        self.assertEqual({trace["plan_id"] for trace in run["metadata"]["cell_runtime_traces"]}, {None})
 
 
 def _request() -> AnalysisRequest:

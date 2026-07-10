@@ -248,7 +248,36 @@ endpoint = null
 
 未来多服务集群可以替换 service binding 和 executor，但不能改变 `CellResult` 输出契约。
 
-## 10. 版本策略
+## 10. CellRuntimeTrace
+
+单个 Cell 节点的实际执行记录。
+
+```json
+{
+  "trace_id": "trace123",
+  "span_id": "span123",
+  "run_id": "run123",
+  "plan_id": "plan123",
+  "node_id": "cell:technical.trend",
+  "cell_id": "technical.trend",
+  "implementation_id": "python-local:technical.trend:trend_close_change_v0.1",
+  "service_id": "python-local",
+  "runtime": "python_local",
+  "formula_version": "trend_close_change_v0.1",
+  "status": "succeeded",
+  "started_at": "2026-07-10T00:00:00+00:00",
+  "finished_at": "2026-07-10T00:00:00+00:00",
+  "duration_ms": 1.23,
+  "retry_count": 0,
+  "error": null,
+  "parent_span_id": null,
+  "metadata": {}
+}
+```
+
+`CellRuntimeTrace` 关注“实际如何执行”，用于性能分析、失败定位和多服务复盘。它进入 `AnalysisRun.metadata.cell_runtime_traces`，不进入 `AnalysisReport`。
+
+## 11. 版本策略
 
 当前已经在 `AnalysisReport` 中加入：
 
@@ -267,6 +296,18 @@ input_hash
 input_snapshot
 formula_versions
 metadata
+```
+
+当前已经在 `CellRuntimeTrace` 中加入：
+
+```text
+schema_version
+trace_id
+span_id
+plan_id
+service_id
+duration_ms
+status
 ```
 
 跨语言 schema 保存在：

@@ -1,25 +1,31 @@
 from market_cell.execution.models import (
     CELL_EXECUTION_PLAN_SCHEMA_VERSION,
+    CELL_RUNTIME_TRACE_SCHEMA_VERSION,
     CellExecutionNode,
     CellExecutionPlan,
     CellRuntime,
+    CellRuntimeTrace,
     CellServiceBinding,
     CpuWeight,
     ExecutionRole,
     LatencySensitivity,
     ResourceHints,
+    RuntimeTraceStatus,
     build_local_execution_plan,
 )
 
 __all__ = [
     "CELL_EXECUTION_PLAN_SCHEMA_VERSION",
+    "CELL_RUNTIME_TRACE_SCHEMA_VERSION",
     "CellExecutionNode",
     "CellExecutionPlan",
     "CellRuntime",
+    "CellRuntimeTrace",
     "CellServiceBinding",
     "CpuWeight",
     "ExecutionRole",
     "LatencySensitivity",
     "ResourceHints",
+    "RuntimeTraceStatus",
     "build_local_execution_plan",
 ]

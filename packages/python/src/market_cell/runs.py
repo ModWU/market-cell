@@ -79,5 +79,10 @@ class AnalysisRun:
     def fail(self, error: str) -> "AnalysisRun":
         return replace(self, status="failed", finished_at=utc_now_iso(), error=error)
 
+    def with_metadata(self, metadata: dict[str, Any]) -> "AnalysisRun":
+        payload = deepcopy(self.metadata)
+        payload.update(deepcopy(metadata))
+        return replace(self, metadata=payload)
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -20,6 +20,7 @@ It owns:
 - Run metadata persistence for provider selection and router plan audits
 - AnalysisRun schema versioning for replayable run records
 - Local CellExecutionPlan generation for future service-fabric execution
+- Local CellRuntimeTrace records for per-Cell latency and status audits
 
 Optional local storage extras:
 

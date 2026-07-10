@@ -10,11 +10,13 @@ from market_cell.registry import CellRegistry
 
 
 CELL_EXECUTION_PLAN_SCHEMA_VERSION = "cell_execution_plan.v1"
+CELL_RUNTIME_TRACE_SCHEMA_VERSION = "cell_runtime_trace.v1"
 
 CellRuntime = Literal["python_local", "python_service", "rust_service", "external_service"]
 ExecutionRole = Literal["leaf", "aggregator", "root"]
 CpuWeight = Literal["unknown", "light", "medium", "heavy"]
 LatencySensitivity = Literal["low", "normal", "high"]
+RuntimeTraceStatus = Literal["succeeded", "failed", "skipped"]
 
 
 @dataclass(frozen=True)
@@ -74,6 +76,32 @@ class CellExecutionPlan:
 
     def to_run_metadata(self) -> dict[str, Any]:
         return {"cell_execution_plan": self.to_dict()}
+
+
+@dataclass(frozen=True)
+class CellRuntimeTrace:
+    trace_id: str
+    span_id: str
+    run_id: str
+    node_id: str
+    cell_id: str
+    formula_version: str
+    status: RuntimeTraceStatus
+    started_at: str
+    finished_at: str
+    duration_ms: float
+    schema_version: str = CELL_RUNTIME_TRACE_SCHEMA_VERSION
+    plan_id: str | None = None
+    implementation_id: str | None = None
+    service_id: str | None = None
+    runtime: CellRuntime | None = None
+    retry_count: int = 0
+    error: str | None = None
+    parent_span_id: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 def build_local_execution_plan(
