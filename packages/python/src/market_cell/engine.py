@@ -6,7 +6,12 @@ from uuid import uuid4
 
 from market_cell import __version__
 from market_cell.events import EventBus, utc_now_iso
-from market_cell.execution import CellExecutionPlan, CellRuntimeTrace, build_local_execution_plan
+from market_cell.execution import (
+    CellExecutionPlan,
+    CellRuntimeTrace,
+    build_local_execution_plan,
+    summarize_runtime_traces,
+)
 from market_cell.cells.base import MarketCell
 from market_cell.models import AnalysisReport, AnalysisRequest, CellResult
 from market_cell.reports import ReportStore
@@ -86,7 +91,12 @@ class AnalysisEngine:
                 child_results=child_results,
             )
             completed_run = run.with_metadata(
-                {"cell_runtime_traces": [trace.to_dict() for trace in runtime_traces]}
+                {
+                    "cell_runtime_traces": [trace.to_dict() for trace in runtime_traces],
+                    "cell_runtime_summaries": [
+                        summary.to_dict() for summary in summarize_runtime_traces(runtime_traces)
+                    ],
+                }
             ).complete(run.run_id)
             report = AnalysisReport(
                 target=request.target,

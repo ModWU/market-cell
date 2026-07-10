@@ -277,7 +277,36 @@ endpoint = null
 
 `CellRuntimeTrace` 关注“实际如何执行”，用于性能分析、失败定位和多服务复盘。它进入 `AnalysisRun.metadata.cell_runtime_traces`，不进入 `AnalysisReport`。
 
-## 11. 版本策略
+## 11. CellRuntimeSummary
+
+一次运行内按 Cell、公式版本、实现、服务和运行时聚合后的性能摘要。
+
+```json
+{
+  "cell_id": "technical.trend",
+  "formula_version": "trend_close_change_v0.1",
+  "implementation_id": "python-local:technical.trend:trend_close_change_v0.1",
+  "service_id": "python-local",
+  "runtime": "python_local",
+  "trace_count": 2,
+  "succeeded_count": 2,
+  "failed_count": 0,
+  "skipped_count": 0,
+  "average_duration_ms": 1.5,
+  "max_duration_ms": 2.0,
+  "min_duration_ms": 1.0,
+  "p95_duration_ms": 2.0,
+  "error_count": 0,
+  "retry_count": 0,
+  "schema_version": "cell_runtime_summary.v1"
+}
+```
+
+`CellRuntimeSummary` 关注“这一组 Cell 执行表现如何”，用于性能回归、服务容量规划、热点 Cell 识别和未来 placement policy。它进入 `AnalysisRun.metadata.cell_runtime_summaries`，不进入 `AnalysisReport`。
+
+它不替代 `CellRuntimeTrace`：trace 是逐次证据，summary 是稳定聚合口径。未来多服务集群中，Rust worker、Python worker 或外部服务只要上报同一类 trace，就可以生成一致的 summary。
+
+## 12. 版本策略
 
 当前已经在 `AnalysisReport` 中加入：
 
@@ -308,6 +337,21 @@ plan_id
 service_id
 duration_ms
 status
+```
+
+当前已经在 `CellRuntimeSummary` 中加入：
+
+```text
+schema_version
+cell_id
+formula_version
+implementation_id
+service_id
+runtime
+trace_count
+p95_duration_ms
+failed_count
+retry_count
 ```
 
 跨语言 schema 保存在：

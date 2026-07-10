@@ -193,6 +193,37 @@ span_id
 
 当前本地 `AnalysisEngine` 已经为每个 Cell 节点生成 `cell_runtime_trace.v1` 记录，并写入 `AnalysisRun.metadata.cell_runtime_traces`。未来远程 worker 也必须上报同一类记录。
 
+### 4.6 Cell Runtime Summary
+
+Runtime summary 是 trace 的聚合层：
+
+```text
+cell_id
+formula_version
+implementation_id
+service_id
+runtime
+trace_count
+succeeded_count
+failed_count
+skipped_count
+average_duration_ms
+max_duration_ms
+min_duration_ms
+p95_duration_ms
+error_count
+retry_count
+```
+
+当前本地 `AnalysisEngine` 已经生成 `cell_runtime_summary.v1`，并写入 `AnalysisRun.metadata.cell_runtime_summaries`。它按 Cell、公式版本、实现、服务和运行时聚合，后续用于：
+
+- 找出高延迟或高失败率 Cell。
+- 判断哪些 Cell 需要迁移到 Rust 热路径或独立 worker。
+- 给 placement policy 提供历史性能输入。
+- 做 CI 或离线回放中的性能回归检测。
+
+它不改变 `CellResult` 和 `AnalysisReport`，只服务于运行审计、调度优化和容量规划。
+
 ## 5. 单服务和多服务如何兼容
 
 ### 5.1 当前本地单服务
@@ -271,7 +302,7 @@ ExecutionPlan 不能包含大体积市场数据，只引用输入键、特征键
 
 AnalysisReport 不能混入调度细节。
 
-AnalysisRun 可以保存 ExecutionPlan 和后续 runtime trace，用于复盘和性能分析。
+AnalysisRun 可以保存 ExecutionPlan、runtime trace 和 runtime summary，用于复盘、性能分析和后续调度优化。
 
 ## 8. 当前落地顺序
 
@@ -281,7 +312,8 @@ AnalysisRun 可以保存 ExecutionPlan 和后续 runtime trace，用于复盘和
 2. 实现 Python 本地 `build_local_execution_plan`。
 3. 把 execution plan 写入 `AnalysisRun.metadata`。
 4. 定义 `CellRuntimeTrace` JSON Schema，并记录本地每个 Cell 节点的耗时、状态和服务归属。
-5. 再考虑 Task Queue、服务发现、远程执行。
+5. 定义 `CellRuntimeSummary` JSON Schema，并按 Cell、公式版本、实现、服务和运行时聚合性能画像。
+6. 再考虑 Task Queue、服务发现、远程执行。
 
 ## 9. 官方参考
 

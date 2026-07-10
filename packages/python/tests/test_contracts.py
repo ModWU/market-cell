@@ -121,6 +121,30 @@ class ContractTests(unittest.TestCase):
                 self.assertIn(field_name, trace)
         self.assertEqual(trace["schema_version"], "cell_runtime_trace.v1")
 
+    def test_cell_runtime_summary_contains_contract_required_fields(self):
+        schema = json.loads(
+            (ROOT / "contracts" / "json_schema" / "cell_runtime_summary.schema.json").read_text(encoding="utf-8")
+        )
+        request = AnalysisRequest(
+            target="BTC/USD",
+            horizon="1h",
+            candles=[
+                Candle("t1", open=100, high=101, low=99, close=100, volume=1000),
+                Candle("t2", open=100, high=102, low=99, close=101, volume=1200),
+            ],
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = FileSystemReportStore(Path(temp_dir))
+            report = AnalysisEngine(report_store=store).run(request)
+            run = store.load_run(report.run_id or "")
+            summary = run["metadata"]["cell_runtime_summaries"][0]
+
+        for field_name in schema["required"]:
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, summary)
+        self.assertEqual(summary["schema_version"], "cell_runtime_summary.v1")
+
 
 if __name__ == "__main__":
     unittest.main()

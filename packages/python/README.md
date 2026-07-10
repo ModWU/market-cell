@@ -21,6 +21,7 @@ It owns:
 - AnalysisRun schema versioning for replayable run records
 - Local CellExecutionPlan generation for future service-fabric execution
 - Local CellRuntimeTrace records for per-Cell latency and status audits
+- Local CellRuntimeSummary aggregation for service, Cell, formula, implementation, and runtime performance profiling
 
 Optional local storage extras:
 

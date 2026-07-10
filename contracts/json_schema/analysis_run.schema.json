@@ -113,6 +113,12 @@
             "$ref": "#/$defs/cell_runtime_trace"
           }
         },
+        "cell_runtime_summaries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cell_runtime_summary"
+          }
+        },
         "data_sources": {
           "$ref": "#/$defs/data_source_audit"
         }
@@ -211,6 +217,91 @@
         "metadata": {
           "type": "object",
           "additionalProperties": true
+        }
+      }
+    },
+    "cell_runtime_summary": {
+      "type": "object",
+      "required": [
+        "cell_id",
+        "formula_version",
+        "implementation_id",
+        "service_id",
+        "runtime",
+        "trace_count",
+        "succeeded_count",
+        "failed_count",
+        "skipped_count",
+        "average_duration_ms",
+        "max_duration_ms",
+        "min_duration_ms",
+        "p95_duration_ms",
+        "error_count",
+        "retry_count",
+        "schema_version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cell_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "formula_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "implementation_id": {
+          "type": ["string", "null"]
+        },
+        "service_id": {
+          "type": ["string", "null"]
+        },
+        "runtime": {
+          "type": ["string", "null"],
+          "enum": ["python_local", "python_service", "rust_service", "external_service", null]
+        },
+        "trace_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "succeeded_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "skipped_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "average_duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "min_duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "p95_duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "error_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retry_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "schema_version": {
+          "const": "cell_runtime_summary.v1"
         }
       }
     },

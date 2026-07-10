@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 from uuid import uuid4
@@ -11,6 +12,7 @@ from market_cell.registry import CellRegistry
 
 CELL_EXECUTION_PLAN_SCHEMA_VERSION = "cell_execution_plan.v1"
 CELL_RUNTIME_TRACE_SCHEMA_VERSION = "cell_runtime_trace.v1"
+CELL_RUNTIME_SUMMARY_SCHEMA_VERSION = "cell_runtime_summary.v1"
 
 CellRuntime = Literal["python_local", "python_service", "rust_service", "external_service"]
 ExecutionRole = Literal["leaf", "aggregator", "root"]
@@ -104,6 +106,60 @@ class CellRuntimeTrace:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class CellRuntimeSummary:
+    cell_id: str
+    formula_version: str
+    implementation_id: str | None
+    service_id: str | None
+    runtime: CellRuntime | None
+    trace_count: int
+    succeeded_count: int
+    failed_count: int
+    skipped_count: int
+    average_duration_ms: float
+    max_duration_ms: float
+    min_duration_ms: float
+    p95_duration_ms: float
+    error_count: int
+    retry_count: int
+    schema_version: str = CELL_RUNTIME_SUMMARY_SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def summarize_runtime_traces(traces: list[CellRuntimeTrace]) -> list[CellRuntimeSummary]:
+    grouped: dict[
+        tuple[str, str, str | None, str | None, CellRuntime | None],
+        list[CellRuntimeTrace],
+    ] = defaultdict(list)
+    for trace in traces:
+        grouped[
+            (
+                trace.cell_id,
+                trace.formula_version,
+                trace.implementation_id,
+                trace.service_id,
+                trace.runtime,
+            )
+        ].append(trace)
+
+    summaries = [_summarize_trace_group(key, group) for key, group in grouped.items()]
+    return sorted(
+        summaries,
+        key=lambda item: (
+            -item.failed_count,
+            -item.p95_duration_ms,
+            item.cell_id,
+            item.formula_version,
+            item.implementation_id or "",
+            item.service_id or "",
+            item.runtime or "",
+        ),
+    )
+
+
 def build_local_execution_plan(
     registry: CellRegistry,
     request: AnalysisRequest,
@@ -180,3 +236,38 @@ def _node_id(cell_id: str) -> str:
 
 def _implementation_id(service_id: str, manifest: CellManifest) -> str:
     return f"{service_id}:{manifest.cell_id}:{manifest.formula_version}"
+
+
+def _summarize_trace_group(
+    key: tuple[str, str, str | None, str | None, CellRuntime | None],
+    traces: list[CellRuntimeTrace],
+) -> CellRuntimeSummary:
+    cell_id, formula_version, implementation_id, service_id, runtime = key
+    durations = sorted(max(trace.duration_ms, 0.0) for trace in traces)
+    status_counts = Counter(trace.status for trace in traces)
+    return CellRuntimeSummary(
+        cell_id=cell_id,
+        formula_version=formula_version,
+        implementation_id=implementation_id,
+        service_id=service_id,
+        runtime=runtime,
+        trace_count=len(traces),
+        succeeded_count=status_counts.get("succeeded", 0),
+        failed_count=status_counts.get("failed", 0),
+        skipped_count=status_counts.get("skipped", 0),
+        average_duration_ms=round(sum(durations) / len(durations), 6) if durations else 0.0,
+        max_duration_ms=durations[-1] if durations else 0.0,
+        min_duration_ms=durations[0] if durations else 0.0,
+        p95_duration_ms=_percentile(durations, 0.95),
+        error_count=sum(1 for trace in traces if trace.error),
+        retry_count=sum(trace.retry_count for trace in traces),
+    )
+
+
+def _percentile(values: list[float], percentile: float) -> float:
+    if not values:
+        return 0.0
+    if len(values) == 1:
+        return values[0]
+    index = int(round((len(values) - 1) * percentile))
+    return values[min(max(index, 0), len(values) - 1)]
