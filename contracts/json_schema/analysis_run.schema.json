@@ -87,6 +87,26 @@
       "type": "object",
       "additionalProperties": true,
       "properties": {
+        "cell_execution_plan": {
+          "type": "object",
+          "required": ["plan_id", "schema_version", "nodes", "service_bindings"],
+          "additionalProperties": true,
+          "properties": {
+            "plan_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "schema_version": {
+              "const": "cell_execution_plan.v1"
+            },
+            "nodes": {
+              "type": "array"
+            },
+            "service_bindings": {
+              "type": "array"
+            }
+          }
+        },
         "data_sources": {
           "$ref": "#/$defs/data_source_audit"
         }

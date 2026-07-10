@@ -19,6 +19,7 @@ It owns:
 - Auditable router plans that map provider selection plans to concrete candle sources
 - Run metadata persistence for provider selection and router plan audits
 - AnalysisRun schema versioning for replayable run records
+- Local CellExecutionPlan generation for future service-fabric execution
 
 Optional local storage extras:
 

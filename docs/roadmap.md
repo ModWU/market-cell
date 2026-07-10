@@ -24,6 +24,8 @@
 - 多语言 workspace 布局：`packages/python`、`crates`、`contracts`
 - JSON Schema 契约
 - AnalysisRun JSON Schema：运行审计、输入快照、公式版本和数据源路由审计契约
+- CellExecutionPlan JSON Schema：Cell DAG、服务绑定和执行资源提示契约
+- Cell Execution Fabric 文档：本地单服务到多服务集群的插拔式执行地基
 - DecisionPolicy 策略层和风险分层
 - GitHub Actions CI，自动运行 Python 和 Rust 测试
 - Data Source 协议、K 线主备路由和 Binance 开发适配器
@@ -43,6 +45,7 @@
 - RouterPlanBuilder：把 ProviderSelectionPlan 映射成可审计的数据源路由顺序
 - Provider/Router Plan Persistence：把数据源选择计划和实际路由计划写入 AnalysisRun
 - AnalysisRun schema_version：运行记录进入 `analysis_run.v1` 契约
+- CellExecutionPlan：本地单服务也生成可复盘执行计划
 
 ## v0.3 Cell 扩展
 
@@ -57,6 +60,7 @@
 同时补齐轻量骨架：
 
 - EventBus 使用场景扩展
+- CellRuntimeTrace：记录每个 Cell 节点的服务、耗时、重试和错误
 - ReportAnalyzer 接口草案
 - Parquet / DuckDB 去重、upsert 和查询窗口增强
 - Replay Source Audit：回放时展示数据源计划变化

@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/cell_execution_plan.schema.json",
+  "title": "MarketCell CellExecutionPlan",
+  "type": "object",
+  "required": [
+    "plan_id",
+    "target",
+    "horizon",
+    "root_node_id",
+    "nodes",
+    "service_bindings",
+    "schema_version",
+    "created_at",
+    "metadata"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "horizon": {
+      "type": "string",
+      "minLength": 1
+    },
+    "root_node_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/cell_execution_node"
+      }
+    },
+    "service_bindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cell_service_binding"
+      }
+    },
+    "schema_version": {
+      "const": "cell_execution_plan.v1"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "cell_runtime": {
+      "enum": ["python_local", "python_service", "rust_service", "external_service"]
+    },
+    "execution_role": {
+      "enum": ["leaf", "aggregator", "root"]
+    },
+    "resource_hints": {
+      "type": "object",
+      "required": [
+        "cpu_weight",
+        "latency_sensitivity",
+        "stateful",
+        "expected_timeout_ms",
+        "max_retries"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cpu_weight": {
+          "enum": ["unknown", "light", "medium", "heavy"]
+        },
+        "latency_sensitivity": {
+          "enum": ["low", "normal", "high"]
+        },
+        "stateful": {
+          "type": "boolean"
+        },
+        "expected_timeout_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "cell_execution_node": {
+      "type": "object",
+      "required": [
+        "node_id",
+        "cell_id",
+        "formula_version",
+        "execution_role",
+        "dependencies",
+        "input_keys",
+        "output_keys",
+        "implementation_id",
+        "resource_hints",
+        "metadata"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cell_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "formula_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "execution_role": {
+          "$ref": "#/$defs/execution_role"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "input_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "output_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "implementation_id": {
+          "type": ["string", "null"]
+        },
+        "resource_hints": {
+          "$ref": "#/$defs/resource_hints"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "cell_service_binding": {
+      "type": "object",
+      "required": [
+        "implementation_id",
+        "cell_id",
+        "service_id",
+        "runtime",
+        "language",
+        "formula_version",
+        "endpoint",
+        "task_queue",
+        "priority",
+        "capabilities",
+        "supports_batch",
+        "max_concurrency",
+        "resource_hints"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "implementation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cell_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "service_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime": {
+          "$ref": "#/$defs/cell_runtime"
+        },
+        "language": {
+          "type": "string",
+          "minLength": 1
+        },
+        "formula_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "endpoint": {
+          "type": ["string", "null"]
+        },
+        "task_queue": {
+          "type": ["string", "null"]
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supports_batch": {
+          "type": "boolean"
+        },
+        "max_concurrency": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "resource_hints": {
+          "$ref": "#/$defs/resource_hints"
+        }
+      }
+    }
+  }
+}

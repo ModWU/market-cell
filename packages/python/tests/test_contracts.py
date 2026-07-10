@@ -4,7 +4,9 @@ from pathlib import Path
 import tempfile
 
 from market_cell.engine import AnalysisEngine
+from market_cell.execution import build_local_execution_plan
 from market_cell.models import AnalysisRequest, Candle
+from market_cell.registry import default_registry
 from market_cell.reports import FileSystemReportStore
 
 
@@ -73,6 +75,27 @@ class ContractTests(unittest.TestCase):
             with self.subTest(field_name=field_name):
                 self.assertIn(field_name, run)
         self.assertEqual(run["schema_version"], "analysis_run.v1")
+
+    def test_cell_execution_plan_contains_contract_required_fields(self):
+        schema = json.loads(
+            (ROOT / "contracts" / "json_schema" / "cell_execution_plan.schema.json").read_text(encoding="utf-8")
+        )
+        request = AnalysisRequest(
+            target="BTC/USD",
+            horizon="1h",
+            candles=[
+                Candle("t1", open=100, high=101, low=99, close=100, volume=1000),
+                Candle("t2", open=100, high=102, low=99, close=101, volume=1200),
+            ],
+        )
+
+        plan = build_local_execution_plan(default_registry(), request).to_dict()
+
+        for field_name in schema["required"]:
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, plan)
+        self.assertEqual(plan["schema_version"], "cell_execution_plan.v1")
+        self.assertTrue(plan["service_bindings"])
 
 
 if __name__ == "__main__":

@@ -218,6 +218,38 @@ metadata.data_sources.router_plan
 
 ## 9. 版本策略
 
+## 9. CellExecutionPlan
+
+一次分析的 Cell 执行计划。
+
+```json
+{
+  "plan_id": "plan123",
+  "target": "BTC/USD",
+  "horizon": "1h",
+  "root_node_id": "cell:root.decision",
+  "nodes": [],
+  "service_bindings": [],
+  "schema_version": "cell_execution_plan.v1",
+  "created_at": "2026-07-10T00:00:00+00:00",
+  "metadata": {}
+}
+```
+
+`CellExecutionPlan` 关注“本次分析如何执行 Cell DAG”，不是 Cell 输出本身。
+
+当前单服务本地执行也必须能生成计划：
+
+```text
+service_id = python-local
+runtime = python_local
+endpoint = null
+```
+
+未来多服务集群可以替换 service binding 和 executor，但不能改变 `CellResult` 输出契约。
+
+## 10. 版本策略
+
 当前已经在 `AnalysisReport` 中加入：
 
 ```text

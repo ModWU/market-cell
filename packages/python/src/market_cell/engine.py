@@ -4,6 +4,7 @@ from typing import Any
 
 from market_cell import __version__
 from market_cell.events import EventBus
+from market_cell.execution import CellExecutionPlan, build_local_execution_plan
 from market_cell.models import AnalysisReport, AnalysisRequest, CellResult
 from market_cell.reports import ReportStore
 from market_cell.registry import CellRegistry, default_registry
@@ -18,11 +19,13 @@ class AnalysisEngine:
         event_bus: EventBus | None = None,
         report_store: ReportStore | None = None,
         run_metadata: dict[str, Any] | None = None,
+        include_execution_plan: bool = True,
     ) -> None:
         self.registry = registry or default_registry()
         self.event_bus = event_bus or EventBus()
         self.report_store = report_store
         self.run_metadata = dict(run_metadata or {})
+        self.include_execution_plan = include_execution_plan
 
     def run(
         self,
@@ -30,10 +33,15 @@ class AnalysisEngine:
         metadata: dict[str, Any] | None = None,
     ) -> AnalysisReport:
         validate_request(request)
+        execution_plan = self._execution_plan(request) if self.include_execution_plan else None
         run = AnalysisRun.start(
             request,
             self.registry.manifests(),
-            metadata=_merge_metadata(self.run_metadata, metadata),
+            metadata=_merge_metadata(
+                self.run_metadata,
+                execution_plan.to_run_metadata() if execution_plan is not None else None,
+                metadata,
+            ),
         )
         self.event_bus.emit(
             "analysis.started",
@@ -84,11 +92,14 @@ class AnalysisEngine:
             )
             raise
 
+    def _execution_plan(self, request: AnalysisRequest) -> CellExecutionPlan:
+        return build_local_execution_plan(self.registry, request)
+
 
 def _merge_metadata(
-    base: dict[str, Any],
-    override: dict[str, Any] | None,
+    *items: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    payload = deepcopy(base)
-    payload.update(deepcopy(override or {}))
+    payload: dict[str, Any] = {}
+    for item in items:
+        payload.update(deepcopy(item or {}))
     return payload

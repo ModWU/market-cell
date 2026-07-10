@@ -142,6 +142,7 @@ Cell 不能：
 
 - 直接下单
 - 直接修改全局权重
+- 直接决定自己部署在哪个服务
 - 隐式读取外部文件
 - 绕过 AnalysisRequest
 - 输出无法解释的黑盒结论
@@ -153,3 +154,25 @@ Cell 可以：
 - 输出风险
 - 输出不确定性
 - 输出冲突状态
+
+## 10. 执行位置和服务绑定
+
+Cell 协议只描述输入、输出、公式版本和解释结构，不描述运行位置。
+
+运行位置由 `CellExecutionPlan` 和 `CellServiceBinding` 决定：
+
+```text
+CellManifest          描述能力
+CellServiceBinding    描述哪个服务承载该能力
+CellExecutionPlan     描述本次分析如何执行 Cell DAG
+```
+
+当前本地测试时，所有 Cell 可以绑定到：
+
+```text
+service_id = python-local
+runtime = python_local
+task_queue = cell.python-local
+```
+
+未来多服务集群时，可以一个 Cell 对应多个服务，也可以一个服务承载多个 Cell，但 `CellResult` 输出协议不能因此变化。

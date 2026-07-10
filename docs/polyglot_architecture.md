@@ -39,7 +39,9 @@ contracts/                跨语言共享契约
 contracts/
 ├── json_schema/
 │   ├── analysis_request.schema.json
-│   └── analysis_report.schema.json
+│   ├── analysis_report.schema.json
+│   ├── analysis_run.schema.json
+│   └── cell_execution_plan.schema.json
 ├── protobuf/
 │   └── market_data.proto
 └── parquet/
@@ -53,6 +55,7 @@ contracts/
 - Python dataclass 是参考实现，不是唯一契约。
 - Rust / TypeScript / API 服务不能私自定义不兼容字段。
 - 实时行情事件走 Protobuf，历史批量 K 线走 Parquet schema，分析输入输出走 JSON Schema。
+- Cell 执行计划走 JSON Schema，后续 Python / Rust / API worker 都不能私自定义不兼容调度字段。
 - 报告必须带 `schema_version`，避免历史报告无法解释。
 - 公式版本和引擎版本必须进入报告或运行记录。
 

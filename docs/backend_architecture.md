@@ -7,7 +7,7 @@ MarketCell 后端分三阶段演进。
 ### 阶段一：本地分析内核
 
 ```text
-CLI + Python AnalysisEngine + JSON 输入输出 + AnalysisRun + FileSystemReportStore
+CLI + Python AnalysisEngine + JSON 输入输出 + AnalysisRun + CellExecutionPlan + FileSystemReportStore
 ```
 
 目标是把 Cell 协议和分析闭环做稳定。
@@ -35,8 +35,10 @@ flowchart TD
     Client["CLI / Web UI / Future Trading Gateway"] --> API["FastAPI Gateway"]
     API --> Task["Analysis Task Service"]
     Task --> Planner["Analysis Planner"]
-    Planner --> Runtime["Cell Runtime"]
+    Planner --> Plan["CellExecutionPlan"]
+    Plan --> Runtime["Cell Execution Fabric"]
     Runtime --> Registry["Cell Registry"]
+    Runtime --> Catalog["Service Capability Catalog"]
     Runtime --> Feature["Feature Service"]
     Runtime --> Report["Report Service"]
     Runtime --> AI["AI Explainer"]
@@ -65,6 +67,7 @@ flowchart TD
 
 - `EventBus`
 - `AnalysisRun`
+- `CellExecutionPlan`
 - `FileSystemReportStore`
 - CLI `reports`
 - CLI `replay`
@@ -129,6 +132,22 @@ AnalysisRun {
 `AnalysisTask` 关注任务状态，`AnalysisRun` 关注一次可复盘执行。
 
 当前阶段暂不实现 `AnalysisTask`，先实现 `AnalysisRun`。
+
+同时保留 `CellExecutionPlan`：
+
+```text
+CellExecutionPlan {
+  plan_id
+  target
+  horizon
+  root_node_id
+  nodes
+  service_bindings
+  schema_version
+}
+```
+
+`CellExecutionPlan` 关注“本次分析如何把 Cell DAG 映射到本地或多服务执行”。当前所有 binding 都可以指向 `python-local`，未来可替换为 Python worker、Rust worker 或外部服务。
 
 原因：
 
