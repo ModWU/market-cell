@@ -71,7 +71,7 @@ class LocalCellExecutorTests(unittest.TestCase):
         )
         remote_node = replace(
             context.node,
-            implementation_id=remote_binding.implementation_id,
+            binding_id=remote_binding.binding_id,
         )
 
         with patch.object(cell, "analyze", wraps=cell.analyze) as analyze:
@@ -180,12 +180,13 @@ class _RecordingExecutor:
 
 
 def _context(plan, cell_id: str) -> CellExecutionContext:
+    node = next(node for node in plan.nodes if node.cell_id == cell_id)
     return CellExecutionContext(
         run_id="run",
         trace_id="trace",
         plan_id=plan.plan_id,
-        node=next(node for node in plan.nodes if node.cell_id == cell_id),
-        binding=next(binding for binding in plan.service_bindings if binding.cell_id == cell_id),
+        node=node,
+        binding=next(binding for binding in plan.service_bindings if binding.binding_id == node.binding_id),
     )
 
 

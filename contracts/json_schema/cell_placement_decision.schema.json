@@ -6,6 +6,7 @@
   "required": [
     "cell_id",
     "formula_version",
+    "selected_binding_id",
     "selected_implementation_id",
     "selected_service_id",
     "policy",
@@ -21,6 +22,10 @@
       "minLength": 1
     },
     "formula_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "selected_binding_id": {
       "type": "string",
       "minLength": 1
     },
@@ -56,13 +61,14 @@
       }
     },
     "schema_version": {
-      "const": "cell_placement_decision.v1"
+      "const": "cell_placement_decision.v2"
     }
   },
   "$defs": {
     "candidate_evaluation": {
       "type": "object",
       "required": [
+        "binding_id",
         "implementation_id",
         "service_id",
         "priority",
@@ -73,6 +79,10 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "binding_id": {
+          "type": "string",
+          "minLength": 1
+        },
         "implementation_id": {
           "type": "string",
           "minLength": 1

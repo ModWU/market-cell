@@ -1,12 +1,17 @@
+from dataclasses import replace
 import json
 import unittest
 from pathlib import Path
 import tempfile
+from typing import get_args
 
 from market_cell.engine import AnalysisEngine
 from market_cell.execution import (
+    ExecutionPlanValidationError,
+    PlanValidationCode,
     build_local_capability_catalog,
     build_local_execution_plan,
+    validate_execution_plan,
 )
 from market_cell.models import AnalysisRequest, Candle
 from market_cell.registry import default_registry
@@ -97,7 +102,8 @@ class ContractTests(unittest.TestCase):
         for field_name in schema["required"]:
             with self.subTest(field_name=field_name):
                 self.assertIn(field_name, plan)
-        self.assertEqual(plan["schema_version"], "cell_execution_plan.v1")
+        self.assertEqual(plan["schema_version"], "cell_execution_plan.v2")
+        self.assertTrue(all(node["binding_id"] for node in plan["nodes"]))
         self.assertTrue(plan["service_bindings"])
 
     def test_cell_runtime_trace_contains_contract_required_fields(self):
@@ -163,7 +169,7 @@ class ContractTests(unittest.TestCase):
         for field_name in schema["required"]:
             with self.subTest(field_name=field_name):
                 self.assertIn(field_name, catalog)
-        self.assertEqual(catalog["schema_version"], "service_capability_catalog.v1")
+        self.assertEqual(catalog["schema_version"], "service_capability_catalog.v2")
         self.assertTrue(catalog["bindings"])
 
     def test_cell_service_binding_contains_contract_required_fields(self):
@@ -196,7 +202,36 @@ class ContractTests(unittest.TestCase):
         for field_name in schema["required"]:
             with self.subTest(field_name=field_name):
                 self.assertIn(field_name, decision)
-        self.assertEqual(decision["schema_version"], "cell_placement_decision.v1")
+        self.assertEqual(decision["schema_version"], "cell_placement_decision.v2")
+        self.assertTrue(decision["selected_binding_id"])
+
+    def test_execution_plan_validation_contains_contract_required_fields(self):
+        schema = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "json_schema"
+                / "execution_plan_validation.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        plan = build_local_execution_plan(default_registry(), _request())
+        root = next(node for node in plan.nodes if node.node_id == plan.root_node_id)
+        invalid_root = replace(root, dependencies=[*root.dependencies, "cell:missing"])
+        invalid_plan = replace(
+            plan,
+            nodes=[invalid_root if node.node_id == root.node_id else node for node in plan.nodes],
+        )
+
+        with self.assertRaises(ExecutionPlanValidationError) as context:
+            validate_execution_plan(invalid_plan)
+        validation = context.exception.to_dict()
+
+        for field_name in schema["required"]:
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, validation)
+        self.assertEqual(validation["schema_version"], "execution_plan_validation.v1")
+        schema_codes = set(schema["$defs"]["issue"]["properties"]["code"]["enum"])
+        self.assertEqual(schema_codes, set(get_args(PlanValidationCode)))
 
 
 def _request() -> AnalysisRequest:

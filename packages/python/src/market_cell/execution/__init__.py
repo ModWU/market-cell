@@ -32,6 +32,7 @@ from market_cell.execution.models import (
     LatencySensitivity,
     ResourceHints,
     RuntimeTraceStatus,
+    service_binding_id,
 )
 from market_cell.execution.placement import (
     CELL_PLACEMENT_DECISION_SCHEMA_VERSION,
@@ -46,6 +47,14 @@ from market_cell.execution.planner import (
     CellExecutionPlanner,
     build_execution_plan,
     build_local_execution_plan,
+)
+from market_cell.execution.plan_validation import (
+    EXECUTION_PLAN_VALIDATION_SCHEMA_VERSION,
+    ExecutionPlanValidationError,
+    PlanValidationCode,
+    PlanValidationIssue,
+    ValidatedExecutionPlan,
+    validate_execution_plan,
 )
 from market_cell.execution.telemetry import summarize_runtime_traces
 
@@ -73,21 +82,28 @@ __all__ = [
     "CellServiceBinding",
     "CpuWeight",
     "ExecutionRole",
+    "ExecutionPlanValidationError",
+    "EXECUTION_PLAN_VALIDATION_SCHEMA_VERSION",
     "ExecutionTraceMismatchError",
     "LatencySensitivity",
     "LocalCellExecutor",
     "PlacementCandidateEvaluation",
     "PlacementHistoryStatus",
     "PlacementUnavailableError",
+    "PlanValidationCode",
+    "PlanValidationIssue",
     "ResourceHints",
     "RuntimeAwarePlacementPolicy",
     "RuntimeTraceStatus",
     "ServiceCapabilityCatalog",
+    "ValidatedExecutionPlan",
     "build_execution_plan",
     "build_local_capability_catalog",
     "build_local_execution_plan",
     "build_local_service_binding",
     "summarize_runtime_traces",
+    "service_binding_id",
     "validate_cell_result",
+    "validate_execution_plan",
     "validate_execution_trace",
 ]

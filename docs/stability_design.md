@@ -113,6 +113,8 @@ plan.binding.runtime      = trace.runtime
 - 失败、超时、重试和降级必须区分。
 - 未来远程执行需要 run_id、plan_id、trace_id 和 parent_span_id 传播。
 - 非法 DAG 必须在任何 Cell 执行前失败。
+- `node_id` 是执行身份，`cell_id` 可以在不同节点重复。
+- 节点必须通过 `binding_id` 显式绑定 implementation 和 service。
 
 ## 6. 运行审计稳定
 
@@ -167,11 +169,10 @@ make test
 
 当前仍需补齐：
 
-1. Graph / Plan Validator。
-2. Plan-driven coordinator。
-3. Cell Graph Definition。
-4. Input Reference / Resolver。
-5. Runtime Summary Store。
-6. Performance baseline。
+1. Plan-driven coordinator。
+2. Cell Graph Definition。
+3. Input Reference / Resolver。
+4. Runtime Summary Store。
+5. Performance baseline。
 
 顺序以 `roadmap.md` 为准。

@@ -127,13 +127,14 @@ schema_version
 metadata
 ```
 
-它允许一个 Cell 对应多个服务，也允许一个服务承载多个 Cell；同一 implementation 也可以部署到多个逻辑服务，binding 由 `(implementation_id, service_id)` 唯一标识。当前目录由本地 Registry 构建；未来可以由静态配置、控制面或服务发现生成，但输出都必须遵守 `service_capability_catalog.v1`。
+它允许一个 Cell 对应多个服务，也允许一个服务承载多个 Cell；同一 implementation 也可以部署到多个逻辑服务。当前目录由本地 Registry 构建；未来可以由静态配置、控制面或服务发现生成，但输出都必须遵守 `service_capability_catalog.v2`。
 
 ### 4.4 Cell Service Binding
 
 Service Binding 描述某个实现当前由哪个服务承载：
 
 ```text
+binding_id
 implementation_id
 service_id
 runtime
@@ -143,6 +144,8 @@ priority
 supports_batch
 max_concurrency
 ```
+
+`binding_id` 是 implementation 与逻辑 service 的稳定组合身份，节点必须显式引用它。跨语言统一生成公式为 `binding:{service_id}:{implementation_id}`，不允许各 runtime 自定义另一套算法。
 
 一个服务可以承载多个 Cell：
 
@@ -192,6 +195,8 @@ service_bindings
 root_node_id
 metadata
 ```
+
+v2 中 `node_id` 是执行身份，`cell_id` 是能力身份。同一个 Cell 可以在图中出现多次，但每个节点必须有唯一 node_id，并通过 binding_id 指向明确服务。
 
 它应该能表达：
 
@@ -350,11 +355,10 @@ Cell 执行异常时，`FileSystemReportStore.save_run` 会单独保存 failed A
 
 ## 8. 当前状态和进入集群前的门槛
 
-计划、binding、catalog、placement、executor、trace 和 summary 已有本地参考实现。
+计划、binding、catalog、placement、executor、trace、summary 和 Plan Validator 已有本地参考实现。
 
 进入远程执行前还必须完成：
 
-- Plan / Graph Validator。
 - plan-driven coordinator。
 - Input Reference / Resolver。
 - 跨运行性能历史。

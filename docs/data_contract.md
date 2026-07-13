@@ -228,13 +228,22 @@ metadata.data_sources.router_plan
   "root_node_id": "cell:root.decision",
   "nodes": [],
   "service_bindings": [],
-  "schema_version": "cell_execution_plan.v1",
+  "schema_version": "cell_execution_plan.v2",
   "created_at": "2026-07-10T00:00:00+00:00",
   "metadata": {}
 }
 ```
 
 `CellExecutionPlan` 关注“本次分析如何执行 Cell DAG”，不是 Cell 输出本身。
+
+v2 执行身份规则：
+
+- `node_id` 在一次计划内唯一。
+- `cell_id` 表示能力，同一个 Cell 可以出现在多个节点。
+- 每个节点通过 `binding_id` 显式引用服务 binding。
+- implementation_id、service_id 和 runtime 只在 binding 中维护，节点不复制第二份。
+- dependency 始终引用 `node_id`，不能引用 `cell_id`。
+- `binding_id` 由 implementation 和逻辑 service 稳定生成。
 
 当前单服务本地执行也必须能生成计划：
 
@@ -316,7 +325,7 @@ endpoint = null
 {
   "catalog_id": "catalog123",
   "bindings": [],
-  "schema_version": "service_capability_catalog.v1",
+  "schema_version": "service_capability_catalog.v2",
   "generated_at": "2026-07-13T00:00:00+00:00",
   "metadata": {}
 }
@@ -324,7 +333,8 @@ endpoint = null
 
 目录规则：
 
-- `(implementation_id, service_id)` 在一个目录内必须唯一；同一实现可以由多个逻辑服务承载。
+- `binding_id` 在一个目录内必须唯一；同一实现可以由多个逻辑服务承载。
+- 跨语言统一按 `binding:{service_id}:{implementation_id}` 生成 binding_id。
 - 候选实现必须同时匹配 `cell_id` 和 `formula_version`。
 - 一个 `cell_id` 可以出现多个 service binding。
 - 一个 `service_id` 可以承载多个 `cell_id`。
@@ -338,19 +348,43 @@ planner 为每个 Cell 选择实现时生成放置决策：
 {
   "cell_id": "technical.trend",
   "formula_version": "trend_close_change_v0.1",
+  "selected_binding_id": "binding:rust-hot:rust-hot:technical.trend:trend_close_change_v0.1",
   "selected_implementation_id": "rust-hot:technical.trend:trend_close_change_v0.1",
   "selected_service_id": "rust-hot",
   "policy": "runtime_aware_priority_v0.1",
   "candidate_count": 2,
   "reason_codes": ["selected_by_runtime_latency"],
   "candidate_evaluations": [],
-  "schema_version": "cell_placement_decision.v1"
+  "schema_version": "cell_placement_decision.v2"
 }
 ```
 
 放置策略先保证公式兼容；有足够历史样本时避开高失败率实现；其余候选按显式优先级和 P95 延迟确定性排序。决策进入 `CellExecutionPlan.metadata.placement_decisions`，用于解释“为什么本次由这个服务执行”。
 
-## 14. 版本策略
+## 14. ExecutionPlanValidation
+
+非法计划使用结构化校验结果：
+
+```json
+{
+  "error_type": "execution_plan_validation",
+  "plan_id": "plan123",
+  "issues": [
+    {
+      "code": "missing_dependency",
+      "message": "node cell:root depends on missing node cell:missing",
+      "node_id": "cell:root",
+      "binding_id": null,
+      "dependency_id": "cell:missing"
+    }
+  ],
+  "schema_version": "execution_plan_validation.v1"
+}
+```
+
+它进入 failed `AnalysisRun.metadata.execution_plan_validation`。不同语言 planner 必须使用相同 issue code，且 planning failure 发生在任何 Cell 执行之前。
+
+## 15. 版本策略
 
 当前已经在 `AnalysisReport` 中加入：
 
@@ -409,6 +443,15 @@ formula_version
 policy
 reason_codes
 candidate_evaluations
+```
+
+ExecutionPlan v2 新增：
+
+```text
+binding_id
+node_id / cell_id 身份分离
+topological_levels
+execution_plan_validation
 ```
 
 跨语言 schema 保存在：

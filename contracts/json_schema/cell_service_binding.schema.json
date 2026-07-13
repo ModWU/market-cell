@@ -4,6 +4,7 @@
   "title": "MarketCell CellServiceBinding",
   "type": "object",
   "required": [
+    "binding_id",
     "implementation_id",
     "cell_id",
     "service_id",
@@ -20,6 +21,11 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "binding_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Deterministic binding:{service_id}:{implementation_id} identity."
+    },
     "implementation_id": {
       "type": "string",
       "minLength": 1

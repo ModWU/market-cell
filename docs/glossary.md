@@ -88,6 +88,8 @@ planner 为某个 Cell 选择 implementation 和 service 的审计记录。
 
 它只保存节点、依赖、输入键和服务绑定，不保存大体积市场数据。
 
+v2 中 `node_id` 是执行身份，`cell_id` 是可重复使用的能力身份，节点通过 `binding_id` 指向具体服务绑定。
+
 ## CellExecutor
 
 执行已计划 Cell 节点的运行时接口。

@@ -11,7 +11,7 @@ from market_cell.models import CellManifest
 from market_cell.registry import CellRegistry
 
 
-SERVICE_CAPABILITY_CATALOG_SCHEMA_VERSION = "service_capability_catalog.v1"
+SERVICE_CAPABILITY_CATALOG_SCHEMA_VERSION = "service_capability_catalog.v2"
 
 
 class CapabilityCatalogError(ValueError):
@@ -27,22 +27,15 @@ class ServiceCapabilityCatalog:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        binding_counts = Counter(
-            (binding.implementation_id, binding.service_id)
-            for binding in self.bindings
-        )
+        binding_counts = Counter(binding.binding_id for binding in self.bindings)
         duplicates = sorted(
-            binding_key
-            for binding_key, count in binding_counts.items()
+            binding_id
+            for binding_id, count in binding_counts.items()
             if count > 1
         )
         if duplicates:
-            labels = [
-                f"{implementation_id}@{service_id}"
-                for implementation_id, service_id in duplicates
-            ]
             raise CapabilityCatalogError(
-                f"duplicate implementation/service bindings: {', '.join(labels)}"
+                f"duplicate binding_id values: {', '.join(duplicates)}"
             )
 
     @classmethod

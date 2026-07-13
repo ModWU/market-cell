@@ -16,7 +16,7 @@ class CellExecutionPlanTests(unittest.TestCase):
 
         plan = build_local_execution_plan(registry, request)
 
-        self.assertEqual(plan.schema_version, "cell_execution_plan.v1")
+        self.assertEqual(plan.schema_version, "cell_execution_plan.v2")
         self.assertEqual(plan.target, "BTC/USD")
         self.assertEqual(plan.horizon, "1h")
         self.assertEqual(len(plan.nodes), len(registry.all_cells()))
@@ -24,6 +24,11 @@ class CellExecutionPlanTests(unittest.TestCase):
         self.assertEqual({binding.service_id for binding in plan.service_bindings}, {"python-local"})
         self.assertEqual({binding.runtime for binding in plan.service_bindings}, {"python_local"})
         self.assertEqual({binding.task_queue for binding in plan.service_bindings}, {"cell.python-local"})
+        self.assertTrue(all(binding.binding_id for binding in plan.service_bindings))
+        self.assertEqual(
+            {node.binding_id for node in plan.nodes},
+            {binding.binding_id for binding in plan.service_bindings},
+        )
 
     def test_local_execution_plan_keeps_leaf_nodes_parallelizable(self):
         plan = build_local_execution_plan(default_registry(), _request())
@@ -41,7 +46,7 @@ class CellExecutionPlanTests(unittest.TestCase):
             run = store.load_run(report.run_id or "")
 
         plan = run["metadata"]["cell_execution_plan"]
-        self.assertEqual(plan["schema_version"], "cell_execution_plan.v1")
+        self.assertEqual(plan["schema_version"], "cell_execution_plan.v2")
         self.assertEqual(plan["root_node_id"], "cell:root.decision")
 
     def test_cell_runtime_traces_are_persisted_in_run_metadata(self):

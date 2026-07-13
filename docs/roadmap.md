@@ -38,6 +38,8 @@
 - `ServiceCapabilityCatalog` 和 `CellPlacementDecision`
 - `RuntimeAwarePlacementPolicy`
 - `CellExecutor` 和严格的 `LocalCellExecutor`
+- ExecutionPlan v2：node_id 与 cell_id 分离，节点显式引用 binding_id
+- Plan / Graph Validator：依赖、环、可达性、root 和 binding 一致性
 - plan / trace / CellResult 一致性校验
 - 成功和失败 AnalysisRun 的运行审计
 - GitHub Actions Python / Rust CI
@@ -46,17 +48,18 @@
 
 当前不以新增 Cell 数量为目标，而是让大量 Cell 和未来多服务运行时建立在可验证地基上。
 
-### P0.1 Plan / Graph Validator
+### P0.1 Plan / Graph Validator（已完成）
 
 目标：所有执行计划在运行前拒绝结构错误。
 
-- node_id 和 cell_id 唯一性
+- node_id 唯一；cell_id 允许在不同节点重复
 - root_node_id 合法性
 - dependency 存在性
 - DAG 环检测
 - 不可达节点检测
 - node、binding、formula_version 一致性
 - 稳定的拓扑层级输出
+- planning failure 在任何 Cell 执行前写入 failed AnalysisRun
 
 ### P0.2 Plan-Driven Local Coordinator
 
@@ -112,7 +115,7 @@
 
 以下条件全部满足后，才进入大规模 Cell 扩展：
 
-- 非法 DAG 在执行前被拒绝。
+- 非法 DAG 在执行前被拒绝。（已完成）
 - 本地执行由 plan 驱动，Registry 不再隐式决定拓扑。
 - 至少一个多级 aggregator 图可以稳定运行和回放。
 - 关闭或更换 executor 时，trace 仍能准确表达实际位置。

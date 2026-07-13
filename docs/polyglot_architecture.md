@@ -45,6 +45,7 @@ contracts/
 │   ├── cell_service_binding.schema.json
 │   ├── service_capability_catalog.schema.json
 │   ├── cell_placement_decision.schema.json
+│   ├── execution_plan_validation.schema.json
 │   ├── cell_runtime_trace.schema.json
 │   └── cell_runtime_summary.schema.json
 ├── protobuf/

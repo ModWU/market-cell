@@ -46,7 +46,7 @@
       }
     },
     "schema_version": {
-      "const": "cell_execution_plan.v1"
+      "const": "cell_execution_plan.v2"
     },
     "created_at": {
       "type": "string",
@@ -98,10 +98,10 @@
         "cell_id",
         "formula_version",
         "execution_role",
+        "binding_id",
         "dependencies",
         "input_keys",
         "output_keys",
-        "implementation_id",
         "resource_hints",
         "metadata"
       ],
@@ -122,6 +122,10 @@
         "execution_role": {
           "$ref": "#/$defs/execution_role"
         },
+        "binding_id": {
+          "type": "string",
+          "minLength": 1
+        },
         "dependencies": {
           "type": "array",
           "items": {
@@ -139,9 +143,6 @@
           "items": {
             "type": "string"
           }
-        },
-        "implementation_id": {
-          "type": ["string", "null"]
         },
         "resource_hints": {
           "$ref": "#/$defs/resource_hints"

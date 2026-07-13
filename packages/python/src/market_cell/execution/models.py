@@ -6,7 +6,7 @@ from typing import Any, Literal
 from market_cell.events import utc_now_iso
 
 
-CELL_EXECUTION_PLAN_SCHEMA_VERSION = "cell_execution_plan.v1"
+CELL_EXECUTION_PLAN_SCHEMA_VERSION = "cell_execution_plan.v2"
 CELL_RUNTIME_TRACE_SCHEMA_VERSION = "cell_runtime_trace.v1"
 CELL_RUNTIME_SUMMARY_SCHEMA_VERSION = "cell_runtime_summary.v1"
 
@@ -15,6 +15,10 @@ ExecutionRole = Literal["leaf", "aggregator", "root"]
 CpuWeight = Literal["unknown", "light", "medium", "heavy"]
 LatencySensitivity = Literal["low", "normal", "high"]
 RuntimeTraceStatus = Literal["succeeded", "failed", "skipped"]
+
+
+def service_binding_id(implementation_id: str, service_id: str) -> str:
+    return f"binding:{service_id}:{implementation_id}"
 
 
 @dataclass(frozen=True)
@@ -41,6 +45,14 @@ class CellServiceBinding:
     supports_batch: bool = False
     max_concurrency: int | None = None
     resource_hints: ResourceHints = field(default_factory=ResourceHints)
+    binding_id: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "binding_id",
+            service_binding_id(self.implementation_id, self.service_id),
+        )
 
 
 @dataclass(frozen=True)
@@ -49,10 +61,10 @@ class CellExecutionNode:
     cell_id: str
     formula_version: str
     execution_role: ExecutionRole
+    binding_id: str
     dependencies: list[str] = field(default_factory=list)
     input_keys: list[str] = field(default_factory=list)
     output_keys: list[str] = field(default_factory=list)
-    implementation_id: str | None = None
     resource_hints: ResourceHints = field(default_factory=ResourceHints)
     metadata: dict[str, Any] = field(default_factory=dict)
 

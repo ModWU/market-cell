@@ -10,10 +10,12 @@ from market_cell.execution import (
     CellExecutionPlan,
     CellExecutor,
     CellRuntimeTrace,
+    ExecutionPlanValidationError,
     LocalCellExecutor,
     build_local_execution_plan,
     summarize_runtime_traces,
     validate_cell_result,
+    validate_execution_plan,
     validate_execution_trace,
 )
 from market_cell.cells.base import MarketCell
@@ -47,24 +49,24 @@ class AnalysisEngine:
         metadata: dict[str, Any] | None = None,
     ) -> AnalysisReport:
         validate_request(request)
-        execution_plan = self._execution_plan(request) if self.include_execution_plan else None
         trace_id = uuid4().hex
         runtime_traces: list[CellRuntimeTrace] = []
         run = AnalysisRun.start(
             request,
             self.registry.manifests(),
-            metadata=_merge_metadata(
-                self.run_metadata,
-                execution_plan.to_run_metadata() if execution_plan is not None else None,
-                metadata,
-            ),
+            metadata=_merge_metadata(self.run_metadata, metadata),
         )
         self.event_bus.emit(
             "analysis.started",
             {"run_id": run.run_id, "target": request.target, "horizon": request.horizon},
         )
 
+        execution_plan: CellExecutionPlan | None = None
         try:
+            if self.include_execution_plan:
+                execution_plan = self._execution_plan(request)
+                run = run.with_metadata(execution_plan.to_run_metadata())
+                validate_execution_plan(execution_plan)
             child_results: list[CellResult] = []
             for cell in self.registry.leaf_cells:
                 result = self._execute_cell(
@@ -117,6 +119,10 @@ class AnalysisEngine:
             self.event_bus.emit("analysis.completed", {"run_id": run.run_id, "report_id": report.report_id})
             return report
         except Exception as exc:
+            if isinstance(exc, ExecutionPlanValidationError):
+                if "cell_execution_plan" not in run.metadata:
+                    run = run.with_metadata(exc.plan.to_run_metadata())
+                run = run.with_metadata({"execution_plan_validation": exc.to_dict()})
             failed_run = run.with_metadata(_runtime_metadata(runtime_traces)).fail(str(exc))
             persistence_error = _save_failed_run(self.report_store, failed_run)
             self.event_bus.emit(
@@ -148,6 +154,7 @@ class AnalysisEngine:
         execution_plan: CellExecutionPlan | None,
         child_results: list[CellResult] | None = None,
     ) -> CellResult:
+        node = _node_for_cell(execution_plan, cell.cell_id)
         outcome = self.executor.execute(
             cell=cell,
             request=request,
@@ -156,8 +163,8 @@ class AnalysisEngine:
                 run_id=run_id,
                 trace_id=trace_id,
                 plan_id=execution_plan.plan_id if execution_plan is not None else None,
-                node=_node_for_cell(execution_plan, cell.cell_id),
-                binding=_binding_for_cell(execution_plan, cell.cell_id),
+                node=node,
+                binding=_binding_for_node(execution_plan, node),
             ),
         )
         runtime_traces.append(outcome.trace)
@@ -207,10 +214,10 @@ def _node_for_cell(execution_plan: CellExecutionPlan | None, cell_id: str):
     return None
 
 
-def _binding_for_cell(execution_plan: CellExecutionPlan | None, cell_id: str):
-    if execution_plan is None:
+def _binding_for_node(execution_plan: CellExecutionPlan | None, node):
+    if execution_plan is None or node is None:
         return None
     for binding in execution_plan.service_bindings:
-        if binding.cell_id == cell_id:
+        if binding.binding_id == node.binding_id:
             return binding
     return None

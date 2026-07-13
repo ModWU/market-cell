@@ -80,7 +80,7 @@ flowchart TD
 - CLI `replay`
 - `ReplayRunner`
 
-当前不立即实现复杂消息队列。下一步先让 ExecutionPlan 真正驱动本地 DAG，并完成图校验和输入引用边界。
+当前不立即实现复杂消息队列。Plan Validator 已完成，下一步先让 ExecutionPlan 真正驱动本地 DAG，再完成图定义和输入引用边界。
 
 ## 3. 后端分层
 

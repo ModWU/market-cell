@@ -23,7 +23,7 @@
       }
     },
     "schema_version": {
-      "const": "service_capability_catalog.v1"
+      "const": "service_capability_catalog.v2"
     },
     "generated_at": {
       "type": "string",

@@ -9,6 +9,7 @@ from market_cell.execution import (
     ServiceCapabilityCatalog,
     build_execution_plan,
     build_local_capability_catalog,
+    service_binding_id,
 )
 from market_cell.models import AnalysisRequest, Candle
 from market_cell.registry import default_registry
@@ -64,6 +65,10 @@ class ExecutionPlacementTests(unittest.TestCase):
                 (binding.implementation_id, "python-backup"),
             },
         )
+        self.assertEqual(
+            replica.binding_id,
+            service_binding_id(replica.implementation_id, replica.service_id),
+        )
         decision = RuntimeAwarePlacementPolicy().select(
             registry.manifests()[0],
             candidates,
@@ -90,15 +95,21 @@ class ExecutionPlacementTests(unittest.TestCase):
         )
 
         trend_node = next(node for node in plan.nodes if node.cell_id == "technical.trend")
+        trend_binding = next(
+            binding
+            for binding in plan.service_bindings
+            if binding.binding_id == trend_node.binding_id
+        )
         decision = next(
             item
             for item in plan.metadata["placement_decisions"]
             if item["cell_id"] == "technical.trend"
         )
-        self.assertEqual(trend_node.implementation_id, rust_trend.implementation_id)
+        self.assertEqual(trend_binding.implementation_id, rust_trend.implementation_id)
         self.assertEqual(decision["selected_service_id"], "rust-hot")
         self.assertIn("selected_by_runtime_latency", decision["reason_codes"])
-        self.assertEqual(decision["schema_version"], "cell_placement_decision.v1")
+        self.assertEqual(decision["schema_version"], "cell_placement_decision.v2")
+        self.assertEqual(decision["selected_binding_id"], rust_trend.binding_id)
 
     def test_planner_avoids_unhealthy_service_even_when_it_has_higher_priority(self):
         registry = default_registry()

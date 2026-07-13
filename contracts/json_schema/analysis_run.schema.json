@@ -97,7 +97,7 @@
               "minLength": 1
             },
             "schema_version": {
-              "const": "cell_execution_plan.v1"
+              "enum": ["cell_execution_plan.v1", "cell_execution_plan.v2"]
             },
             "nodes": {
               "type": "array"
@@ -118,6 +118,9 @@
           "items": {
             "$ref": "#/$defs/cell_runtime_summary"
           }
+        },
+        "execution_plan_validation": {
+          "$ref": "https://marketcell.local/schemas/execution_plan_validation.schema.json"
         },
         "data_sources": {
           "$ref": "#/$defs/data_source_audit"

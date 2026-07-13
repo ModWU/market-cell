@@ -178,3 +178,5 @@ task_queue = cell.python-local
 ```
 
 未来多服务集群时，可以一个 Cell 对应多个服务，也可以一个服务承载多个 Cell，但 `CellResult` 输出协议不能因此变化。Cell 也不能读取 task queue、endpoint 或 service health 来自行决定位置。
+
+身份规则：`cell_id` 可以在一个 Graph 中重复使用，`node_id` 才是一次计划内的唯一执行身份。任何依赖、trace 和结果收集都应优先按 node_id 对齐。

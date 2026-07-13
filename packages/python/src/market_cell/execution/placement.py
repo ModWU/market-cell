@@ -8,7 +8,7 @@ from market_cell.execution.models import CellRuntimeSummary, CellServiceBinding
 from market_cell.models import CellManifest
 
 
-CELL_PLACEMENT_DECISION_SCHEMA_VERSION = "cell_placement_decision.v1"
+CELL_PLACEMENT_DECISION_SCHEMA_VERSION = "cell_placement_decision.v2"
 
 PlacementHistoryStatus = Literal[
     "no_history",
@@ -24,6 +24,7 @@ class PlacementUnavailableError(ValueError):
 
 @dataclass(frozen=True)
 class PlacementCandidateEvaluation:
+    binding_id: str
     implementation_id: str
     service_id: str
     priority: int
@@ -34,6 +35,7 @@ class PlacementCandidateEvaluation:
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "binding_id": self.binding_id,
             "implementation_id": self.implementation_id,
             "service_id": self.service_id,
             "priority": self.priority,
@@ -58,6 +60,7 @@ class CellPlacementDecision:
         return {
             "cell_id": self.cell_id,
             "formula_version": self.formula_version,
+            "selected_binding_id": self.selected_binding.binding_id,
             "selected_implementation_id": self.selected_binding.implementation_id,
             "selected_service_id": self.selected_binding.service_id,
             "policy": self.policy,
@@ -185,6 +188,7 @@ class RuntimeAwarePlacementPolicy:
             history_status = "healthy"
 
         return PlacementCandidateEvaluation(
+            binding_id=candidate.binding_id,
             implementation_id=candidate.implementation_id,
             service_id=candidate.service_id,
             priority=candidate.priority,

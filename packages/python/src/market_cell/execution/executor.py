@@ -162,8 +162,7 @@ def validate_execution_trace(
         (
             item
             for item in execution_plan.service_bindings
-            if item.cell_id == trace.cell_id
-            and item.implementation_id == trace.implementation_id
+            if node is not None and item.binding_id == node.binding_id
         ),
         None,
     )
@@ -177,11 +176,11 @@ def validate_execution_trace(
             mismatches.append("cell_id")
         if trace.formula_version != node.formula_version:
             mismatches.append("formula_version")
-        if trace.implementation_id != node.implementation_id:
-            mismatches.append("implementation_id")
     if binding is None:
         mismatches.append("service_binding")
     else:
+        if trace.implementation_id != binding.implementation_id:
+            mismatches.append("implementation_id")
         if trace.service_id != binding.service_id:
             mismatches.append("service_id")
         if trace.runtime != binding.runtime:
@@ -213,8 +212,10 @@ def _validate_local_execution_context(
         or context.binding.formula_version != formula_version
     ):
         mismatches.append("formula_version")
-    if context.node.implementation_id != context.binding.implementation_id:
-        mismatches.append("node_binding_implementation")
+    if context.node.binding_id != context.binding.binding_id:
+        mismatches.append("node_binding_id")
+    if context.binding.binding_id != actual_binding.binding_id:
+        mismatches.append("binding_id")
     if context.binding.implementation_id != actual_binding.implementation_id:
         mismatches.append("implementation_id")
     if context.binding.service_id != actual_binding.service_id:
@@ -297,6 +298,7 @@ def _trace_metadata(
         metadata.update(
             {
                 "planned_implementation_id": planned_binding.implementation_id,
+                "planned_binding_id": planned_binding.binding_id,
                 "planned_service_id": planned_binding.service_id,
                 "planned_runtime": planned_binding.runtime,
             }

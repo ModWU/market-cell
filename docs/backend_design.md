@@ -134,11 +134,10 @@ PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --store
 
 扩展顺序只以 `roadmap.md` 为准。当前后端优先完成：
 
-1. Plan / Graph Validator。
-2. plan-driven local coordinator。
-3. Cell Graph Definition。
-4. Input Reference / Resolver。
-5. Runtime Summary Store 和性能基线。
+1. plan-driven local coordinator。
+2. Cell Graph Definition。
+3. Input Reference / Resolver。
+4. Runtime Summary Store 和性能基线。
 
 这些边界稳定后再进入更多 Cell、多周期、API 和远程执行。
 

@@ -135,17 +135,19 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 - `RuntimeAwarePlacementPolicy`：按公式兼容、失败率、优先级和 P95 延迟选择 binding。
 - `CellPlacementDecision`：记录候选和选择原因。
 - `CellExecutor` / `LocalCellExecutor`：把执行从 AnalysisEngine 中拆出。
+- ExecutionPlan v2：node_id 与 cell_id 分离，节点显式引用 binding_id。
+- implementation、service 和 runtime 由 binding 单点定义，node 不保存重复副本。
+- Plan / Graph Validator：检查 root、依赖、binding、环和可达性，并输出稳定拓扑层。
 - plan、trace、CellResult 一致性校验。
 - 成功和失败 AnalysisRun 的 trace / summary 审计。
 
 仍未完成：
 
 1. ExecutionPlan 还没有真正驱动 DAG 调度。Engine 当前仍按 Registry 顺序执行叶子 Cell，再执行根 Cell。
-2. 缺少 Plan / Graph Validator，尚未统一检查重复节点、缺失依赖、环、不可达节点和 root 合法性。
-3. `input_keys` 只是描述字段，尚无 Input Resolver；服务化后不能继续把大体积 candles 直接嵌入任务计划。
-4. 缺少 Executor Router，当前只有本地 Python executor。
-5. Runtime summary 只有单次运行聚合，缺少跨运行、带时间窗口的历史存储。
-6. 缺少性能预算和回归阈值，CI 目前只守功能正确性。
+2. `input_keys` 只是描述字段，尚无 Input Resolver；服务化后不能继续把大体积 candles 直接嵌入任务计划。
+3. 缺少 Executor Router，当前只有本地 Python executor。
+4. Runtime summary 只有单次运行聚合，缺少跨运行、带时间窗口的历史存储。
+5. 缺少性能预算和回归阈值，CI 目前只守功能正确性。
 
 这些缺口应先于大规模新增业务 Cell 解决。
 
@@ -228,7 +230,7 @@ Runtime State   服务健康、容量和短期状态
 
 进入大规模 Cell 扩展前，至少应满足：
 
-- Plan / Graph Validator 能拒绝非法 DAG。
+- Plan / Graph Validator 能拒绝非法 DAG。（已完成）
 - 本地执行顺序由 ExecutionPlan 驱动，而不是 Registry 固定循环。
 - Input Reference / Resolver 边界确定。
 - Runtime summary 可以跨运行聚合并进入 placement。

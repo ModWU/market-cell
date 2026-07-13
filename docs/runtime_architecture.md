@@ -133,6 +133,7 @@ Cell execution   -> contracts/json_schema/cell_execution_plan.schema.json
 Service binding  -> contracts/json_schema/cell_service_binding.schema.json
 Service catalog  -> contracts/json_schema/service_capability_catalog.schema.json
 Cell placement   -> contracts/json_schema/cell_placement_decision.schema.json
+Plan validation  -> contracts/json_schema/execution_plan_validation.schema.json
 Cell trace       -> contracts/json_schema/cell_runtime_trace.schema.json
 Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
 ```
@@ -145,7 +146,6 @@ Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
 
 当前运行时地基仍需补齐：
 
-- Plan / Graph Validator。
 - plan-driven local coordinator。
 - Input Reference / Resolver。
 - 跨运行 Runtime Summary Store。

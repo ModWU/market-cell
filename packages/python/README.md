@@ -27,6 +27,7 @@ It owns:
 - CellExecutor protocol and strict LocalCellExecutor reference implementation
 - Plan/trace and CellResult contract validation at the execution boundary
 - Failed AnalysisRun persistence with failure traces and summaries
+- ExecutionPlan v2 node/binding identity and deterministic DAG validation
 
 Execution code is split by responsibility:
 
@@ -35,6 +36,7 @@ Execution code is split by responsibility:
 - `execution/executor.py`: execution protocol, local runtime, and consistency checks
 - `execution/placement.py`: implementation selection policy and audit decisions
 - `execution/planner.py`: Cell DAG and binding plan generation
+- `execution/plan_validation.py`: structural, binding, cycle, reachability, and topology validation
 - `execution/telemetry.py`: runtime trace aggregation
 
 Optional local storage extras:
