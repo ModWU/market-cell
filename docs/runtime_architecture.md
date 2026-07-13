@@ -100,7 +100,7 @@ packages/python/src/market_cell/
 
 数据源选择策略位于 `data/provider_selection.py`。它只生成 `ProviderSelectionPlan`，用于表达 primary / backups / disabled 的建议，不直接持有网络连接。`data/router_plan.py` 再把选择计划映射到实际 `CandleSource` 实例，生成可审计的 `RouterPlan`，最后显式创建 `MarketDataRouter`。`RouterPlan.to_run_metadata()` 可把选择计划和实际路由计划写入 `AnalysisRun.metadata`，不改变 `AnalysisReport` 和 Cell 输出结构。`AnalysisRun` 已经有 `analysis_run.v1` JSON Schema，后续服务化和跨语言模块必须按该契约保存运行审计。这样可以让策略、配置、取数运行时和分析报告分别测试，也避免把 Python 冷路径策略和后续 Rust 实时热路径耦合在一起。
 
-Cell 执行模块位于 `execution/`，按 `models / catalog / placement / planner / telemetry` 分层。当前 `build_local_execution_plan` 会先从本地 Registry 建立 `ServiceCapabilityCatalog`，再由 `RuntimeAwarePlacementPolicy` 生成可审计的 `CellPlacementDecision`，最后形成 `CellExecutionPlan` 并写入 `AnalysisRun.metadata.cell_execution_plan`。本地执行器继续生成 trace 和 summary。未来服务化时，能力目录可来自控制面或服务发现，planner 可以消费跨运行 summary，但只有远程 executor 落地后才允许实际执行远程 binding，防止计划位置与真实执行位置不一致。
+Cell 执行模块位于 `execution/`，按 `models / catalog / placement / planner / executor / telemetry` 分层。planner 先从 `ServiceCapabilityCatalog` 选择 binding 并生成 `CellExecutionPlan`；`CellExecutor` 只负责执行已确定的节点。当前 `LocalCellExecutor` 始终上报真实本地 service，即使关闭 plan metadata 也不会丢失执行归属；它会拒绝远程 binding、校验 CellResult，并由引擎复核成功 trace 是否与 plan 完全一致。未来服务化时新增 Executor Router 和远程 executor，不需要把网络调用重新塞回 AnalysisEngine。
 
 ## 5. Storage Layer
 
@@ -155,7 +155,8 @@ Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
 10. 建立 CellRuntimeTrace JSON Schema，记录每个 Cell 节点实际执行状态和耗时。
 11. 建立 CellRuntimeSummary JSON Schema，按服务、Cell、公式版本、实现和运行时聚合性能画像。
 12. 建立 ServiceCapabilityCatalog 和 RuntimeAwarePlacementPolicy，让 summary 进入可审计计划选择。
-13. 再推进 Parquet / DuckDB 和专业数据商 adapter。
+13. 建立 CellExecutor / LocalCellExecutor 和 plan-trace-result 一致性边界。
+14. 再推进 Parquet / DuckDB 和专业数据商 adapter。
 
 暂不做：
 

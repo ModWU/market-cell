@@ -52,7 +52,11 @@
 - CellRuntimeSummary：本地每次运行生成可复盘性能摘要
 - ServiceCapabilityCatalog：一个 Cell 多实现、一个服务多 Cell 的跨语言能力目录契约
 - RuntimeAwarePlacementPolicy：按公式兼容性、服务优先级、历史失败率和 P95 延迟生成可审计放置决策
-- Execution 模块分层：models / catalog / placement / planner / telemetry 职责拆分
+- CellExecutor / LocalCellExecutor：计划和执行解耦，本地执行拒绝远程 binding
+- 执行一致性：成功 trace 必须与 plan 的 node、implementation、service 和 runtime 完全一致
+- CellResult 执行边界校验：防止远程或本地实现返回错误 Cell、标的或周期
+- 失败运行持久化：Cell 异常时保存 failed AnalysisRun、失败 trace 和 summary
+- Execution 模块分层：models / catalog / placement / planner / executor / telemetry 职责拆分
 
 ## v0.3 Cell 扩展
 

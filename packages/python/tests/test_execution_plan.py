@@ -60,6 +60,14 @@ class CellExecutionPlanTests(unittest.TestCase):
         self.assertEqual({trace["service_id"] for trace in traces}, {"python-local"})
         self.assertEqual({trace["runtime"] for trace in traces}, {"python_local"})
         self.assertEqual({trace["plan_id"] for trace in traces}, {plan["plan_id"]})
+        self.assertEqual(
+            {trace["metadata"]["executor"] for trace in traces},
+            {"local_python_executor_v0.1"},
+        )
+        bindings = {binding["cell_id"]: binding for binding in plan["service_bindings"]}
+        self.assertTrue(
+            all(trace["service_id"] == bindings[trace["cell_id"]]["service_id"] for trace in traces)
+        )
         self.assertTrue(all(trace["duration_ms"] >= 0 for trace in traces))
 
     def test_cell_runtime_summaries_are_persisted_in_run_metadata(self):
@@ -108,6 +116,10 @@ class CellExecutionPlanTests(unittest.TestCase):
         self.assertNotIn("cell_execution_plan", run["metadata"])
         self.assertIn("cell_runtime_traces", run["metadata"])
         self.assertEqual({trace["plan_id"] for trace in run["metadata"]["cell_runtime_traces"]}, {None})
+        self.assertEqual(
+            {trace["service_id"] for trace in run["metadata"]["cell_runtime_traces"]},
+            {"python-local"},
+        )
 
 
 def _request() -> AnalysisRequest:

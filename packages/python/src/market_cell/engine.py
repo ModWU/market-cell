@@ -1,16 +1,20 @@
 from copy import deepcopy
 from dataclasses import replace
-from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
 from market_cell import __version__
-from market_cell.events import EventBus, utc_now_iso
+from market_cell.events import EventBus
 from market_cell.execution import (
+    CellExecutionContext,
     CellExecutionPlan,
+    CellExecutor,
     CellRuntimeTrace,
+    LocalCellExecutor,
     build_local_execution_plan,
     summarize_runtime_traces,
+    validate_cell_result,
+    validate_execution_trace,
 )
 from market_cell.cells.base import MarketCell
 from market_cell.models import AnalysisReport, AnalysisRequest, CellResult
@@ -28,12 +32,14 @@ class AnalysisEngine:
         report_store: ReportStore | None = None,
         run_metadata: dict[str, Any] | None = None,
         include_execution_plan: bool = True,
+        executor: CellExecutor | None = None,
     ) -> None:
         self.registry = registry or default_registry()
         self.event_bus = event_bus or EventBus()
         self.report_store = report_store
         self.run_metadata = dict(run_metadata or {})
         self.include_execution_plan = include_execution_plan
+        self.executor = executor or LocalCellExecutor()
 
     def run(
         self,
@@ -61,7 +67,7 @@ class AnalysisEngine:
         try:
             child_results: list[CellResult] = []
             for cell in self.registry.leaf_cells:
-                result = self._analyze_with_trace(
+                result = self._execute_cell(
                     cell=cell,
                     request=request,
                     run_id=run.run_id,
@@ -81,7 +87,7 @@ class AnalysisEngine:
                     },
                 )
 
-            decision = self._analyze_with_trace(
+            decision = self._execute_cell(
                 cell=self.registry.decision_cell,
                 request=request,
                 run_id=run.run_id,
@@ -90,14 +96,7 @@ class AnalysisEngine:
                 execution_plan=execution_plan,
                 child_results=child_results,
             )
-            completed_run = run.with_metadata(
-                {
-                    "cell_runtime_traces": [trace.to_dict() for trace in runtime_traces],
-                    "cell_runtime_summaries": [
-                        summary.to_dict() for summary in summarize_runtime_traces(runtime_traces)
-                    ],
-                }
-            ).complete(run.run_id)
+            completed_run = run.with_metadata(_runtime_metadata(runtime_traces)).complete(run.run_id)
             report = AnalysisReport(
                 target=request.target,
                 horizon=request.horizon,
@@ -118,17 +117,28 @@ class AnalysisEngine:
             self.event_bus.emit("analysis.completed", {"run_id": run.run_id, "report_id": report.report_id})
             return report
         except Exception as exc:
-            failed_run = run.fail(str(exc))
+            failed_run = run.with_metadata(_runtime_metadata(runtime_traces)).fail(str(exc))
+            persistence_error = _save_failed_run(self.report_store, failed_run)
             self.event_bus.emit(
                 "analysis.failed",
-                {"run_id": failed_run.run_id, "target": request.target, "error": failed_run.error},
+                {
+                    "run_id": failed_run.run_id,
+                    "target": request.target,
+                    "error": failed_run.error,
+                    "persistence_error": persistence_error,
+                },
             )
             raise
 
     def _execution_plan(self, request: AnalysisRequest) -> CellExecutionPlan:
-        return build_local_execution_plan(self.registry, request)
+        service_id = (
+            self.executor.service_id
+            if isinstance(self.executor, LocalCellExecutor)
+            else "python-local"
+        )
+        return build_local_execution_plan(self.registry, request, service_id)
 
-    def _analyze_with_trace(
+    def _execute_cell(
         self,
         cell: MarketCell,
         request: AnalysisRequest,
@@ -138,46 +148,22 @@ class AnalysisEngine:
         execution_plan: CellExecutionPlan | None,
         child_results: list[CellResult] | None = None,
     ) -> CellResult:
-        node = _node_for_cell(execution_plan, cell.cell_id)
-        binding = _binding_for_cell(execution_plan, cell.cell_id)
-        started_at = utc_now_iso()
-        started = perf_counter()
-        try:
-            result = cell.analyze(request, child_results)
-        except Exception as exc:
-            finished_at = utc_now_iso()
-            runtime_traces.append(
-                _runtime_trace(
-                    trace_id=trace_id,
-                    run_id=run_id,
-                    cell=cell,
-                    status="failed",
-                    started_at=started_at,
-                    finished_at=finished_at,
-                    duration_ms=_duration_ms(started),
-                    node=node,
-                    binding=binding,
-                    execution_plan=execution_plan,
-                    error=str(exc),
-                )
-            )
-            raise
-
-        finished_at = utc_now_iso()
-        runtime_traces.append(
-            _runtime_trace(
-                trace_id=trace_id,
+        outcome = self.executor.execute(
+            cell=cell,
+            request=request,
+            child_results=child_results,
+            context=CellExecutionContext(
                 run_id=run_id,
-                cell=cell,
-                status="succeeded",
-                started_at=started_at,
-                finished_at=finished_at,
-                duration_ms=_duration_ms(started),
-                node=node,
-                binding=binding,
-                execution_plan=execution_plan,
-            )
+                trace_id=trace_id,
+                plan_id=execution_plan.plan_id if execution_plan is not None else None,
+                node=_node_for_cell(execution_plan, cell.cell_id),
+                binding=_binding_for_cell(execution_plan, cell.cell_id),
+            ),
         )
+        runtime_traces.append(outcome.trace)
+        result = outcome.unwrap()
+        validate_execution_trace(outcome.trace, execution_plan)
+        validate_cell_result(cell, request, result)
         return result
 
 
@@ -190,41 +176,26 @@ def _merge_metadata(
     return payload
 
 
-def _runtime_trace(
-    trace_id: str,
-    run_id: str,
-    cell: MarketCell,
-    status: str,
-    started_at: str,
-    finished_at: str,
-    duration_ms: float,
-    node,
-    binding,
-    execution_plan: CellExecutionPlan | None,
-    error: str | None = None,
-) -> CellRuntimeTrace:
-    manifest = cell.manifest()
-    return CellRuntimeTrace(
-        trace_id=trace_id,
-        span_id=uuid4().hex,
-        run_id=run_id,
-        plan_id=execution_plan.plan_id if execution_plan is not None else None,
-        node_id=node.node_id if node is not None else f"cell:{cell.cell_id}",
-        cell_id=cell.cell_id,
-        implementation_id=node.implementation_id if node is not None else None,
-        service_id=binding.service_id if binding is not None else None,
-        runtime=binding.runtime if binding is not None else None,
-        formula_version=manifest.formula_version,
-        status=status,
-        started_at=started_at,
-        finished_at=finished_at,
-        duration_ms=duration_ms,
-        error=error,
-    )
+def _runtime_metadata(runtime_traces: list[CellRuntimeTrace]) -> dict[str, Any]:
+    return {
+        "cell_runtime_traces": [trace.to_dict() for trace in runtime_traces],
+        "cell_runtime_summaries": [
+            summary.to_dict() for summary in summarize_runtime_traces(runtime_traces)
+        ],
+    }
 
 
-def _duration_ms(started: float) -> float:
-    return round((perf_counter() - started) * 1000, 6)
+def _save_failed_run(
+    report_store: ReportStore | None,
+    failed_run: AnalysisRun,
+) -> str | None:
+    if report_store is None:
+        return None
+    try:
+        report_store.save_run(failed_run)
+    except Exception as exc:
+        return str(exc)
+    return None
 
 
 def _node_for_cell(execution_plan: CellExecutionPlan | None, cell_id: str):

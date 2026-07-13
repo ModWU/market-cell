@@ -18,6 +18,9 @@ class ReportStore(Protocol):
     def load_run(self, run_id: str) -> dict:
         ...
 
+    def save_run(self, run: AnalysisRun) -> str:
+        ...
+
 
 class FileSystemReportStore:
     def __init__(self, root: Path | str = "reports") -> None:
@@ -28,11 +31,15 @@ class FileSystemReportStore:
     def save(self, report: AnalysisReport, run: AnalysisRun) -> str:
         report_id = report.report_id or run.run_id
         self.reports_dir.mkdir(parents=True, exist_ok=True)
-        self.runs_dir.mkdir(parents=True, exist_ok=True)
 
         self._write_json(self.reports_dir / f"{report_id}.json", report.to_dict())
-        self._write_json(self.runs_dir / f"{run.run_id}.json", run.to_dict())
+        self.save_run(run)
         return report_id
+
+    def save_run(self, run: AnalysisRun) -> str:
+        self.runs_dir.mkdir(parents=True, exist_ok=True)
+        self._write_json(self.runs_dir / f"{run.run_id}.json", run.to_dict())
+        return run.run_id
 
     def load_report(self, report_id: str) -> dict:
         return self._read_json(self.reports_dir / f"{report_id}.json")

@@ -57,8 +57,10 @@ flowchart TD
 - Request Parser
 - Input Validator
 - Cell Registry
-- 固定 Cell 执行器
+- CellExecutor 协议和 LocalCellExecutor 本地参考实现
 - CellExecutionPlan 执行计划契约和本地计划构建器
+- ServiceCapabilityCatalog 和 RuntimeAwarePlacementPolicy
+- 执行计划、实际 trace 与 CellResult 一致性校验
 - CellRuntimeTrace 本地执行耗时和服务归属记录
 - CellRuntimeSummary 本地执行性能摘要聚合
 - Scoring Engine 初版
@@ -91,8 +93,8 @@ flowchart TD
 
 - Analysis Planner
 - Factor Graph
-- Cell Execution Fabric
-- Service Capability Catalog
+- 分布式 Cell Execution Fabric
+- Service Discovery / Executor Router
 - Data Connector / Feature Store
 - AI Explainer
 - Visualization

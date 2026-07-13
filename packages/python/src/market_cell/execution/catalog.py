@@ -89,7 +89,7 @@ def build_local_capability_catalog(
     service_id: str = "python-local",
 ) -> ServiceCapabilityCatalog:
     return ServiceCapabilityCatalog.create(
-        [_local_binding(service_id, manifest) for manifest in registry.manifests()],
+        [build_local_service_binding(manifest, service_id) for manifest in registry.manifests()],
         catalog_id=f"{service_id}:{uuid4().hex}",
         metadata={
             "source": "local_registry",
@@ -98,7 +98,10 @@ def build_local_capability_catalog(
     )
 
 
-def _local_binding(service_id: str, manifest: CellManifest) -> CellServiceBinding:
+def build_local_service_binding(
+    manifest: CellManifest,
+    service_id: str = "python-local",
+) -> CellServiceBinding:
     return CellServiceBinding(
         implementation_id=_implementation_id(service_id, manifest),
         cell_id=manifest.cell_id,

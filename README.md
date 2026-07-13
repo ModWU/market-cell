@@ -164,6 +164,7 @@ MarketCell 输出的是分析结果和风险解释，不是投资建议，也不
 - Cell 执行计划遵守 `cell_execution_plan.v1` 契约，当前本地单服务和未来多服务集群共用同一地基
 - 服务能力目录遵守 `service_capability_catalog.v1` 契约，一个 Cell 可有多个实现，一个服务也可承载多个 Cell
 - 每个 Cell 的实现选择会生成 `cell_placement_decision.v1` 审计记录，并基于优先级、历史失败率和 P95 延迟做稳定放置
+- `CellExecutor` 将计划与实际执行解耦；当前 `LocalCellExecutor` 会拒绝远程 binding，并校验 CellResult 与运行 trace 的一致性
 - 每个 Cell 节点会生成 `cell_runtime_trace.v1` 运行轨迹，记录服务、状态和耗时
 - 每次运行会生成 `cell_runtime_summary.v1` 性能摘要，按 Cell、公式版本、实现、服务和运行时聚合耗时与失败信息
 - 后期可以接入真实数据、AI、可视化和自动交易模块

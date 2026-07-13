@@ -269,11 +269,15 @@ endpoint = null
   "retry_count": 0,
   "error": null,
   "parent_span_id": null,
-  "metadata": {}
+  "metadata": {
+    "executor": "local_python_executor_v0.1",
+    "planned_binding": true,
+    "planned_service_id": "python-local"
+  }
 }
 ```
 
-`CellRuntimeTrace` 关注“实际如何执行”，用于性能分析、失败定位和多服务复盘。它进入 `AnalysisRun.metadata.cell_runtime_traces`，不进入 `AnalysisReport`。
+`CellRuntimeTrace` 关注“实际如何执行”，用于性能分析、失败定位和多服务复盘。`service_id / runtime / implementation_id` 必须来自实际 executor，计划信息只进入 trace metadata。成功 trace 必须与 `CellExecutionPlan` 完全一致；关闭计划记录时 trace 仍需保留真实服务归属。它进入 `AnalysisRun.metadata.cell_runtime_traces`，不进入 `AnalysisReport`。
 
 ## 11. CellRuntimeSummary
 

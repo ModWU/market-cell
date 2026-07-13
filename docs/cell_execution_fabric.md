@@ -344,7 +344,9 @@ AnalysisReport 不能混入调度细节。
 
 AnalysisRun 可以保存 ExecutionPlan、runtime trace 和 runtime summary，用于复盘、性能分析和后续调度优化。
 
-本地 executor 不能执行标记为远程服务的 binding。远程 binding 目前只可用于 planner 和契约测试；必须等远程 executor、结果回传和 trace 上报闭环完成后才能进入真实执行路径。
+本地 `LocalCellExecutor` 已经在执行前校验 node、formula、implementation、service、runtime 和 language。远程 binding 会被拒绝，且 Cell 不会被调用；失败 trace 记录本地 executor 和原计划服务，避免把拒绝调度误记成远程执行。成功后引擎会再次校验 trace 与 plan，并校验 CellResult 的 cell_id、target 和 horizon。
+
+Cell 执行异常时，`FileSystemReportStore.save_run` 会单独保存 failed AnalysisRun，包括已完成 trace、失败 trace 和 runtime summary；保存运行记录失败时只写入 `analysis.failed.persistence_error`，不会覆盖原始 Cell 异常。
 
 ## 8. 当前落地顺序
 
@@ -356,8 +358,9 @@ AnalysisRun 可以保存 ExecutionPlan、runtime trace 和 runtime summary，用
 4. 定义 `CellRuntimeTrace` JSON Schema，并记录本地每个 Cell 节点的耗时、状态和服务归属。
 5. 定义 `CellRuntimeSummary` JSON Schema，并按 Cell、公式版本、实现、服务和运行时聚合性能画像。
 6. 定义 `ServiceCapabilityCatalog` 和 `CellPlacementDecision` JSON Schema，实现运行时感知的确定性 planner。
-7. 下一步抽象 executor，并建立“计划位置等于实际执行位置”的校验。
-8. 再考虑 Task Queue、服务发现和远程执行。
+7. 定义 `CellExecutor` 和 `LocalCellExecutor`，建立“计划位置等于实际执行位置”及 CellResult 边界校验。
+8. 下一步建立 Executor Router，让不同 runtime 由明确的 executor 承载。
+9. 再考虑 Task Queue、服务发现和远程执行。
 
 ## 9. 官方参考
 
