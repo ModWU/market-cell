@@ -50,6 +50,9 @@
 - CellExecutionPlan：本地单服务也生成可复盘执行计划
 - CellRuntimeTrace：本地每个 Cell 节点生成可复盘执行 trace
 - CellRuntimeSummary：本地每次运行生成可复盘性能摘要
+- ServiceCapabilityCatalog：一个 Cell 多实现、一个服务多 Cell 的跨语言能力目录契约
+- RuntimeAwarePlacementPolicy：按公式兼容性、服务优先级、历史失败率和 P95 延迟生成可审计放置决策
+- Execution 模块分层：models / catalog / placement / planner / telemetry 职责拆分
 
 ## v0.3 Cell 扩展
 

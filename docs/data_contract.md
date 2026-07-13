@@ -216,8 +216,6 @@ metadata.data_sources.router_plan
 - metadata 可以继续扩展，但已经命名的领域必须保持结构稳定。
 - 回放时应该优先读取 `input_snapshot`、`formula_versions` 和 `metadata`，不要依赖临时日志。
 
-## 9. 版本策略
-
 ## 9. CellExecutionPlan
 
 一次分析的 Cell 执行计划。
@@ -306,7 +304,49 @@ endpoint = null
 
 它不替代 `CellRuntimeTrace`：trace 是逐次证据，summary 是稳定聚合口径。未来多服务集群中，Rust worker、Python worker 或外部服务只要上报同一类 trace，就可以生成一致的 summary。
 
-## 12. 版本策略
+## 12. ServiceCapabilityCatalog
+
+服务能力目录描述当前有哪些 Cell 实现可供 planner 选择：
+
+```json
+{
+  "catalog_id": "catalog123",
+  "bindings": [],
+  "schema_version": "service_capability_catalog.v1",
+  "generated_at": "2026-07-13T00:00:00+00:00",
+  "metadata": {}
+}
+```
+
+目录规则：
+
+- `(implementation_id, service_id)` 在一个目录内必须唯一；同一实现可以由多个逻辑服务承载。
+- 候选实现必须同时匹配 `cell_id` 和 `formula_version`。
+- 一个 `cell_id` 可以出现多个 service binding。
+- 一个 `service_id` 可以承载多个 `cell_id`。
+- catalog 只描述能力和当前绑定，不保存市场输入或 CellResult。
+
+## 13. CellPlacementDecision
+
+planner 为每个 Cell 选择实现时生成放置决策：
+
+```json
+{
+  "cell_id": "technical.trend",
+  "formula_version": "trend_close_change_v0.1",
+  "selected_implementation_id": "rust-hot:technical.trend:trend_close_change_v0.1",
+  "selected_service_id": "rust-hot",
+  "policy": "runtime_aware_priority_v0.1",
+  "candidate_count": 2,
+  "reason_codes": ["selected_by_runtime_latency"],
+  "candidate_evaluations": [],
+  "schema_version": "cell_placement_decision.v1"
+}
+```
+
+放置策略先保证公式兼容；有足够历史样本时避开高失败率实现；其余候选按显式优先级和 P95 延迟确定性排序。决策进入 `CellExecutionPlan.metadata.placement_decisions`，用于解释“为什么本次由这个服务执行”。
+
+## 14. 版本策略
 
 当前已经在 `AnalysisReport` 中加入：
 
@@ -352,6 +392,19 @@ trace_count
 p95_duration_ms
 failed_count
 retry_count
+```
+
+当前已经在 `ServiceCapabilityCatalog` 和 `CellPlacementDecision` 中加入：
+
+```text
+schema_version
+catalog_id
+implementation_id
+service_id
+formula_version
+policy
+reason_codes
+candidate_evaluations
 ```
 
 跨语言 schema 保存在：

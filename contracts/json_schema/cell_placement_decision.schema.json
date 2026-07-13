@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/cell_placement_decision.schema.json",
+  "title": "MarketCell CellPlacementDecision",
+  "type": "object",
+  "required": [
+    "cell_id",
+    "formula_version",
+    "selected_implementation_id",
+    "selected_service_id",
+    "policy",
+    "candidate_count",
+    "reason_codes",
+    "candidate_evaluations",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "cell_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "formula_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "selected_implementation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "selected_service_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "reason_codes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "candidate_evaluations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/candidate_evaluation"
+      }
+    },
+    "schema_version": {
+      "const": "cell_placement_decision.v1"
+    }
+  },
+  "$defs": {
+    "candidate_evaluation": {
+      "type": "object",
+      "required": [
+        "implementation_id",
+        "service_id",
+        "priority",
+        "trace_count",
+        "failure_rate",
+        "p95_duration_ms",
+        "history_status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "implementation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "service_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "trace_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failure_rate": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "p95_duration_ms": {
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "history_status": {
+          "enum": [
+            "no_history",
+            "insufficient_history",
+            "healthy",
+            "unhealthy"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -100,7 +100,7 @@ packages/python/src/market_cell/
 
 数据源选择策略位于 `data/provider_selection.py`。它只生成 `ProviderSelectionPlan`，用于表达 primary / backups / disabled 的建议，不直接持有网络连接。`data/router_plan.py` 再把选择计划映射到实际 `CandleSource` 实例，生成可审计的 `RouterPlan`，最后显式创建 `MarketDataRouter`。`RouterPlan.to_run_metadata()` 可把选择计划和实际路由计划写入 `AnalysisRun.metadata`，不改变 `AnalysisReport` 和 Cell 输出结构。`AnalysisRun` 已经有 `analysis_run.v1` JSON Schema，后续服务化和跨语言模块必须按该契约保存运行审计。这样可以让策略、配置、取数运行时和分析报告分别测试，也避免把 Python 冷路径策略和后续 Rust 实时热路径耦合在一起。
 
-Cell 执行计划位于 `execution/`，当前提供本地 `build_local_execution_plan`。它把本地单进程 Cell 也表示成 `CellExecutionPlan`，并写入 `AnalysisRun.metadata.cell_execution_plan`。本地执行器还会为每个 Cell 写入 `AnalysisRun.metadata.cell_runtime_traces`，记录实际服务、实现、状态和耗时，并生成 `AnalysisRun.metadata.cell_runtime_summaries`，按 Cell、公式版本、实现、服务和运行时聚合耗时、失败和重试信息。这样当前仍是单服务本地执行，但服务化时可以把同一份计划交给远程 executor、task queue 或 worker pool，并让远程 worker 上报同一类 trace，再由统一聚合口径生成性能画像。
+Cell 执行模块位于 `execution/`，按 `models / catalog / placement / planner / telemetry` 分层。当前 `build_local_execution_plan` 会先从本地 Registry 建立 `ServiceCapabilityCatalog`，再由 `RuntimeAwarePlacementPolicy` 生成可审计的 `CellPlacementDecision`，最后形成 `CellExecutionPlan` 并写入 `AnalysisRun.metadata.cell_execution_plan`。本地执行器继续生成 trace 和 summary。未来服务化时，能力目录可来自控制面或服务发现，planner 可以消费跨运行 summary，但只有远程 executor 落地后才允许实际执行远程 binding，防止计划位置与真实执行位置不一致。
 
 ## 5. Storage Layer
 
@@ -130,6 +130,9 @@ Analysis input    -> contracts/json_schema/analysis_request.schema.json
 Analysis output   -> contracts/json_schema/analysis_report.schema.json
 Analysis run/audit -> contracts/json_schema/analysis_run.schema.json
 Cell execution   -> contracts/json_schema/cell_execution_plan.schema.json
+Service binding  -> contracts/json_schema/cell_service_binding.schema.json
+Service catalog  -> contracts/json_schema/service_capability_catalog.schema.json
+Cell placement   -> contracts/json_schema/cell_placement_decision.schema.json
 Cell trace       -> contracts/json_schema/cell_runtime_trace.schema.json
 Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
 ```
@@ -151,7 +154,8 @@ Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
 9. 建立 CellExecutionPlan JSON Schema，让本地单服务和未来多服务执行使用同一计划契约。
 10. 建立 CellRuntimeTrace JSON Schema，记录每个 Cell 节点实际执行状态和耗时。
 11. 建立 CellRuntimeSummary JSON Schema，按服务、Cell、公式版本、实现和运行时聚合性能画像。
-12. 再推进 Parquet / DuckDB 和专业数据商 adapter。
+12. 建立 ServiceCapabilityCatalog 和 RuntimeAwarePlacementPolicy，让 summary 进入可审计计划选择。
+13. 再推进 Parquet / DuckDB 和专业数据商 adapter。
 
 暂不做：
 

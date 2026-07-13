@@ -22,6 +22,16 @@ It owns:
 - Local CellExecutionPlan generation for future service-fabric execution
 - Local CellRuntimeTrace records for per-Cell latency and status audits
 - Local CellRuntimeSummary aggregation for service, Cell, formula, implementation, and runtime performance profiling
+- ServiceCapabilityCatalog contracts for one-Cell/many-service and one-service/many-Cell mappings
+- Runtime-aware placement decisions with formula compatibility, failure-rate protection, deterministic priority, and P95 latency selection
+
+Execution code is split by responsibility:
+
+- `execution/models.py`: stable execution data objects
+- `execution/catalog.py`: service capability discovery model
+- `execution/placement.py`: implementation selection policy and audit decisions
+- `execution/planner.py`: Cell DAG and binding plan generation
+- `execution/telemetry.py`: runtime trace aggregation
 
 Optional local storage extras:
 

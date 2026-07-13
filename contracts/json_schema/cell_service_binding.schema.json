@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/cell_service_binding.schema.json",
+  "title": "MarketCell CellServiceBinding",
+  "type": "object",
+  "required": [
+    "implementation_id",
+    "cell_id",
+    "service_id",
+    "runtime",
+    "language",
+    "formula_version",
+    "endpoint",
+    "task_queue",
+    "priority",
+    "capabilities",
+    "supports_batch",
+    "max_concurrency",
+    "resource_hints"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "implementation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cell_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "service_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runtime": {
+      "enum": [
+        "python_local",
+        "python_service",
+        "rust_service",
+        "external_service"
+      ]
+    },
+    "language": {
+      "type": "string",
+      "minLength": 1
+    },
+    "formula_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "endpoint": {
+      "type": ["string", "null"]
+    },
+    "task_queue": {
+      "type": ["string", "null"]
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "supports_batch": {
+      "type": "boolean"
+    },
+    "max_concurrency": {
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "resource_hints": {
+      "$ref": "#/$defs/resource_hints"
+    }
+  },
+  "$defs": {
+    "resource_hints": {
+      "type": "object",
+      "required": [
+        "cpu_weight",
+        "latency_sensitivity",
+        "stateful",
+        "expected_timeout_ms",
+        "max_retries"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cpu_weight": {
+          "enum": ["unknown", "light", "medium", "heavy"]
+        },
+        "latency_sensitivity": {
+          "enum": ["low", "normal", "high"]
+        },
+        "stateful": {
+          "type": "boolean"
+        },
+        "expected_timeout_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

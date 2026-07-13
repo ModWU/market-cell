@@ -1,3 +1,9 @@
+from market_cell.execution.catalog import (
+    SERVICE_CAPABILITY_CATALOG_SCHEMA_VERSION,
+    CapabilityCatalogError,
+    ServiceCapabilityCatalog,
+    build_local_capability_catalog,
+)
 from market_cell.execution.models import (
     CELL_EXECUTION_PLAN_SCHEMA_VERSION,
     CELL_RUNTIME_SUMMARY_SCHEMA_VERSION,
@@ -13,16 +19,35 @@ from market_cell.execution.models import (
     LatencySensitivity,
     ResourceHints,
     RuntimeTraceStatus,
-    build_local_execution_plan,
-    summarize_runtime_traces,
 )
+from market_cell.execution.placement import (
+    CELL_PLACEMENT_DECISION_SCHEMA_VERSION,
+    CellPlacementDecision,
+    CellPlacementPolicy,
+    PlacementCandidateEvaluation,
+    PlacementHistoryStatus,
+    PlacementUnavailableError,
+    RuntimeAwarePlacementPolicy,
+)
+from market_cell.execution.planner import (
+    CellExecutionPlanner,
+    build_execution_plan,
+    build_local_execution_plan,
+)
+from market_cell.execution.telemetry import summarize_runtime_traces
 
 __all__ = [
+    "CELL_PLACEMENT_DECISION_SCHEMA_VERSION",
     "CELL_EXECUTION_PLAN_SCHEMA_VERSION",
     "CELL_RUNTIME_SUMMARY_SCHEMA_VERSION",
     "CELL_RUNTIME_TRACE_SCHEMA_VERSION",
+    "SERVICE_CAPABILITY_CATALOG_SCHEMA_VERSION",
+    "CapabilityCatalogError",
     "CellExecutionNode",
     "CellExecutionPlan",
+    "CellExecutionPlanner",
+    "CellPlacementDecision",
+    "CellPlacementPolicy",
     "CellRuntime",
     "CellRuntimeSummary",
     "CellRuntimeTrace",
@@ -30,8 +55,15 @@ __all__ = [
     "CpuWeight",
     "ExecutionRole",
     "LatencySensitivity",
+    "PlacementCandidateEvaluation",
+    "PlacementHistoryStatus",
+    "PlacementUnavailableError",
     "ResourceHints",
+    "RuntimeAwarePlacementPolicy",
     "RuntimeTraceStatus",
+    "ServiceCapabilityCatalog",
+    "build_execution_plan",
+    "build_local_capability_catalog",
     "build_local_execution_plan",
     "summarize_runtime_traces",
 ]

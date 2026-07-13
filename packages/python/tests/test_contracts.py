@@ -4,7 +4,10 @@ from pathlib import Path
 import tempfile
 
 from market_cell.engine import AnalysisEngine
-from market_cell.execution import build_local_execution_plan
+from market_cell.execution import (
+    build_local_capability_catalog,
+    build_local_execution_plan,
+)
 from market_cell.models import AnalysisRequest, Candle
 from market_cell.registry import default_registry
 from market_cell.reports import FileSystemReportStore
@@ -144,6 +147,67 @@ class ContractTests(unittest.TestCase):
             with self.subTest(field_name=field_name):
                 self.assertIn(field_name, summary)
         self.assertEqual(summary["schema_version"], "cell_runtime_summary.v1")
+
+    def test_service_capability_catalog_contains_contract_required_fields(self):
+        schema = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "json_schema"
+                / "service_capability_catalog.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        catalog = build_local_capability_catalog(default_registry()).to_dict()
+
+        for field_name in schema["required"]:
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, catalog)
+        self.assertEqual(catalog["schema_version"], "service_capability_catalog.v1")
+        self.assertTrue(catalog["bindings"])
+
+    def test_cell_service_binding_contains_contract_required_fields(self):
+        schema = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "json_schema"
+                / "cell_service_binding.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        binding = build_local_capability_catalog(default_registry()).to_dict()["bindings"][0]
+
+        for field_name in schema["required"]:
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, binding)
+
+    def test_cell_placement_decision_contains_contract_required_fields(self):
+        schema = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "json_schema"
+                / "cell_placement_decision.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        plan = build_local_execution_plan(default_registry(), _request()).to_dict()
+        decision = plan["metadata"]["placement_decisions"][0]
+
+        for field_name in schema["required"]:
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, decision)
+        self.assertEqual(decision["schema_version"], "cell_placement_decision.v1")
+
+
+def _request() -> AnalysisRequest:
+    return AnalysisRequest(
+        target="BTC/USD",
+        horizon="1h",
+        candles=[
+            Candle("t1", open=100, high=101, low=99, close=100, volume=1000),
+            Candle("t2", open=100, high=102, low=99, close=101, volume=1200),
+        ],
+    )
 
 
 if __name__ == "__main__":

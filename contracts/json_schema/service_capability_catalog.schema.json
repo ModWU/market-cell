@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/service_capability_catalog.schema.json",
+  "title": "MarketCell ServiceCapabilityCatalog",
+  "type": "object",
+  "required": [
+    "catalog_id",
+    "bindings",
+    "schema_version",
+    "generated_at",
+    "metadata"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "catalog_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "$ref": "https://marketcell.local/schemas/cell_service_binding.schema.json"
+      }
+    },
+    "schema_version": {
+      "const": "service_capability_catalog.v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

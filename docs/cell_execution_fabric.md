@@ -115,7 +115,21 @@ technical.trend
 └── rust-service-hot:technical.trend:trend_close_change_v0.1
 ```
 
-### 4.3 Cell Service Binding
+### 4.3 Service Capability Catalog
+
+Capability Catalog 是 planner 的候选实现输入，而不是临时连接对象集合：
+
+```text
+catalog_id
+generated_at
+bindings[]
+schema_version
+metadata
+```
+
+它允许一个 Cell 对应多个服务，也允许一个服务承载多个 Cell；同一 implementation 也可以部署到多个逻辑服务，binding 由 `(implementation_id, service_id)` 唯一标识。当前目录由本地 Registry 构建；未来可以由静态配置、控制面或服务发现生成，但输出都必须遵守 `service_capability_catalog.v1`。
+
+### 4.4 Cell Service Binding
 
 Service Binding 描述某个实现当前由哪个服务承载：
 
@@ -148,7 +162,23 @@ risk.manipulation
 └── external-ml service
 ```
 
-### 4.4 Cell Execution Plan
+### 4.5 Cell Placement Decision
+
+Placement Decision 记录 planner 对每个 Cell 的实际选择：
+
+```text
+cell_id
+formula_version
+selected_implementation_id
+selected_service_id
+policy
+reason_codes
+candidate_evaluations
+```
+
+候选评估区分 `no_history / insufficient_history / healthy / unhealthy`，并保留 trace 数量、失败率和 P95 延迟。这样调度结论可以复盘，而不是只看到最终 binding。
+
+### 4.6 Cell Execution Plan
 
 ExecutionPlan 描述本次分析实际要执行的 DAG：
 
@@ -170,7 +200,7 @@ metadata
 - 哪个节点优先使用哪个 implementation。
 - 本次计划落在本地单服务，还是未来的多服务集群。
 
-### 4.5 Cell Runtime Trace
+### 4.7 Cell Runtime Trace
 
 每个节点执行都应该产生 runtime trace：
 
@@ -193,7 +223,7 @@ span_id
 
 当前本地 `AnalysisEngine` 已经为每个 Cell 节点生成 `cell_runtime_trace.v1` 记录，并写入 `AnalysisRun.metadata.cell_runtime_traces`。未来远程 worker 也必须上报同一类记录。
 
-### 4.6 Cell Runtime Summary
+### 4.8 Cell Runtime Summary
 
 Runtime summary 是 trace 的聚合层：
 
@@ -292,6 +322,16 @@ Placement Policy 可以根据这些条件选择实现：
 | 数据局部性 | 靠近 Feature Store 的服务优先 |
 | 成本 | 非实时任务避开昂贵资源 |
 
+当前参考策略 `runtime_aware_priority_v0.1` 使用稳定、确定性的最小规则：
+
+1. 只接受 `cell_id + formula_version` 完全匹配的候选。
+2. 当样本达到阈值时，把失败率超过阈值的实现移出健康候选池。
+3. 健康候选按较小的 `priority` 值优先。
+4. 同优先级下，优先选择有足够历史且 P95 延迟更低的实现。
+5. 所有候选都不健康时仍返回最小风险 fallback，同时明确记录原因。
+
+未知服务不会仅凭一次快测就被判定健康或故障，避免小样本抖动直接改变服务放置。
+
 ## 7. 边界和禁忌
 
 Cell 不能直接决定自己跑在哪个服务。
@@ -304,6 +344,8 @@ AnalysisReport 不能混入调度细节。
 
 AnalysisRun 可以保存 ExecutionPlan、runtime trace 和 runtime summary，用于复盘、性能分析和后续调度优化。
 
+本地 executor 不能执行标记为远程服务的 binding。远程 binding 目前只可用于 planner 和契约测试；必须等远程 executor、结果回传和 trace 上报闭环完成后才能进入真实执行路径。
+
 ## 8. 当前落地顺序
 
 当前只做地基，不上复杂集群：
@@ -313,7 +355,9 @@ AnalysisRun 可以保存 ExecutionPlan、runtime trace 和 runtime summary，用
 3. 把 execution plan 写入 `AnalysisRun.metadata`。
 4. 定义 `CellRuntimeTrace` JSON Schema，并记录本地每个 Cell 节点的耗时、状态和服务归属。
 5. 定义 `CellRuntimeSummary` JSON Schema，并按 Cell、公式版本、实现、服务和运行时聚合性能画像。
-6. 再考虑 Task Queue、服务发现、远程执行。
+6. 定义 `ServiceCapabilityCatalog` 和 `CellPlacementDecision` JSON Schema，实现运行时感知的确定性 planner。
+7. 下一步抽象 executor，并建立“计划位置等于实际执行位置”的校验。
+8. 再考虑 Task Queue、服务发现和远程执行。
 
 ## 9. 官方参考
 

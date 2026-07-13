@@ -4,7 +4,7 @@ This directory contains language-neutral contracts shared by all MarketCell runt
 
 Current contracts are split by runtime path:
 
-- JSON Schema for analysis requests, reports, replayable analysis runs, Cell execution plans, Cell runtime traces, and Cell runtime summaries.
+- JSON Schema for analysis requests, reports, replayable analysis runs, Cell execution plans, service capability catalogs, placement decisions, Cell runtime traces, and Cell runtime summaries.
 - Protobuf for realtime market-data events.
 - Parquet schema notes for historical and replayable candle storage.
 
@@ -14,6 +14,9 @@ Directory policy:
 - `json_schema/analysis_report.schema.json`: stable report shape emitted by the analysis runtime.
 - `json_schema/analysis_run.schema.json`: run metadata, input snapshots, formula versions, and data-source audit records.
 - `json_schema/cell_execution_plan.schema.json`: DAG nodes, service bindings, runtime hints, and local/cluster execution fabric contract.
+- `json_schema/cell_service_binding.schema.json`: shared implementation-to-service binding used by both execution plans and capability catalogs.
+- `json_schema/service_capability_catalog.schema.json`: language-neutral catalog of the Cell implementations currently provided by local or remote services.
+- `json_schema/cell_placement_decision.schema.json`: auditable selection record for the implementation and service chosen for each Cell.
 - `json_schema/cell_runtime_trace.schema.json`: per-Cell execution trace records for latency, errors, retry count, and service attribution.
 - `json_schema/cell_runtime_summary.schema.json`: per-run aggregated runtime profile grouped by Cell, formula version, implementation, service, and runtime.
 - `protobuf/market_data.proto`: realtime event contract for Rust hot-path producers and later services.
