@@ -1,4 +1,4 @@
-# MarketCell 术语表 v0.1
+# MarketCell 术语表 v0.2
 
 ## Cell
 
@@ -18,13 +18,15 @@ Technical Tissue = TrendCell + VolumeCell + VolatilityCell
 
 ## Organ
 
-一个完整市场子系统。
+一个有名称、有版本的 Cell 子图，表达某个完整市场子系统。
 
 例如：
 
 ```text
 Crypto Organ = 链上资金 + 合约数据 + 交易所数据 + 技术结构
 ```
+
+Organ 是组合概念，不引入新的 Cell 输出或执行协议。
 
 ## Body
 
@@ -55,6 +57,62 @@ Crypto Organ = 链上资金 + 合约数据 + 交易所数据 + 技术结构
 一次分析任务临时生成的执行树。
 
 它表达“这次分析要调用哪些 Cell，以及如何聚合结果”。
+
+## CellGraphDefinition
+
+版本化的 Cell 组合定义。
+
+它描述节点、依赖、聚合关系和 root，但不描述具体服务位置。当前尚未落地，是地基阶段的优先契约。
+
+## ServiceCapabilityCatalog
+
+服务能力目录。
+
+它描述当前有哪些 Cell implementation 以及由哪些逻辑服务承载，允许一个 Cell 多服务和一个服务多 Cell。
+
+## CellServiceBinding
+
+Cell implementation 与逻辑服务之间的绑定。
+
+它包含 implementation、service、runtime、language、task queue 和资源提示，不改变 CellResult。
+
+## CellPlacementDecision
+
+planner 为某个 Cell 选择 implementation 和 service 的审计记录。
+
+它保留候选、历史状态和选择原因。
+
+## CellExecutionPlan
+
+一次分析运行的可执行 DAG 和已选择 binding。
+
+它只保存节点、依赖、输入键和服务绑定，不保存大体积市场数据。
+
+## CellExecutor
+
+执行已计划 Cell 节点的运行时接口。
+
+Executor 必须上报实际服务位置和运行 trace，不能把计划位置当成真实执行结果。
+
+## CellRuntimeTrace
+
+单个 Cell 节点的一次实际执行记录，包含服务、状态、耗时、错误和追踪标识。
+
+## CellRuntimeSummary
+
+按 Cell、公式、实现、服务和 runtime 聚合的性能摘要，用于回归、容量和 placement。
+
+## AnalysisRun
+
+一次分析执行的审计记录。
+
+它保存输入快照、公式版本、执行计划、数据源路由、trace、summary 和成功或失败状态。
+
+## Input Reference
+
+指向行情窗口、特征快照或共享存储对象的稳定引用。
+
+未来多服务执行时，ExecutionPlan 使用引用而不是复制整段历史数据。
 
 ## AnalysisRequest
 

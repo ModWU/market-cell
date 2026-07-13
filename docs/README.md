@@ -1,91 +1,76 @@
 # MarketCell 文档索引
 
-## 推荐阅读顺序
+## 快速阅读
 
-1. `documentation_architecture.md`：先看文档体系和闭环关系。
-2. `external_architecture_research.md`：理解成熟系统有什么值得吸收。
-3. `product_design.md`：理解产品到底要做什么。
-4. `system_architecture.md`：理解整体系统如何分层、如何扩展。
-5. `backend_design.md`：理解后端模块、边界和第一阶段实现方式。
-6. `backend_architecture.md`：理解后端未来服务化、数据流和部署演进。
-7. `polyglot_architecture.md`：理解多语言目录、共享契约和语言职责边界。
-8. `runtime_architecture.md`：理解 Rust 热路径、Python 冷路径和存储交接面。
-9. `cell_protocol.md`：以后新增 Cell 必须遵守的协议。
-10. `cell_execution_fabric.md`：理解 Cell 如何从本地单服务演进到多服务集群执行。
-11. `data_contract.md`：输入输出数据结构和校验规则。
-12. `data_source_strategy.md`：理解 K 线和行情数据源如何分层、降级和缓存。
-13. `storage_layer_design.md`：理解 Parquet/DuckDB 存储适配和分区策略。
-14. `source_quality_monitoring.md`：理解 K 线缺口、延迟、异常和跨源偏差监控。
-15. `provider_selection_policy.md`：理解如何根据健康趋势、源等级和业务偏好选择主源/备源，并映射成可审计路由顺序。
-16. `feature_layer_design.md`：理解 K 线基础特征如何统一计算和版本化。
-17. `evaluation_strategy.md`：理解如何判断 Cell 和分析报告是否可靠。
-18. `stability_design.md`：理解分析结构、Cell 输出和风险解释如何保持稳定。
-19. `risk_and_governance.md`：风险边界、自动交易隔离和合规原则。
-20. `roadmap.md`：阶段路线。
-21. `cell_dictionary.md`：Cell 分类字典。
-22. `glossary.md`：统一术语。
-23. `design_review.md`：设计完善记录。
+第一次了解项目：
 
-## 文档层次
+1. `product_design.md`：产品定位和边界。
+2. `system_architecture.md`：当前系统基线和地基缺口。
+3. `roadmap.md`：唯一实施顺序。
+4. `cell_protocol.md`：Cell 开发协议。
+5. `cell_execution_fabric.md`：本地到多服务执行架构。
+6. `data_contract.md`：核心数据契约。
 
-```text
-L0 文档入口：README.md
-L1 产品层：product_design.md
-L2 架构层：system_architecture.md
-L3 后端工程层：backend_design.md / backend_architecture.md
-L4 协议契约层：cell_protocol.md / cell_execution_fabric.md / data_contract.md / data_source_strategy.md / storage_layer_design.md / source_quality_monitoring.md / provider_selection_policy.md / feature_layer_design.md / polyglot_architecture.md / runtime_architecture.md / contracts/
-L5 验证治理层：evaluation_strategy.md / stability_design.md / risk_and_governance.md
-L6 研究规划字典层：external_architecture_research.md / roadmap.md / cell_dictionary.md / glossary.md
-L7 历史记录层：design_review.md
-```
+准备参与地基开发：
 
-## 文档闭环
+1. `documentation_architecture.md`
+2. `system_architecture.md`
+3. `backend_design.md`
+4. `cell_execution_fabric.md`
+5. `runtime_architecture.md`
+6. `polyglot_architecture.md`
+7. `stability_design.md`
+8. `roadmap.md`
 
-```text
-产品目标
-→ 系统架构
-→ 后端设计
-→ 协议和数据契约
-→ 代码实现
-→ 测试和验证
-→ 评估和复盘
-→ 路线图调整
-→ 产品目标
-```
+## 权威文档
 
-## 当前文档状态
-
-| 文档 | 作用 | 状态 |
+| 主题 | 文档 | 状态 |
 |---|---|---|
-| `documentation_architecture.md` | 文档层级和闭环关系 | v0.1 |
-| `external_architecture_research.md` | 外部成熟系统架构研究 | v0.1 |
-| `product_design.md` | 产品定位、用户、场景、路线 | v0.2 |
-| `system_architecture.md` | 总体架构、分层、图、数据流 | v0.2 |
-| `backend_design.md` | 后端模块设计和接口边界 | v0.1 |
-| `backend_architecture.md` | 后端服务化架构和演进路线 | v0.1 |
-| `polyglot_architecture.md` | 多语言仓库结构和共享契约边界 | v0.2 |
-| `runtime_architecture.md` | Rust 热路径、Python 冷路径和存储交接 | v0.1 |
-| `cell_protocol.md` | Cell 开发协议 | v0.1 |
-| `cell_execution_fabric.md` | Cell 本地/多服务执行织网设计 | v0.1 |
-| `data_contract.md` | 输入输出数据契约 | v0.2 |
-| `data_source_strategy.md` | K 线和行情数据源策略 | v0.1 |
-| `storage_layer_design.md` | Parquet/DuckDB 存储适配和分区策略 | v0.1 |
-| `source_quality_monitoring.md` | K 线缺口、延迟、异常和跨源偏差监控 | v0.1 |
-| `provider_selection_policy.md` | 主源/备源选择策略 | v0.1 |
-| `feature_layer_design.md` | K 线基础特征层设计 | v0.1 |
-| `evaluation_strategy.md` | Cell 和报告的验证方法 | v0.1 |
-| `stability_design.md` | 分析结构、Cell 输出和风险解释稳定性设计 | v0.1 |
-| `cell_dictionary.md` | Cell 分类字典 | v0.1 |
-| `roadmap.md` | 版本路线图 | v0.1 |
-| `risk_and_governance.md` | 风险治理和交易边界 | v0.1 |
-| `glossary.md` | 核心术语表 | v0.1 |
-| `design_review.md` | 设计补充记录 | v0.2 |
+| 文档治理 | `documentation_architecture.md` | baseline v0.2 |
+| 产品定位 | `product_design.md` | baseline v0.2 |
+| 系统基线 | `system_architecture.md` | baseline v0.3 |
+| 实施顺序 | `roadmap.md` | baseline v0.2 |
+| 后端模块 | `backend_design.md` | baseline |
+| 服务化演进 | `backend_architecture.md` | baseline |
+| Cell 协议 | `cell_protocol.md` | baseline |
+| Cell 执行织网 | `cell_execution_fabric.md` | baseline |
+| 数据契约 | `data_contract.md`, `../contracts/` | baseline |
+| Python / Rust 运行时 | `runtime_architecture.md` | baseline |
+| 多语言仓库 | `polyglot_architecture.md` | baseline |
+| 稳定性 | `stability_design.md` | baseline |
+| 评估方法 | `evaluation_strategy.md` | baseline |
+| 风险治理 | `risk_and_governance.md` | baseline |
 
-## 文档原则
+路线和版本只维护在 `roadmap.md`，其他文档不得复制独立版本计划。
 
-- 产品文档回答“为什么做”和“做什么”。
-- 架构文档回答“系统怎么长大”。
-- 后端文档回答“代码怎么组织和运行”。
-- 协议文档回答“新增能力必须遵守什么规则”。
-- 风险文档回答“系统不能越过哪些边界”。
-- 评估文档回答“如何判断系统是否真的有用”。
+## 数据专项
+
+- `data_source_strategy.md`：专业数据商、交易所直连和本地回放分层。
+- `provider_selection_policy.md`：主源、备源和禁用源选择。
+- `source_quality_monitoring.md`：缺口、陈旧、异常和跨源偏差。
+- `storage_layer_design.md`：Parquet / DuckDB 存储边界。
+- `feature_layer_design.md`：基础特征计算和版本化。
+
+## 研究和参考
+
+- `external_architecture_research.md`：成熟系统研究输入。
+- `cell_dictionary.md`：Cell 能力字典。
+- `glossary.md`：统一术语。
+- `design_review.md`：历史设计快照，不作为当前实施顺序。
+
+## 未来专项
+
+达到对应阶段时再创建：
+
+- `factor_graph_design.md`
+- `multi_horizon_design.md`
+- `ai_explainer_design.md`
+- `trading_gateway_design.md`
+- `adr/`
+
+## 维护规则
+
+- 公共字段变化必须同步 schema、模型、文档和契约测试。
+- 执行架构变化必须同步 Execution Fabric、Runtime 和稳定性测试。
+- 新 Cell 必须同步 Cell 字典、公式版本、验证样例和误判记录。
+- 重大技术取舍使用 ADR，历史评审不覆盖当前基线。

@@ -1,4 +1,4 @@
-# MarketCell 运行时架构 v0.1
+# MarketCell 运行时架构 v0.2
 
 ## 1. 目标
 
@@ -141,22 +141,17 @@ Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
 
 ## 7. 当前推进顺序
 
-当前阶段优先做轻量、稳定、可测试的底座：
+冷热路径、共享契约、Rust 行情原语、Python 回放、数据源审计、ExecutionPlan、placement、executor 和运行遥测已经建立参考实现。
 
-1. 明确冷热路径责任边界。
-2. 建立 Protobuf / Parquet / JSON Schema 三类契约。
-3. 建立 Rust market data domain primitives。
-4. 建立 Python ReplayRunner，验证静态快照能稳定重跑。
-5. 建立数据源健康趋势和 provider 选择计划。
-6. 建立 RouterPlanBuilder，让 provider 计划能映射成可审计路由顺序。
-7. 把 provider/router 审计信息写入 AnalysisRun。
-8. 建立 AnalysisRun JSON Schema，让运行审计可跨语言复用。
-9. 建立 CellExecutionPlan JSON Schema，让本地单服务和未来多服务执行使用同一计划契约。
-10. 建立 CellRuntimeTrace JSON Schema，记录每个 Cell 节点实际执行状态和耗时。
-11. 建立 CellRuntimeSummary JSON Schema，按服务、Cell、公式版本、实现和运行时聚合性能画像。
-12. 建立 ServiceCapabilityCatalog 和 RuntimeAwarePlacementPolicy，让 summary 进入可审计计划选择。
-13. 建立 CellExecutor / LocalCellExecutor 和 plan-trace-result 一致性边界。
-14. 再推进 Parquet / DuckDB 和专业数据商 adapter。
+当前运行时地基仍需补齐：
+
+- Plan / Graph Validator。
+- plan-driven local coordinator。
+- Input Reference / Resolver。
+- 跨运行 Runtime Summary Store。
+- 性能基线。
+
+具体顺序只以 `roadmap.md` 为准。
 
 暂不做：
 
@@ -165,4 +160,4 @@ Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
 - PyO3 绑定
 - 自动交易热路径
 
-原因是当前最重要的是稳定领域模型和数据契约，而不是堆叠基础设施。
+原因是当前最重要的是让现有执行语义可验证，而不是堆叠基础设施。

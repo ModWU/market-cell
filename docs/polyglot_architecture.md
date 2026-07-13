@@ -80,6 +80,7 @@ market-cell/
 │       ├── pyproject.toml
 │       ├── src/market_cell/
 │       │   ├── cells/
+│       │   ├── execution/
 │       │   ├── policies/
 │       │   ├── reports/
 │       │   └── ...

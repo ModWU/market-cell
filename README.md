@@ -36,8 +36,8 @@ market-cell/
 │   └── parquet/                # 历史 K 线批量存储契约
 ├── docs/
 │   ├── product_design.md      # 产品设计文档 v0.2
-│   ├── system_architecture.md # 系统架构文档 v0.2
-│   ├── documentation_architecture.md # 文档体系和闭环关系
+│   ├── system_architecture.md # 当前系统架构基线和地基缺口
+│   ├── documentation_architecture.md # 文档权威边界和维护规则
 │   ├── external_architecture_research.md # 外部成熟系统架构研究
 │   ├── backend_design.md      # 后端模块设计
 │   ├── backend_architecture.md # 后端服务化架构
@@ -51,12 +51,12 @@ market-cell/
 │   ├── provider_selection_policy.md # 主源/备源选择策略
 │   ├── feature_layer_design.md # K 线基础特征层设计
 │   ├── evaluation_strategy.md # 评估和验证策略
-│   ├── stability_design.md    # 分析结构、Cell 输出和风险解释稳定性
+│   ├── stability_design.md    # 分析、执行、审计和性能稳定性
 │   ├── cell_dictionary.md     # Cell 分类字典
-│   ├── roadmap.md             # 阶段路线图
+│   ├── roadmap.md             # 唯一实施顺序和地基退出标准
 │   ├── risk_and_governance.md # 风险治理边界
 │   ├── glossary.md            # 核心术语表
-│   └── design_review.md       # 设计完善记录
+│   └── design_review.md       # 历史设计快照
 ├── packages/
 │   └── python/
 │       ├── pyproject.toml      # Python 包配置

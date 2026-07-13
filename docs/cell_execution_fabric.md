@@ -1,4 +1,4 @@
-# MarketCell Cell Execution Fabric v0.1
+# MarketCell Cell Execution Fabric v0.2
 
 ## 1. 为什么需要 Execution Fabric
 
@@ -348,19 +348,20 @@ AnalysisRun 可以保存 ExecutionPlan、runtime trace 和 runtime summary，用
 
 Cell 执行异常时，`FileSystemReportStore.save_run` 会单独保存 failed AnalysisRun，包括已完成 trace、失败 trace 和 runtime summary；保存运行记录失败时只写入 `analysis.failed.persistence_error`，不会覆盖原始 Cell 异常。
 
-## 8. 当前落地顺序
+## 8. 当前状态和进入集群前的门槛
 
-当前只做地基，不上复杂集群：
+计划、binding、catalog、placement、executor、trace 和 summary 已有本地参考实现。
 
-1. 定义 `CellExecutionPlan` JSON Schema。
-2. 实现 Python 本地 `build_local_execution_plan`。
-3. 把 execution plan 写入 `AnalysisRun.metadata`。
-4. 定义 `CellRuntimeTrace` JSON Schema，并记录本地每个 Cell 节点的耗时、状态和服务归属。
-5. 定义 `CellRuntimeSummary` JSON Schema，并按 Cell、公式版本、实现、服务和运行时聚合性能画像。
-6. 定义 `ServiceCapabilityCatalog` 和 `CellPlacementDecision` JSON Schema，实现运行时感知的确定性 planner。
-7. 定义 `CellExecutor` 和 `LocalCellExecutor`，建立“计划位置等于实际执行位置”及 CellResult 边界校验。
-8. 下一步建立 Executor Router，让不同 runtime 由明确的 executor 承载。
-9. 再考虑 Task Queue、服务发现和远程执行。
+进入远程执行前还必须完成：
+
+- Plan / Graph Validator。
+- plan-driven coordinator。
+- Input Reference / Resolver。
+- 跨运行性能历史。
+- Executor Router。
+- 幂等、超时、重试、背压和取消语义。
+
+具体实施顺序只以 `roadmap.md` 为准。
 
 ## 9. 官方参考
 

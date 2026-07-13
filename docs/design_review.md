@@ -1,4 +1,6 @@
-# MarketCell 设计完善记录 v0.2
+# MarketCell 设计完善历史记录 v0.2
+
+> 状态：historical。本文保留早期设计判断及其演进背景，不再作为当前实施顺序；当前基线见 `system_architecture.md`，当前优先级见 `roadmap.md`。
 
 ## 1. 当前设计判断
 
@@ -187,14 +189,9 @@ Analysis Tree：每次分析从图中生成任务树
 
 ## 7. 下一步实现优先级
 
-建议下一步按这个顺序做：
+本节是早期快照，其中 MarketRegimeCell、报告保存、回放和部分数据接入地基已经完成。
 
-1. 增加 SupportResistanceCell
-2. 增加 MarketRegimeCell，判断趋势、震荡、极端波动
-3. 增加多周期输入，支持 1h / 4h / 1d 同时分析
-4. 增加 JSON report 保存能力
-5. 增加本地回放能力
-6. 再接入真实行情数据
+随着多服务 Cell 目标明确，当前优先级已经调整为先完成 Plan Validator、plan-driven coordinator、Cell Graph Definition、Input Resolver 和跨运行性能历史，再继续大规模新增 Cell。唯一有效顺序见 `roadmap.md`。
 
 ## 8. 当前最重要的克制
 
@@ -228,4 +225,4 @@ SourceProfile
 - API key、实时/历史能力、最近健康下滑这些运行条件不会混进 Cell。
 - 后续 Rust 热路径可以产出同类健康信号，而不用改 Python Cell 协议。
 
-下一步更适合做 `RouterPlanBuilder` 或专业数据商 adapter，而不是让 policy 直接控制网络源实例。
+`RouterPlanBuilder` 已经完成。后续数据工作以专业数据商 adapter、SLA 和回放审计为主，具体顺序见 `roadmap.md`。

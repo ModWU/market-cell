@@ -1,129 +1,177 @@
-# MarketCell 路线图 v0.1
+# MarketCell 实施路线图 v0.2
 
-## v0.1 已完成
+## 1. 文档职责
 
-- 项目骨架
-- Python 分析内核
-- Rust 高性能模块预留
-- JSON 输入输出
-- 第一批 Cell
-- 基础测试
+本文是仓库唯一的实施顺序来源。
 
-## v0.2 当前阶段
+`product_design.md` 负责产品方向，`system_architecture.md` 负责系统边界，专项文档负责具体设计；它们不再维护独立版本清单。
 
-- 产品设计文档
-- 系统架构文档
-- 后端设计文档
-- 后端架构文档
-- Cell 协议
-- 数据契约
-- 风险治理文档
-- AnalysisRun 运行记录
-- FileSystemReportStore
-- CLI 报告保存和回放
-- 多语言 workspace 布局：`packages/python`、`crates`、`contracts`
-- JSON Schema 契约
-- AnalysisRun JSON Schema：运行审计、输入快照、公式版本和数据源路由审计契约
-- CellExecutionPlan JSON Schema：Cell DAG、服务绑定和执行资源提示契约
-- CellRuntimeTrace JSON Schema：每个 Cell 节点的服务、状态、耗时、错误和重试契约
-- CellRuntimeSummary JSON Schema：按服务、Cell、公式版本、实现和运行时聚合耗时、失败和重试信息
-- Cell Execution Fabric 文档：本地单服务到多服务集群的插拔式执行地基
-- DecisionPolicy 策略层和风险分层
-- GitHub Actions CI，自动运行 Python 和 Rust 测试
-- Data Source 协议、K 线主备路由和 Binance 开发适配器
-- Feature Layer 初版：统一量价基础特征
-- CandleCache 协议和文件缓存实现
-- 运行时冷热路径文档：Rust 动态数据，Python 静态分析
-- Protobuf 实时行情事件契约
-- Parquet K 线批量存储契约
-- Rust market_data_core 行情原语和质量函数
-- ReplayRunner：基于 input_snapshot 重新执行并比较结果漂移
-- Parquet/DuckDB 存储适配基础：CandleRow、分区路径、可选读写适配器
-- SourceQualityMonitor：K 线缺口、陈旧、异常量价和跨源偏差监控
-- FileSystemDataQualityStore：质量问题 JSONL 持久化
-- SourceHealthSummary：按 provider / symbol / horizon 聚合质量评分
-- SourceHealthTrendPoint / ProviderReliabilitySummary：按时间窗口聚合趋势和 provider 基础排名
-- ProviderSelectionPolicy：结合源等级、健康趋势、业务偏好和 API key 可用性选择主源/备源/禁用源
-- RouterPlanBuilder：把 ProviderSelectionPlan 映射成可审计的数据源路由顺序
-- Provider/Router Plan Persistence：把数据源选择计划和实际路由计划写入 AnalysisRun
-- AnalysisRun schema_version：运行记录进入 `analysis_run.v1` 契约
-- CellExecutionPlan：本地单服务也生成可复盘执行计划
-- CellRuntimeTrace：本地每个 Cell 节点生成可复盘执行 trace
-- CellRuntimeSummary：本地每次运行生成可复盘性能摘要
-- ServiceCapabilityCatalog：一个 Cell 多实现、一个服务多 Cell 的跨语言能力目录契约
-- RuntimeAwarePlacementPolicy：按公式兼容性、服务优先级、历史失败率和 P95 延迟生成可审计放置决策
-- CellExecutor / LocalCellExecutor：计划和执行解耦，本地执行拒绝远程 binding
-- 执行一致性：成功 trace 必须与 plan 的 node、implementation、service 和 runtime 完全一致
-- CellResult 执行边界校验：防止远程或本地实现返回错误 Cell、标的或周期
-- 失败运行持久化：Cell 异常时保存 failed AnalysisRun、失败 trace 和 summary
-- Execution 模块分层：models / catalog / placement / planner / executor / telemetry 职责拆分
+## 2. 已完成基线
 
-## v0.3 Cell 扩展
+### 2.1 分析闭环
 
-目标：增强分析能力。
+- AnalysisRequest 输入和校验
+- Cell Manifest、Registry 和第一批参考 Cell
+- DecisionPolicy、风险分层和 AnalysisReport
+- AnalysisRun、报告保存和 ReplayRunner
+- 分析结构、Cell 输出和风险解释守护测试
+
+### 2.2 数据地基
+
+- CandleSource、主备路由、缓存和 Binance 开发适配器
+- 数据质量监控、质量记录、健康趋势和 provider 可靠性摘要
+- ProviderSelectionPolicy 和 RouterPlanBuilder
+- Parquet / DuckDB 可选存储适配基础
+- Protobuf 实时行情契约和 Parquet K 线契约
+
+### 2.3 多语言地基
+
+- `packages/python`、`crates`、`contracts` workspace 边界
+- Rust `market_data_core` 行情原语
+- Rust `realtime_core` 动态数据模块预留
+- Python 静态分析与 Rust 动态热点职责划分
+
+### 2.4 Cell Execution Fabric 地基
+
+- `CellExecutionPlan`、`CellServiceBinding` 和资源提示契约
+- `CellRuntimeTrace`、`CellRuntimeSummary` 契约和本地采集
+- `ServiceCapabilityCatalog` 和 `CellPlacementDecision`
+- `RuntimeAwarePlacementPolicy`
+- `CellExecutor` 和严格的 `LocalCellExecutor`
+- plan / trace / CellResult 一致性校验
+- 成功和失败 AnalysisRun 的运行审计
+- GitHub Actions Python / Rust CI
+
+## 3. 当前阶段：Foundation Hardening
+
+当前不以新增 Cell 数量为目标，而是让大量 Cell 和未来多服务运行时建立在可验证地基上。
+
+### P0.1 Plan / Graph Validator
+
+目标：所有执行计划在运行前拒绝结构错误。
+
+- node_id 和 cell_id 唯一性
+- root_node_id 合法性
+- dependency 存在性
+- DAG 环检测
+- 不可达节点检测
+- node、binding、formula_version 一致性
+- 稳定的拓扑层级输出
+
+### P0.2 Plan-Driven Local Coordinator
+
+目标：本地执行顺序真正由 ExecutionPlan 驱动。
+
+- 按拓扑层执行节点
+- 同层节点保留并行能力，但第一版可以顺序执行
+- 聚合节点从依赖结果读取 child_results
+- Registry 只提供实现，不再决定运行顺序
+- 执行事件和 trace 绑定 node_id
+
+### P0.3 Cell Graph Definition
+
+目标：把 Cell 组合关系从 Registry 列表中拆出。
+
+- 定义版本化 `CellGraphDefinition`
+- 支持 leaf、aggregator、root 多层结构
+- Organ 表达为命名子图
+- 多个 Organ 可共享 Cell
+- Graph Definition 生成 ExecutionPlan，但不包含服务位置
+
+### P0.4 Input Reference / Resolver
+
+目标：为大数据输入和远程执行建立引用边界。
+
+- 区分 input snapshot、input reference 和 feature snapshot
+- ExecutionPlan 只保存引用和键
+- 本地 resolver 参考实现
+- 数据版本、来源和哈希进入运行审计
+- 避免跨服务复制整段历史 K 线
+
+### P0.5 Runtime Summary Store
+
+目标：让 placement 使用跨运行历史，而不是单次摘要。
+
+- 按 Cell、公式、实现、服务和 runtime 存储
+- 支持时间窗口、样本量和最近状态
+- 保留 P50 / P95 / P99、失败率和重试率
+- placement 读取明确窗口快照
+- 历史过期和实现版本切换规则
+
+### P0.6 Performance Baseline
+
+目标：CI 同时守住正确性和性能回归。
+
+- 建立固定输入基准
+- 记录总运行时间和 Cell P95
+- 设置宽松、可解释的首版阈值
+- 区分功能测试和 benchmark
+- Rust 热点迁移必须由 profile 证据驱动
+
+## 4. Foundation 退出标准
+
+以下条件全部满足后，才进入大规模 Cell 扩展：
+
+- 非法 DAG 在执行前被拒绝。
+- 本地执行由 plan 驱动，Registry 不再隐式决定拓扑。
+- 至少一个多级 aggregator 图可以稳定运行和回放。
+- 关闭或更换 executor 时，trace 仍能准确表达实际位置。
+- placement 能消费跨运行历史窗口。
+- 失败、超时、重试和降级拥有明确审计结构。
+- 固定样例具备性能基线。
+
+## 5. 后续阶段
+
+### v0.3 Cell 能力扩展
 
 - SupportResistanceCell
 - BreakoutCell
 - LiquidityCell
 - VolumePriceAnomalyCell
 - FundingOpenInterestCell
+- 每个新 Cell 必须有验证数据、误判记录和公式版本
 
-同时补齐轻量骨架：
-
-- EventBus 使用场景扩展
-- ReportAnalyzer 接口草案
-- Parquet / DuckDB 去重、upsert 和查询窗口增强
-- Replay Source Audit：回放时展示数据源计划变化
-- 数据源心跳成功率和延迟分布
-
-## v0.4 多周期分析
-
-目标：开始回答短线、中线、长线问题。
+### v0.4 多周期和多 Organ
 
 - MultiHorizonRequest
 - HorizonDecisionCell
 - 多周期冲突检测
-- 短线 / 中线 / 长线报告结构
+- Organ 组合和共享 Cell
+- 短线 / 中线 / 长线分层报告
 
-## v0.5 数据接入
+### v0.5 专业数据接入
 
-目标：从样例数据走向真实数据。
+- 专业历史数据商 adapter
+- 交易所实时和历史数据闭环
+- 数据源 SLA、心跳和延迟分布
+- Parquet 去重、upsert 和查询窗口增强
+- Replay Source Audit
 
-- CSV / JSON 本地行情导入
-- 交易所 K 线拉取
-- Parquet 保存历史数据
-- DuckDB 查询历史数据
+### v0.6 评估平台
 
-## v0.6 报告保存和回放
+- 真实走势标签
+- Cell 命中率、校准和风险事件评估
+- 公式版本对比
+- Shadow Run
+- ReportAnalyzer
 
-目标：让系统可以复盘。
+### v0.7 AI 解释层
 
-- 保存 AnalysisReport
-- 保存输入快照
-- 回放历史分析
-- 对比后续真实走势
+- AI 只消费结构化 AnalysisReport
+- 冲突解释和复盘总结
+- 引用 Evidence，不重写决策事实
+- AI 输出独立版本和审计
 
-## v0.7 AI 解释层
+### v0.8 服务化后端
 
-目标：AI 不直接做交易决策，而是解释结构化报告。
-
-- AI 总结报告
-- AI 解释冲突
-- AI 生成复盘
-- AI 帮助发现缺失因子
-
-## v0.8 服务化后端
-
-目标：给未来界面和自动交易前置系统提供 API。
-
-- FastAPI
+- FastAPI Gateway
 - AnalysisTask
-- Report API
-- Cell API
+- Executor Router
+- Python / Rust remote executor
+- Report、Run 和 Cell API
+- 服务发现、超时、重试和背压
 
-## v1.0 自动交易前置系统
-
-目标：只接收分析结果，不污染分析内核。
+### v1.0 自动交易前置系统
 
 - Trading Gateway
 - Risk Guard
@@ -131,11 +179,13 @@
 - Position Manager
 - Exchange Adapter
 
-## 暂不做
+Trading Layer 只消费稳定分析结果，不进入 Cell Execution Fabric。
 
-- 高频交易
+## 6. 暂不做
+
+- 高频交易策略
 - 真实下单
-- 复杂微服务
-- 用户系统
-- 权限系统
-- 收费系统
+- 复杂微服务拆分
+- 多租户、权限和收费系统
+- 没有 profile 证据的 Rust 重写
+- 没有回放证据的 AI 决策替换

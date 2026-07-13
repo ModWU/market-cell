@@ -163,8 +163,10 @@ Cell 协议只描述输入、输出、公式版本和解释结构，不描述运
 
 ```text
 CellManifest          描述能力
+CellGraphDefinition   描述 Cell 组合和依赖
 CellServiceBinding    描述哪个服务承载该能力
 CellExecutionPlan     描述本次分析如何执行 Cell DAG
+CellExecutor          执行已经确定的节点
 ```
 
 当前本地测试时，所有 Cell 可以绑定到：
@@ -175,4 +177,4 @@ runtime = python_local
 task_queue = cell.python-local
 ```
 
-未来多服务集群时，可以一个 Cell 对应多个服务，也可以一个服务承载多个 Cell，但 `CellResult` 输出协议不能因此变化。
+未来多服务集群时，可以一个 Cell 对应多个服务，也可以一个服务承载多个 Cell，但 `CellResult` 输出协议不能因此变化。Cell 也不能读取 task queue、endpoint 或 service health 来自行决定位置。

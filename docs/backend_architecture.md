@@ -1,4 +1,4 @@
-# MarketCell 后端架构文档 v0.1
+# MarketCell 后端架构文档 v0.2
 
 ## 1. 架构阶段
 
@@ -7,7 +7,7 @@ MarketCell 后端分三阶段演进。
 ### 阶段一：本地分析内核
 
 ```text
-CLI + Python AnalysisEngine + JSON 输入输出 + AnalysisRun + CellExecutionPlan + FileSystemReportStore
+CLI + AnalysisEngine + Planner + LocalCellExecutor + AnalysisRun + FileSystemReportStore
 ```
 
 目标是把 Cell 协议和分析闭环做稳定。
@@ -35,10 +35,13 @@ flowchart TD
     Client["CLI / Web UI / Future Trading Gateway"] --> API["FastAPI Gateway"]
     API --> Task["Analysis Task Service"]
     Task --> Planner["Analysis Planner"]
+    Registry["Cell Registry"] --> Planner
+    Catalog["Service Capability Catalog"] --> Planner
+    Policy["Placement Policy"] --> Planner
     Planner --> Plan["CellExecutionPlan"]
     Plan --> Runtime["Cell Execution Fabric"]
-    Runtime --> Registry["Cell Registry"]
-    Runtime --> Catalog["Service Capability Catalog"]
+    Runtime --> PyExecutor["Python Executor"]
+    Runtime --> RustExecutor["Rust Executor"]
     Runtime --> Feature["Feature Service"]
     Runtime --> Report["Report Service"]
     Runtime --> AI["AI Explainer"]
@@ -68,12 +71,16 @@ flowchart TD
 - `EventBus`
 - `AnalysisRun`
 - `CellExecutionPlan`
+- `ServiceCapabilityCatalog`
+- `RuntimeAwarePlacementPolicy`
+- `CellExecutor` / `LocalCellExecutor`
+- `CellRuntimeTrace` / `CellRuntimeSummary`
 - `FileSystemReportStore`
 - CLI `reports`
 - CLI `replay`
 - `ReplayRunner`
 
-当前不立即实现复杂消息队列，但命名和模块边界已经为 EventBus 预留空间。
+当前不立即实现复杂消息队列。下一步先让 ExecutionPlan 真正驱动本地 DAG，并完成图校验和输入引用边界。
 
 ## 3. 后端分层
 
@@ -123,9 +130,14 @@ AnalysisRun {
   input_hash
   formula_versions
   cell_manifests
+  execution_plan
+  runtime_traces
+  runtime_summaries
+  status
   started_at
   finished_at
   report_id
+  error
 }
 ```
 
@@ -201,11 +213,10 @@ flowchart LR
 
 阶段选择：
 
-- v0.2：本地 JSON 报告保存
-- v0.5：ReportStore 能力增强
-- v0.6：DuckDB / Parquet
-- v0.8：PostgreSQL
-- v1.0：Redis
+- 当前：本地 JSON Report / Run、可选 Parquet / DuckDB 行情存储。
+- 本地研究平台：增强 Parquet 查询、upsert、运行性能历史。
+- 服务化阶段：PostgreSQL 保存任务和运行审计。
+- 实时集群阶段：Redis 或专用状态存储只保存短期运行状态。
 
 ## 7. Python 与 Rust 协作方式
 
@@ -231,16 +242,23 @@ flowchart LR
 
 ## 8. 可观测性规划
 
-后端后期必须记录：
+当前已经记录：
 
-- task_id
+- run_id / plan_id / trace_id / span_id
 - cell_id
 - formula_version
 - input_hash
-- execution_time
-- warning
-- error
+- implementation_id / service_id / runtime
+- duration_ms / status / error / retry_count
 - report_id
+
+后续服务化再增加：
+
+- task_id / attempt_id
+- queue_wait_ms
+- timeout / cancellation / retry cause
+- service health / concurrency / capacity
+- OpenTelemetry 跨进程上下文
 
 这会决定系统能不能复盘。
 
@@ -264,3 +282,5 @@ flowchart LR
 - 太早引入复杂数据库会增加维护成本。
 - 太晚定义数据契约会导致 Cell 输出混乱。
 - 太晚做回放会导致历史判断不可验证。
+- ExecutionPlan 如果长期只用于审计而不驱动执行，会出现计划拓扑和真实顺序分裂。
+- 没有 Input Reference 时直接把大体积 K 线跨服务传递，会迅速成为性能和稳定性瓶颈。
