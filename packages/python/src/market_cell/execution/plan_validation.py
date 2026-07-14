@@ -8,6 +8,7 @@ from market_cell.execution.models import (
     CellExecutionPlan,
     CellServiceBinding,
 )
+from market_cell.graph.topology import dependency_closure, stable_topological_levels
 
 
 EXECUTION_PLAN_VALIDATION_SCHEMA_VERSION = "execution_plan_validation.v1"
@@ -80,7 +81,7 @@ def validate_execution_plan(plan: CellExecutionPlan) -> ValidatedExecutionPlan:
     _validate_nodes(plan, node_by_id, binding_by_id, issues)
     _validate_binding_usage(plan, issues)
 
-    topological_levels, cyclic_nodes = _topological_levels(node_by_id)
+    topological_levels, cyclic_nodes = stable_topological_levels(node_by_id)
     if cyclic_nodes:
         issues.append(
             PlanValidationIssue(
@@ -255,37 +256,6 @@ def _validate_binding_usage(
             )
 
 
-def _topological_levels(
-    node_by_id: dict[str, CellExecutionNode],
-) -> tuple[list[list[str]], list[str]]:
-    dependency_counts = {
-        node_id: sum(1 for dependency in node.dependencies if dependency in node_by_id)
-        for node_id, node in node_by_id.items()
-    }
-    dependents = {node_id: [] for node_id in node_by_id}
-    for node in node_by_id.values():
-        for dependency_id in node.dependencies:
-            if dependency_id in dependents:
-                dependents[dependency_id].append(node.node_id)
-
-    current = sorted(node_id for node_id, count in dependency_counts.items() if count == 0)
-    levels: list[list[str]] = []
-    visited: set[str] = set()
-    while current:
-        levels.append(current)
-        next_level: list[str] = []
-        for node_id in current:
-            visited.add(node_id)
-            for dependent_id in sorted(dependents[node_id]):
-                dependency_counts[dependent_id] -= 1
-                if dependency_counts[dependent_id] == 0:
-                    next_level.append(dependent_id)
-        current = sorted(set(next_level))
-
-    cyclic_nodes = sorted(set(node_by_id) - visited)
-    return levels, cyclic_nodes
-
-
 def _validate_reachability(
     plan: CellExecutionPlan,
     node_by_id: dict[str, CellExecutionNode],
@@ -293,18 +263,7 @@ def _validate_reachability(
 ) -> None:
     if plan.root_node_id not in node_by_id:
         return
-    reachable: set[str] = set()
-    pending = [plan.root_node_id]
-    while pending:
-        node_id = pending.pop()
-        if node_id in reachable:
-            continue
-        reachable.add(node_id)
-        pending.extend(
-            dependency_id
-            for dependency_id in node_by_id[node_id].dependencies
-            if dependency_id in node_by_id
-        )
+    reachable = dependency_closure([plan.root_node_id], node_by_id)
     for node_id in sorted(set(node_by_id) - reachable):
         issues.append(
             PlanValidationIssue(

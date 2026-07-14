@@ -1,6 +1,7 @@
 import unittest
 
 from market_cell.engine import AnalysisEngine
+from market_cell.graph import default_analysis_graph
 from market_cell.models import AnalysisRequest, Candle, CellResult, MarketEvent
 from market_cell.registry import default_registry
 
@@ -35,7 +36,15 @@ class StabilityTests(unittest.TestCase):
     def test_all_registered_cells_return_normalized_cell_result(self):
         request = sample_request()
 
-        for cell in default_registry().leaf_cells:
+        registry = default_registry()
+        leaf_cell_ids = [
+            node.cell_id
+            for node in default_analysis_graph().nodes
+            if node.execution_role == "leaf"
+        ]
+
+        for cell_id in leaf_cell_ids:
+            cell = registry.resolve(cell_id)
             with self.subTest(cell_id=cell.cell_id):
                 result = cell.analyze(request)
                 self.assertIsInstance(result, CellResult)

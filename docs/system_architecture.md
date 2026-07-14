@@ -1,4 +1,4 @@
-# MarketCell 系统架构基线 v0.3
+# MarketCell 系统架构基线 v0.4
 
 ## 1. 文档职责
 
@@ -44,7 +44,8 @@ flowchart TD
     Input["CLI / JSON Input"] --> Validate["Input Validator"]
     Validate --> Engine["AnalysisEngine"]
 
-    Registry["Cell Registry"] --> Planner["CellExecutionPlanner"]
+    Graph["CellGraphDefinition"] --> Planner["CellExecutionPlanner"]
+    Registry["Cell Implementation Registry"] --> Planner
     Catalog["ServiceCapabilityCatalog"] --> Planner
     Placement["RuntimeAwarePlacementPolicy"] --> Planner
     Planner --> Plan["CellExecutionPlan"]
@@ -61,6 +62,7 @@ flowchart TD
     Executor --> Trace["CellRuntimeTrace"]
     Trace --> Summary["CellRuntimeSummary"]
     Plan --> Run["AnalysisRun"]
+    Graph --> Run
     Trace --> Run
     Summary --> Run
     Report --> Store["ReportStore"]
@@ -78,7 +80,7 @@ flowchart TD
 |---|---|---|---|
 | Interface | CLI、JSON 输入输出 | Application、Contracts | 分析公式、服务放置 |
 | Application | Engine、Planner、Replay、运行编排 | Domain、Execution、Storage ports | 具体指标公式 |
-| Domain | Cell、Manifest、Result、Evidence、DecisionPolicy | 基础数据模型 | 网络、数据库、任务队列 |
+| Domain | Cell、Manifest、Graph、Organ、Result、Evidence、DecisionPolicy | 基础数据模型 | 网络、数据库、任务队列、服务位置 |
 | Execution | Catalog、Placement、Plan、Executor、Telemetry | Domain contracts | 用户报告语义、行情采集 |
 | Data / Feature | 数据源、质量、缓存、基础特征 | Domain data contracts | Cell 决策聚合 |
 | Infrastructure | 文件、Parquet、DuckDB、交易所、Rust 服务 | Ports、共享契约 | 修改领域输出语义 |
@@ -96,6 +98,7 @@ flowchart TD
 - `CellResult`
 - `AnalysisReport`
 - `AnalysisRun`
+- `CellGraphDefinition`
 - `CellServiceBinding`
 - `CellExecutionPlan`
 - `PlanExecution`
@@ -125,9 +128,9 @@ CellGraphDefinition 描述 Cell 之间的依赖和组合
 CellExecutionPlan  描述本次运行选择的实现和服务
 ```
 
-`Organ` 应理解为一个有名称、有版本的 Cell 子图，而不是新的执行协议。多个 Organ 可以共享 Cell，也可以在一次分析中组合。
+`Organ` 是 Graph 内的版本化命名子图，通过 `organ_id + organ_version + node_ids + output_node_ids` 表达。Organ 必须包含自身依赖闭包；多个 Organ 可以包含同一 node_id，从而共享一次执行结果，而不是重复计算。
 
-当前 planner 仍然从 `CellRegistry` 的“叶子 Cell 列表 + 一个 DecisionCell”生成固定 DAG。这适合本地闭环，但还不能表达任意 Organ、共享子图和多级聚合。Coordinator 已经只把 Registry 当作本地实现解析表，实际顺序完全服从 ExecutionPlan；下一步应新增图定义契约，把组合关系也从 Registry 中拆出。
+当前 `CellRegistry` 已经是纯 implementation 解析表，不再保存 leaf / root 角色。默认组合关系位于 `graph/defaults.py`；自定义 Graph 可以表达 leaf、aggregator、root 多层结构、同一 Cell 多节点和共享 Organ。Planner 只负责把已校验 Graph 解析为 Manifest、placement 和 binding。
 
 ## 8. Execution Fabric 当前状态
 
@@ -137,9 +140,12 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 - `RuntimeAwarePlacementPolicy`：按公式兼容、失败率、优先级和 P95 延迟选择 binding。
 - `CellPlacementDecision`：记录候选和选择原因。
 - `CellExecutor` / `LocalCellExecutor`：把执行从 AnalysisEngine 中拆出。
+- `CellGraphDefinition`：版本化保存 node、dependency、root 和命名 Organ，不包含服务位置。
+- Graph Validator：检查 root、依赖、环、可达性、Organ 闭包和 Registry 能力兼容性。
 - ExecutionPlan v2：node_id 与 cell_id 分离，节点显式引用 binding_id。
 - implementation、service 和 runtime 由 binding 单点定义，node 不保存重复副本。
-- Plan / Graph Validator：检查 root、依赖、binding、环和可达性，并输出稳定拓扑层。
+- Plan Validator：检查 root、依赖、binding、环和可达性，并输出稳定拓扑层。
+- Graph 与 Plan Validator 共用确定性拓扑算法。
 - `PlanDrivenLocalCoordinator`：按拓扑层执行，按 node_id 保存结果，并按节点依赖顺序传递 child_results。
 - `plan_execution.v1`：审计执行顺序、完成节点和失败节点。
 - plan、trace、CellResult 一致性校验。
@@ -148,11 +154,10 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 
 仍未完成：
 
-1. Graph Definition 尚未独立，planner 仍从 Registry 的叶子和根角色生成图。
-2. `input_keys` 只是描述字段，尚无 Input Resolver；服务化后不能继续把大体积 candles 直接嵌入任务计划。
-3. 缺少 Executor Router，当前只有本地 Python executor。
-4. Runtime summary 只有单次运行聚合，缺少跨运行、带时间窗口的历史存储。
-5. 缺少性能预算和回归阈值，CI 目前只守功能正确性。
+1. `input_keys` 只是描述字段，尚无 Input Resolver；服务化后不能继续把大体积 candles 直接嵌入任务计划。
+2. 缺少 Executor Router，当前只有本地 Python executor。
+3. Runtime summary 只有单次运行聚合，缺少跨运行、带时间窗口的历史存储。
+4. 缺少性能预算和回归阈值，CI 目前只守功能正确性。
 
 这些缺口应先于大规模新增业务 Cell 解决。
 
@@ -235,7 +240,8 @@ Runtime State   服务健康、容量和短期状态
 
 进入大规模 Cell 扩展前，至少应满足：
 
-- Plan / Graph Validator 能拒绝非法 DAG。（已完成）
+- Graph Validator 和 Plan Validator 能分别拒绝非法组合图与非法执行计划。（已完成）
+- Registry 与 Graph 拓扑解耦，多级 aggregator 和共享 Organ 可稳定执行。（已完成）
 - 本地执行顺序由 ExecutionPlan 驱动，而不是 Registry 固定循环。（已完成）
 - Input Reference / Resolver 边界确定。
 - Runtime summary 可以跨运行聚合并进入 placement。

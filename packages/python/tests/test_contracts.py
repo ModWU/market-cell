@@ -13,6 +13,12 @@ from market_cell.execution import (
     build_local_execution_plan,
     validate_execution_plan,
 )
+from market_cell.graph import (
+    CellGraphValidationError,
+    GraphValidationCode,
+    default_analysis_graph,
+    validate_cell_graph_definition,
+)
 from market_cell.models import AnalysisRequest, Candle
 from market_cell.registry import default_registry
 from market_cell.reports import FileSystemReportStore
@@ -105,6 +111,57 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(plan["schema_version"], "cell_execution_plan.v2")
         self.assertTrue(all(node["binding_id"] for node in plan["nodes"]))
         self.assertTrue(plan["service_bindings"])
+
+    def test_cell_graph_definition_contains_contract_required_fields(self):
+        schema = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "json_schema"
+                / "cell_graph_definition.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        graph = default_analysis_graph().to_dict()
+
+        for field_name in schema["required"]:
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, graph)
+        self.assertEqual(graph["schema_version"], "cell_graph_definition.v1")
+        self.assertTrue(graph["nodes"])
+        self.assertTrue(graph["organs"])
+        self.assertTrue(all(organ["organ_version"] for organ in graph["organs"]))
+
+    def test_cell_graph_validation_contains_contract_required_fields(self):
+        schema = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "json_schema"
+                / "cell_graph_validation.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        graph = default_analysis_graph()
+        root = next(node for node in graph.nodes if node.node_id == graph.root_node_id)
+        invalid_root = replace(root, dependencies=[*root.dependencies, "node:missing"])
+        invalid = replace(
+            graph,
+            nodes=[
+                invalid_root if node.node_id == root.node_id else node
+                for node in graph.nodes
+            ],
+        )
+
+        with self.assertRaises(CellGraphValidationError) as context:
+            validate_cell_graph_definition(invalid)
+        validation = context.exception.to_dict()
+
+        for field_name in schema["required"]:
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, validation)
+        self.assertEqual(validation["schema_version"], "cell_graph_validation.v1")
+        schema_codes = set(schema["$defs"]["issue"]["properties"]["code"]["enum"])
+        self.assertEqual(schema_codes, set(get_args(GraphValidationCode)))
 
     def test_cell_runtime_trace_contains_contract_required_fields(self):
         schema = json.loads(

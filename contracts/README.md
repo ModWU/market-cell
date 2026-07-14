@@ -13,6 +13,8 @@ Directory policy:
 - `json_schema/analysis_request.schema.json`: external input accepted by the analysis runtime.
 - `json_schema/analysis_report.schema.json`: stable report shape emitted by the analysis runtime.
 - `json_schema/analysis_run.schema.json`: run metadata, input snapshots, formula versions, and data-source audit records.
+- `json_schema/cell_graph_definition.schema.json`: versioned Cell composition DAG and overlapping named Organ subgraphs without service location.
+- `json_schema/cell_graph_validation.schema.json`: structured graph, Organ, dependency, reachability, and registered-capability validation failures.
 - `json_schema/cell_execution_plan.schema.json`: v2 DAG contract with unique node identities and explicit binding references.
 - `json_schema/cell_service_binding.schema.json`: shared implementation-to-service binding with deterministic `binding_id`.
 - `json_schema/service_capability_catalog.schema.json`: language-neutral catalog of the Cell implementations currently provided by local or remote services.

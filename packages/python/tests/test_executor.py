@@ -25,7 +25,7 @@ class LocalCellExecutorTests(unittest.TestCase):
         registry = default_registry()
         request = _request()
         plan = build_local_execution_plan(registry, request)
-        cell = registry.leaf_cells[0]
+        cell = registry.resolve("technical.trend")
 
         outcome = LocalCellExecutor().execute(
             cell=cell,
@@ -41,7 +41,7 @@ class LocalCellExecutorTests(unittest.TestCase):
         validate_execution_trace(outcome.trace, plan)
 
     def test_local_executor_without_plan_still_reports_actual_service(self):
-        cell = default_registry().leaf_cells[0]
+        cell = default_registry().resolve("technical.trend")
 
         outcome = LocalCellExecutor().execute(
             cell=cell,
@@ -59,7 +59,7 @@ class LocalCellExecutorTests(unittest.TestCase):
         registry = default_registry()
         request = _request()
         plan = build_local_execution_plan(registry, request)
-        cell = registry.leaf_cells[0]
+        cell = registry.resolve("technical.trend")
         context = _context(plan, cell.cell_id)
         remote_binding = replace(
             context.binding,
@@ -92,7 +92,7 @@ class LocalCellExecutorTests(unittest.TestCase):
     def test_local_executor_rejects_incompatible_cell_result(self):
         registry = default_registry()
         request = _request()
-        cell = registry.leaf_cells[0]
+        cell = registry.resolve("technical.trend")
         valid_result = cell.analyze(request)
 
         with patch.object(
@@ -114,7 +114,7 @@ class LocalCellExecutorTests(unittest.TestCase):
         registry = default_registry()
         request = _request()
         plan = build_local_execution_plan(registry, request)
-        cell = registry.leaf_cells[0]
+        cell = registry.resolve("technical.trend")
         outcome = LocalCellExecutor().execute(
             cell=cell,
             request=request,
@@ -144,7 +144,7 @@ class LocalCellExecutorTests(unittest.TestCase):
     def test_analysis_engine_persists_failed_run_with_failure_trace(self):
         registry = default_registry()
         event_bus = EventBus()
-        failing_cell = registry.leaf_cells[0]
+        failing_cell = registry.resolve("technical.trend")
 
         with tempfile.TemporaryDirectory() as temp_dir:
             store = FileSystemReportStore(Path(temp_dir))

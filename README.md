@@ -20,7 +20,8 @@ v0.1 提供一个最小闭环：
 
 ```text
 输入市场样例数据
-→ 校验并按 ExecutionPlan 执行 Cell DAG
+→ 校验 CellGraphDefinition 并生成 ExecutionPlan
+→ 按计划执行 Cell DAG
 → 聚合成根节点判断
 → 输出结构化 JSON 分析报告
 → 保存可复盘运行记录、计划执行顺序、trace 和性能摘要
@@ -35,6 +36,7 @@ market-cell/
 │   ├── protobuf/               # 实时行情事件契约
 │   └── parquet/                # 历史 K 线批量存储契约
 ├── docs/
+│   ├── adr/                    # 重大架构决策记录
 │   ├── product_design.md      # 产品设计文档 v0.2
 │   ├── system_architecture.md # 当前系统架构基线和地基缺口
 │   ├── documentation_architecture.md # 文档权威边界和维护规则
@@ -65,6 +67,7 @@ market-cell/
 │       │   ├── data/           # K 线数据源协议、质量检查、缓存和适配器
 │       │   ├── engine.py       # 分析执行器
 │       │   ├── execution/      # 能力目录、放置、计划、协调、执行和运行遥测
+│       │   ├── graph/          # Cell 组合图、Organ、默认图和结构校验
 │       │   ├── features/       # K 线基础特征快照
 │       │   ├── models.py       # 核心数据结构
 │       │   ├── policies/       # 决策策略和风险分层
@@ -157,10 +160,13 @@ MarketCell 输出的是分析结果和风险解释，不是投资建议，也不
 - 每次分析可以复盘
 - 每套公式可以版本化
 - 每次保存的输入快照可以重新执行并比较漂移
+- 回放会分别报告结果、公式版本和 Graph 版本漂移
 - 数据源选择可以根据健康趋势、源等级和业务偏好审计
 - 实际数据源路由顺序可以从选择计划显式生成和复盘
 - 每次分析运行可以保存数据源选择和路由计划审计信息
 - 运行记录遵守 `analysis_run.v1` 契约，便于后续跨语言和服务化复盘
+- Cell 组合遵守 `cell_graph_definition.v1`，Registry 只注册实现，Graph 独立定义 leaf、aggregator、root 和 Organ
+- Graph 不包含服务位置；`cell_graph_validation.v1` 在 planning 前拒绝非法依赖、Organ 或未注册能力
 - Cell 执行计划遵守 `cell_execution_plan.v2` 契约，使用唯一 node_id 和显式 binding_id 对齐 DAG 与服务
 - 本地 DAG 由 `PlanDrivenLocalCoordinator` 按稳定拓扑层执行，Registry 只解析实现，不决定运行顺序
 - 每次协调遵守 `plan_execution.v1` 契约，保存 execution_order、completed_node_ids 和 failed_node_id

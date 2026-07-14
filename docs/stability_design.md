@@ -1,4 +1,4 @@
-# MarketCell 稳定性设计 v0.3
+# MarketCell 稳定性设计 v0.4
 
 ## 1. 目标
 
@@ -19,6 +19,8 @@
 ```text
 AnalysisRequest
 → validate_request
+→ CellGraphDefinition
+→ Graph Validator
 → CellExecutionPlanner
 → CellExecutionPlan
 → Plan Validator
@@ -33,12 +35,12 @@ AnalysisRequest
 稳定要求：
 
 - Engine 负责编排，不实现具体公式。
-- Registry 只提供本地能力实现，不承担运行顺序。
-- Planner 选择实现和服务，Coordinator 负责图语义，Executor 负责单节点真实执行。
+- Registry 只提供本地能力实现，不承担节点角色或运行顺序。
+- Graph 定义组合，Planner 选择实现和服务，Coordinator 负责运行图语义，Executor 负责单节点真实执行。
 - AnalysisReport 不包含服务、重试或队列信息。
 - 新数据源必须经过标准数据契约进入分析。
 
-当前本地运行已经完全由 ExecutionPlan 驱动。剩余结构缺口是 Graph Definition 尚未从 Registry 的叶子 / 根角色中独立出来。
+当前 Graph、Registry、ExecutionPlan 和 Coordinator 已经分层。默认图与自定义多级图使用同一校验、规划和执行路径。
 
 ## 3. Cell 输出稳定
 
@@ -70,7 +72,7 @@ metadata
 - `cell_id / target / horizon` 必须与 invocation 匹配。
 - 关键消费字段不能只藏在 metadata。
 - 公式版本通过 Manifest 和 AnalysisRun 保存。
-- Executor 和 Engine 双重校验结果契约。
+- Executor 和 Coordinator 双重校验结果契约。
 
 ## 4. 风险解释稳定
 
@@ -115,6 +117,7 @@ binding.runtime                  = trace.runtime
 - 失败、超时、重试和降级必须区分。
 - 未来远程执行需要 run_id、plan_id、trace_id 和 parent_span_id 传播。
 - 非法 DAG 必须在任何 Cell 执行前失败。
+- 非法 Graph、Organ 或未注册 Cell 必须在生成 ExecutionPlan 前失败。
 - `node_id` 是执行身份，`cell_id` 可以在不同节点重复。
 - 节点必须通过 `binding_id` 显式绑定 implementation 和 service。
 - 执行顺序来自 validator 输出的稳定拓扑层，不来自 Registry 或 plan.nodes 排列。
@@ -127,6 +130,7 @@ binding.runtime                  = trace.runtime
 
 - input snapshot 和 input hash
 - formula versions 和 manifests
+- cell graph snapshot 和 graph validation
 - provider / router audit
 - execution plan 和 placement decisions
 - plan execution order、completed nodes 和 failed node
@@ -157,11 +161,12 @@ binding.runtime                  = trace.runtime
 
 - `test_stability.py`：分析结构、Cell 输出和风险解释。
 - `test_contracts.py`：跨语言 JSON 契约。
+- `test_cell_graph.py`：默认图、多级聚合、共享 Organ、重复 Cell 和 Graph 失败审计。
 - `test_executor.py`：binding、执行、trace、结果和失败 run。
 - `test_coordinator.py`：拓扑顺序、多级聚合、重复 Cell、失败局部状态和节点事件。
 - `test_execution_plan.py`：计划、trace 和 summary 持久化。
 - `test_execution_placement.py`：多服务候选和运行时感知 placement。
-- `test_replay.py`：输入快照重跑和公式漂移。
+- `test_replay.py`：输入快照重跑、公式漂移和 Graph 身份 / 版本 / 内容漂移。
 - `test_run_store.py`：报告与运行记录。
 - `test_decision_policy.py`：方向和风险分层。
 - `test_registry_validation.py`：输入边界。
@@ -176,9 +181,8 @@ make test
 
 当前仍需补齐：
 
-1. Cell Graph Definition。
-2. Input Reference / Resolver。
-3. Runtime Summary Store。
-4. Performance baseline。
+1. Input Reference / Resolver。
+2. Runtime Summary Store。
+3. Performance baseline。
 
 顺序以 `roadmap.md` 为准。

@@ -1,4 +1,4 @@
-# MarketCell 后端架构文档 v0.3
+# MarketCell 后端架构文档 v0.4
 
 ## 1. 架构阶段
 
@@ -7,7 +7,7 @@ MarketCell 后端分三阶段演进。
 ### 阶段一：本地分析内核
 
 ```text
-CLI + AnalysisEngine + Planner + Validator + Coordinator + LocalCellExecutor + AnalysisRun + FileSystemReportStore
+CLI + AnalysisEngine + Graph + Planner + Validators + Coordinator + LocalCellExecutor + AnalysisRun + FileSystemReportStore
 ```
 
 目标是把 Cell 协议和分析闭环做稳定。
@@ -35,7 +35,8 @@ flowchart TD
     Client["CLI / Web UI / Future Trading Gateway"] --> API["FastAPI Gateway"]
     API --> Task["Analysis Task Service"]
     Task --> Planner["Analysis Planner"]
-    Registry["Cell Registry"] --> Planner
+    Graph["CellGraphDefinition"] --> Planner
+    Registry["Cell Implementation Registry"] --> Planner
     Catalog["Service Capability Catalog"] --> Planner
     Policy["Placement Policy"] --> Planner
     Planner --> Plan["CellExecutionPlan"]
@@ -72,9 +73,11 @@ flowchart TD
 - `EventBus`
 - `AnalysisRun`
 - `CellExecutionPlan`
+- `CellGraphDefinition` / named Organ
+- `CellGraphValidation`
 - `ServiceCapabilityCatalog`
 - `RuntimeAwarePlacementPolicy`
-- `Plan / Graph Validator`
+- `CellGraphValidation` / `ExecutionPlanValidation`
 - `PlanDrivenLocalCoordinator`
 - `CellExecutor` / `LocalCellExecutor`
 - `PlanExecution` audit
@@ -84,7 +87,7 @@ flowchart TD
 - CLI `replay`
 - `ReplayRunner`
 
-当前不立即实现复杂消息队列。ExecutionPlan 已经真正驱动本地 DAG，下一步先把 Cell Graph Definition 从 Registry 中拆出，再完成输入引用边界。
+当前不立即实现复杂消息队列。Graph 已经从 Registry 拆出，ExecutionPlan 也真正驱动本地 DAG；下一步完成输入引用和大数据解析边界。
 
 ## 3. 后端分层
 
@@ -134,6 +137,8 @@ AnalysisRun {
   input_hash
   formula_versions
   cell_manifests
+  cell_graph_definition
+  cell_graph_validation
   execution_plan
   plan_execution
   runtime_traces

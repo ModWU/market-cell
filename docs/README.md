@@ -28,8 +28,8 @@
 |---|---|---|
 | 文档治理 | `documentation_architecture.md` | baseline v0.2 |
 | 产品定位 | `product_design.md` | baseline v0.2 |
-| 系统基线 | `system_architecture.md` | baseline v0.3 |
-| 实施顺序 | `roadmap.md` | baseline v0.2 |
+| 系统基线 | `system_architecture.md` | baseline v0.4 |
+| 实施顺序 | `roadmap.md` | baseline v0.3 |
 | 后端模块 | `backend_design.md` | baseline |
 | 服务化演进 | `backend_architecture.md` | baseline |
 | Cell 协议 | `cell_protocol.md` | baseline |
@@ -58,6 +58,10 @@
 - `glossary.md`：统一术语。
 - `design_review.md`：历史设计快照，不作为当前实施顺序。
 
+## 架构决策
+
+- `adr/0001-cell-graph-definition.md`：Graph、Organ、Registry 和 ExecutionPlan 的职责边界。
+
 ## 未来专项
 
 达到对应阶段时再创建：
@@ -66,7 +70,6 @@
 - `multi_horizon_design.md`
 - `ai_explainer_design.md`
 - `trading_gateway_design.md`
-- `adr/`
 
 ## 维护规则
 

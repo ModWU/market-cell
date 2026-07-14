@@ -1,4 +1,4 @@
-# MarketCell Cell 协议 v0.2
+# MarketCell Cell 协议 v0.3
 
 ## 1. Cell 是什么
 
@@ -131,6 +131,7 @@ deprecated
 - 在 `cells/` 中实现 Cell
 - 在 `cells/__init__.py` 导出
 - 在 `registry.py` 注册
+- 需要进入默认分析时，在 `graph/defaults.py` 添加节点和依赖
 - 在 `cell_dictionary.md` 记录
 - 添加测试
 - 添加公式版本
@@ -190,3 +191,5 @@ task_queue = cell.python-local
 未来多服务集群时，可以一个 Cell 对应多个服务，也可以一个服务承载多个 Cell，但 `CellResult` 输出协议不能因此变化。Cell 也不能读取 task queue、endpoint 或 service health 来自行决定位置。
 
 身份规则：`cell_id` 可以在一个 Graph 中重复使用，`node_id` 才是一次计划内的唯一执行身份。任何依赖、trace 和结果收集都应优先按 node_id 对齐。
+
+Registry 只注册 implementation。leaf、aggregator、root 和 Organ 归属只能出现在 Graph Definition 中，不能重新塞回 Registry。

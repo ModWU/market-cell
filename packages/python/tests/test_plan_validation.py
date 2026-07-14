@@ -132,7 +132,7 @@ class ExecutionPlanValidationTests(unittest.TestCase):
         invalid_root = replace(root, dependencies=[*root.dependencies, "cell:missing"])
         invalid_plan = replace(valid_plan, nodes=_replace_node(valid_plan, invalid_root))
         event_bus = EventBus()
-        first_cell = registry.leaf_cells[0]
+        first_cell = registry.resolve("technical.trend")
 
         with tempfile.TemporaryDirectory() as temp_dir:
             store = FileSystemReportStore(Path(temp_dir))

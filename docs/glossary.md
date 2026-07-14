@@ -1,4 +1,4 @@
-# MarketCell 术语表 v0.2
+# MarketCell 术语表 v0.4
 
 ## Cell
 
@@ -26,7 +26,7 @@ Technical Tissue = TrendCell + VolumeCell + VolatilityCell
 Crypto Organ = 链上资金 + 合约数据 + 交易所数据 + 技术结构
 ```
 
-Organ 是组合概念，不引入新的 Cell 输出或执行协议。
+Organ 在 `CellGraphDefinition` 中通过 `organ_id + organ_version + node_ids + output_node_ids` 表达。不同 Organ 可以共享同一 node_id；它是组合概念，不引入新的 Cell 输出或执行协议。
 
 ## Body
 
@@ -62,7 +62,7 @@ Organ 是组合概念，不引入新的 Cell 输出或执行协议。
 
 版本化的 Cell 组合定义。
 
-它描述节点、依赖、聚合关系和 root，但不描述具体服务位置。当前尚未落地，是地基阶段的优先契约。
+它描述节点、依赖、聚合关系、root 和命名 Organ，但不描述具体服务位置。当前契约版本为 `cell_graph_definition.v1`。
 
 ## ServiceCapabilityCatalog
 

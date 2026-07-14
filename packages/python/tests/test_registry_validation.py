@@ -27,10 +27,10 @@ class RegistryValidationTests(unittest.TestCase):
         self.assertIs(registry.resolve(cell.cell_id), cell)
 
     def test_registry_rejects_duplicate_local_cell_id(self):
-        decision = default_registry().decision_cell
+        decision = default_registry().resolve("root.decision")
 
         with self.assertRaises(DuplicateCellRegistrationError):
-            CellRegistry([TrendCell(), TrendCell()], decision)
+            CellRegistry([TrendCell(), TrendCell(), decision])
 
     def test_registry_reports_missing_local_implementation(self):
         with self.assertRaises(CellNotRegisteredError):

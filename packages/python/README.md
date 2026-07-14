@@ -9,7 +9,7 @@ It owns:
 - Cell registry and reference Cell implementations
 - Decision policies
 - Report and run metadata handling
-- Replay comparison from saved input snapshots
+- Replay comparison from saved input snapshots, formula versions, and Graph identity
 - Static and low-frequency data analysis workflows
 - Candle source quality monitoring and cross-source comparison
 - Data quality issue persistence for source health history
@@ -20,6 +20,8 @@ It owns:
 - Run metadata persistence for provider selection and router plan audits
 - AnalysisRun schema versioning for replayable run records
 - Mandatory local CellExecutionPlan generation and validation
+- Versioned CellGraphDefinition and overlapping named Organ subgraphs
+- Graph validation for topology, Organ closure, reachability, and Registry compatibility
 - Plan-driven local DAG coordination with node-scoped results and dependency ordering
 - Versioned PlanExecution audit metadata for completed and failed runs
 - Local CellRuntimeTrace records for per-Cell latency and status audits
@@ -34,6 +36,10 @@ It owns:
 
 Execution code is split by responsibility:
 
+- `graph/models.py`: stable Graph, node, and Organ data objects
+- `graph/defaults.py`: reference analysis composition independent of Registry order
+- `graph/validation.py`: Graph, Organ, and registered-capability validation
+- `graph/topology.py`: shared deterministic topology algorithms
 - `execution/models.py`: stable execution data objects
 - `execution/catalog.py`: service capability discovery model
 - `execution/coordinator.py`: plan-driven topology execution and node state

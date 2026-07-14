@@ -107,6 +107,12 @@
             }
           }
         },
+        "cell_graph_definition": {
+          "$ref": "https://marketcell.local/schemas/cell_graph_definition.schema.json"
+        },
+        "cell_graph_validation": {
+          "$ref": "https://marketcell.local/schemas/cell_graph_validation.schema.json"
+        },
         "cell_runtime_traces": {
           "type": "array",
           "items": {

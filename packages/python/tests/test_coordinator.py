@@ -21,7 +21,7 @@ class PlanDrivenLocalCoordinatorTests(unittest.TestCase):
         first = _RecordingCell("test.first", calls)
         second = _RecordingCell("test.second", calls)
         root = _RecordingCell("test.root", calls)
-        registry = CellRegistry([second, first], root)
+        registry = CellRegistry([second, first, root])
         nodes = [
             _node("node:root", root, "root", ["node:second", "node:first"]),
             _node("node:second", second, "leaf"),
@@ -60,7 +60,7 @@ class PlanDrivenLocalCoordinatorTests(unittest.TestCase):
         second = _RecordingCell("test.second", calls)
         aggregator = _RecordingCell("test.aggregator", calls)
         root = _RecordingCell("test.root", calls)
-        registry = CellRegistry([aggregator, second, first], root)
+        registry = CellRegistry([aggregator, second, first, root])
         nodes = [
             _node("node:root", root, "root", ["node:aggregator"]),
             _node(
@@ -90,7 +90,7 @@ class PlanDrivenLocalCoordinatorTests(unittest.TestCase):
         calls: list[str] = []
         shared = _RecordingCell("test.shared", calls)
         root = _RecordingCell("test.root", calls)
-        registry = CellRegistry([shared], root)
+        registry = CellRegistry([shared, root])
         nodes = [
             _node(
                 "node:root",
@@ -128,7 +128,7 @@ class PlanDrivenLocalCoordinatorTests(unittest.TestCase):
         calls: list[str] = []
         missing = _RecordingCell("test.missing", calls)
         root = _RecordingCell("test.root", calls)
-        registry = CellRegistry([], root)
+        registry = CellRegistry([root])
         nodes = [
             _node("node:root", root, "root", ["node:missing"]),
             _node("node:missing", missing, "leaf"),
@@ -151,7 +151,7 @@ class PlanDrivenLocalCoordinatorTests(unittest.TestCase):
         first = _RecordingCell("test.first", calls)
         second = _RecordingCell("test.second", calls, failure="planned failure")
         root = _RecordingCell("test.root", calls)
-        registry = CellRegistry([second, first], root)
+        registry = CellRegistry([second, first, root])
         nodes = [
             _node("node:root", root, "root", ["node:first", "node:second"]),
             _node("node:second", second, "leaf"),

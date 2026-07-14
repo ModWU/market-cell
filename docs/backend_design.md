@@ -1,4 +1,4 @@
-# MarketCell 后端设计文档 v0.3
+# MarketCell 后端设计文档 v0.4
 
 ## 1. 后端目标
 
@@ -28,7 +28,8 @@ flowchart TD
     Loader --> Models["Domain Models"]
     Models --> Validator["Validator"]
     Validator --> Engine["AnalysisEngine"]
-    Registry["CellRegistry"] --> Planner["CellExecutionPlanner"]
+    Graph["CellGraphDefinition"] --> Planner["CellExecutionPlanner"]
+    Registry["CellRegistry"] --> Planner
     Catalog["ServiceCapabilityCatalog"] --> Planner
     Planner --> Plan["CellExecutionPlan"]
     Plan --> Engine
@@ -50,12 +51,13 @@ flowchart TD
 | `events.py` | 轻量事件总线，记录分析开始、Cell 完成、报告保存等事件 |
 | `runs.py` | 定义 AnalysisRun，记录一次可复盘分析运行 |
 | `validation.py` | 校验输入数据 |
-| `registry.py` | 注册并按 cell_id 确定性解析一个本地 Cell 实现 |
+| `registry.py` | 注册并按 cell_id 确定性解析一个本地 Cell 实现，不保存拓扑角色 |
+| `graph/` | Graph、Organ、默认组合、共享拓扑算法和结构校验 |
 | `engine.py` | 编排规划、协调、报告和运行审计，不持有图执行细节 |
 | `execution/models.py` | 执行计划、binding、trace 和 summary 数据对象 |
 | `execution/catalog.py` | 服务能力目录和本地 binding 工厂 |
 | `execution/placement.py` | 运行时感知的服务放置策略 |
-| `execution/planner.py` | 从 Registry、Catalog 和 Policy 生成执行计划 |
+| `execution/planner.py` | 从 Graph、Registry、Catalog 和 Policy 生成执行计划 |
 | `execution/plan_validation.py` | 校验 DAG、root、binding、环和可达性并生成稳定拓扑层 |
 | `execution/coordinator.py` | 按 ExecutionPlan 执行拓扑、管理 node_id 结果和失败局部状态 |
 | `execution/executor.py` | CellExecutor 协议、本地执行和一致性校验 |
@@ -77,6 +79,7 @@ sequenceDiagram
     participant CLI as CLI
     participant V as Validator
     participant E as Engine
+    participant G as Graph Validator
     participant P as Planner
     participant O as Coordinator
     participant X as Executor
@@ -85,7 +88,9 @@ sequenceDiagram
     CLI->>V: AnalysisRequest
     V-->>CLI: valid
     CLI->>E: run(request)
-    E->>P: build(request, registry, catalog)
+    E->>P: build(graph, request, registry, catalog)
+    P->>G: validate(graph, registry manifests)
+    G-->>P: stable topology
     P-->>E: CellExecutionPlan
     E->>O: execute(validated plan)
     O->>X: execute(node, binding, dependencies)
@@ -140,10 +145,9 @@ PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --store
 
 扩展顺序只以 `roadmap.md` 为准。当前后端优先完成：
 
-1. Cell Graph Definition。
-2. Input Reference / Resolver。
-3. Runtime Summary Store。
-4. Performance baseline。
+1. Input Reference / Resolver。
+2. Runtime Summary Store。
+3. Performance baseline。
 
 这些边界稳定后再进入更多 Cell、多周期、API 和远程执行。
 

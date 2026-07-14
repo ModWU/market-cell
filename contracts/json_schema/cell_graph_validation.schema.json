@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/cell_graph_validation.schema.json",
+  "title": "MarketCell CellGraphValidation",
+  "type": "object",
+  "required": [
+    "error_type",
+    "graph_id",
+    "graph_version",
+    "issues",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "error_type": {
+      "const": "cell_graph_validation"
+    },
+    "graph_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "graph_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "issues": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
+    },
+    "schema_version": {
+      "const": "cell_graph_validation.v1"
+    }
+  },
+  "$defs": {
+    "issue": {
+      "type": "object",
+      "required": [
+        "code",
+        "message",
+        "node_id",
+        "dependency_id",
+        "cell_id",
+        "organ_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "duplicate_node_id",
+            "missing_root",
+            "invalid_root_role",
+            "unexpected_root_role",
+            "missing_dependency",
+            "duplicate_dependency",
+            "self_dependency",
+            "leaf_has_dependencies",
+            "cycle_detected",
+            "unreachable_node",
+            "missing_cell_implementation",
+            "duplicate_organ_id",
+            "duplicate_organ_node",
+            "duplicate_organ_output",
+            "organ_has_no_outputs",
+            "missing_organ_node",
+            "organ_output_not_member",
+            "organ_dependency_outside_subgraph",
+            "organ_unreachable_node"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "node_id": {
+          "type": ["string", "null"]
+        },
+        "dependency_id": {
+          "type": ["string", "null"]
+        },
+        "cell_id": {
+          "type": ["string", "null"]
+        },
+        "organ_id": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

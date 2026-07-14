@@ -19,7 +19,12 @@ from market_cell.execution import (
     summarize_runtime_traces,
     validate_execution_plan,
 )
-from market_cell.models import AnalysisReport, AnalysisRequest
+from market_cell.graph import (
+    CellGraphDefinition,
+    CellGraphValidationError,
+    default_analysis_graph,
+)
+from market_cell.models import AnalysisReport, AnalysisRequest, CellManifest
 from market_cell.reports import ReportStore
 from market_cell.registry import CellRegistry, default_registry
 from market_cell.runs import AnalysisRun
@@ -36,6 +41,7 @@ class AnalysisEngine:
         include_execution_plan: bool = True,
         executor: CellExecutor | None = None,
         coordinator: CellExecutionCoordinator | None = None,
+        graph_definition: CellGraphDefinition | None = None,
     ) -> None:
         if not include_execution_plan:
             raise ValueError(
@@ -47,6 +53,7 @@ class AnalysisEngine:
         self.run_metadata = dict(run_metadata or {})
         self.executor = executor or LocalCellExecutor()
         self.coordinator = coordinator or PlanDrivenLocalCoordinator()
+        self.graph_definition = graph_definition or default_analysis_graph()
 
     def run(
         self,
@@ -58,12 +65,22 @@ class AnalysisEngine:
         runtime_traces: list[CellRuntimeTrace] = []
         run = AnalysisRun.start(
             request,
-            self.registry.manifests(),
-            metadata=_merge_metadata(self.run_metadata, metadata),
+            self._graph_manifests(),
+            metadata=_merge_metadata(
+                self.run_metadata,
+                metadata,
+                self.graph_definition.to_run_metadata(),
+            ),
         )
         self.event_bus.emit(
             "analysis.started",
-            {"run_id": run.run_id, "target": request.target, "horizon": request.horizon},
+            {
+                "run_id": run.run_id,
+                "target": request.target,
+                "horizon": request.horizon,
+                "graph_id": self.graph_definition.graph_id,
+                "graph_version": self.graph_definition.graph_version,
+            },
         )
 
         execution_plan: CellExecutionPlan | None = None
@@ -112,6 +129,10 @@ class AnalysisEngine:
                 if "cell_execution_plan" not in run.metadata:
                     run = run.with_metadata(exc.plan.to_run_metadata())
                 run = run.with_metadata({"execution_plan_validation": exc.to_dict()})
+            if isinstance(exc, CellGraphValidationError):
+                if "cell_graph_definition" not in run.metadata:
+                    run = run.with_metadata(exc.graph.to_run_metadata())
+                run = run.with_metadata({"cell_graph_validation": exc.to_dict()})
             failed_run = run.with_metadata(_runtime_metadata(runtime_traces)).fail(str(exc))
             persistence_error = _save_failed_run(self.report_store, failed_run)
             self.event_bus.emit(
@@ -136,7 +157,20 @@ class AnalysisEngine:
             if isinstance(self.executor, LocalCellExecutor)
             else "python-local"
         )
-        return build_local_execution_plan(self.registry, request, service_id)
+        return build_local_execution_plan(
+            self.registry,
+            request,
+            service_id,
+            graph_definition=self.graph_definition,
+        )
+
+    def _graph_manifests(self) -> list[CellManifest]:
+        graph_cell_ids = {node.cell_id for node in self.graph_definition.nodes}
+        return [
+            manifest
+            for manifest in self.registry.manifests()
+            if manifest.cell_id in graph_cell_ids
+        ]
 
     def _emit_node_completion(
         self,

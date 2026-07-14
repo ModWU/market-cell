@@ -1,4 +1,4 @@
-# MarketCell 实施路线图 v0.2
+# MarketCell 实施路线图 v0.3
 
 ## 1. 文档职责
 
@@ -39,8 +39,10 @@
 - `RuntimeAwarePlacementPolicy`
 - `CellExecutor` 和严格的 `LocalCellExecutor`
 - `PlanDrivenLocalCoordinator` 和 `plan_execution.v1` 运行审计
+- `CellGraphDefinition`、命名 Organ 子图和 `cell_graph_validation.v1`
 - ExecutionPlan v2：node_id 与 cell_id 分离，节点显式引用 binding_id
-- Plan / Graph Validator：依赖、环、可达性、root 和 binding 一致性
+- Graph Validator：组合依赖、Organ、环、可达性和 Registry 兼容性
+- ExecutionPlan Validator：运行依赖、环、可达性、root 和 binding 一致性
 - plan / trace / CellResult 一致性校验
 - 成功和失败 AnalysisRun 的运行审计
 - GitHub Actions Python / Rust CI
@@ -49,7 +51,7 @@
 
 当前不以新增 Cell 数量为目标，而是让大量 Cell 和未来多服务运行时建立在可验证地基上。
 
-### P0.1 Plan / Graph Validator（已完成）
+### P0.1 ExecutionPlan Validator（已完成）
 
 目标：所有执行计划在运行前拒绝结构错误。
 
@@ -75,17 +77,20 @@
 - 成功和失败运行保存确定性 execution_order、completed_node_ids 和 failed_node_id
 - 禁止无 ExecutionPlan 的第二执行路径
 
-### P0.3 Cell Graph Definition（下一步）
+### P0.3 Cell Graph Definition（已完成）
 
 目标：把 Cell 组合关系从 Registry 列表中拆出。
 
 - 定义版本化 `CellGraphDefinition`
 - 支持 leaf、aggregator、root 多层结构
-- Organ 表达为命名子图
+- Organ 以 organ_id + organ_version 表达版本化命名子图
 - 多个 Organ 可共享 Cell
 - Graph Definition 生成 ExecutionPlan，但不包含服务位置
+- Registry 只注册实现，不再保存 leaf / root 拓扑角色
+- Graph、Plan Validator 共享确定性拓扑算法
+- Graph snapshot 和结构化校验失败进入 AnalysisRun
 
-### P0.4 Input Reference / Resolver
+### P0.4 Input Reference / Resolver（下一步）
 
 目标：为大数据输入和远程执行建立引用边界。
 
@@ -121,7 +126,7 @@
 
 - 非法 DAG 在执行前被拒绝。（已完成）
 - 本地执行由 plan 驱动，Registry 不再隐式决定拓扑。（已完成）
-- 至少一个多级 aggregator 图可以稳定运行和回放。
+- 至少一个多级 aggregator 图可以稳定运行和回放。（已完成）
 - 关闭或更换 executor 时，trace 仍能准确表达实际位置。
 - placement 能消费跨运行历史窗口。
 - 失败、超时、重试和降级拥有明确审计结构。

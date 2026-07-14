@@ -24,15 +24,9 @@ class CellNotRegisteredError(LookupError):
 
 
 class CellRegistry:
-    def __init__(
-        self,
-        leaf_cells: Sequence[MarketCell],
-        decision_cell: MarketCell,
-    ) -> None:
-        self.leaf_cells = tuple(leaf_cells)
-        self.decision_cell = decision_cell
-        cells = self.all_cells()
-        registration_counts = Counter(cell.cell_id for cell in cells)
+    def __init__(self, cells: Sequence[MarketCell]) -> None:
+        self._cells = tuple(cells)
+        registration_counts = Counter(cell.cell_id for cell in self._cells)
         duplicate_ids = sorted(
             cell_id for cell_id, count in registration_counts.items() if count > 1
         )
@@ -40,13 +34,13 @@ class CellRegistry:
             raise DuplicateCellRegistrationError(
                 f"duplicate local cell registrations: {', '.join(duplicate_ids)}"
             )
-        self._cells_by_id = {cell.cell_id: cell for cell in cells}
+        self._cells_by_id = {cell.cell_id: cell for cell in self._cells}
 
     def all_cells(self) -> list[MarketCell]:
-        return [*self.leaf_cells, self.decision_cell]
+        return list(self._cells)
 
     def manifests(self) -> list[CellManifest]:
-        return [cell.manifest() for cell in self.all_cells()]
+        return [cell.manifest() for cell in self._cells]
 
     def resolve(self, cell_id: str) -> MarketCell:
         try:
@@ -59,13 +53,13 @@ class CellRegistry:
 
 def default_registry(decision_policy: DecisionPolicy | None = None) -> CellRegistry:
     return CellRegistry(
-        leaf_cells=[
+        [
             TrendCell(),
             VolumeCell(),
             VolatilityCell(),
             MarketRegimeCell(),
             NewsEventCell(),
             ManipulationRiskCell(),
+            DecisionCell(policy=decision_policy),
         ],
-        decision_cell=DecisionCell(policy=decision_policy),
     )

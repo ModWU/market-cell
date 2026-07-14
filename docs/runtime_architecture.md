@@ -1,4 +1,4 @@
-# MarketCell 运行时架构 v0.3
+# MarketCell 运行时架构 v0.4
 
 ## 1. 目标
 
@@ -21,7 +21,8 @@ flowchart LR
     Quality --> Aggregation["Candle Aggregation<br/>feature precompute"]
     Aggregation --> Store["Storage Layer<br/>Parquet / DuckDB / cache"]
     Store --> Cold["Python Cold Path"]
-    Cold --> Plan["CellExecutionPlan"]
+    Cold --> Graph["CellGraphDefinition"]
+    Graph --> Plan["CellExecutionPlan"]
     Plan --> Coordinator["CellExecutionCoordinator"]
     Coordinator --> Cells["Executors / Cells"]
     Cells --> Report["AnalysisReport / Replay"]
@@ -67,6 +68,7 @@ Python 负责静态数据分析和研究效率。
 - AnalysisRequest / AnalysisReport
 - Cell 编排和参考实现
 - CellExecutionPlan 本地构建和服务绑定参考实现
+- CellGraphDefinition、命名 Organ 和组合图校验
 - Plan-driven DAG 协调、节点结果管理和执行审计
 - 决策策略、风险解释、报告生成
 - 历史回放、公式对比、评估实验
@@ -85,6 +87,7 @@ Python 负责静态数据分析和研究效率。
 packages/python/src/market_cell/
 ├── data/       # 静态和低频数据接入协议
 ├── features/   # 可读参考特征实现
+├── graph/      # 版本化 Cell 组合、Organ、默认图和拓扑校验
 ├── replay/     # 基于 input_snapshot 的重跑和漂移比较
 ├── reports/    # 报告和运行记录保存
 ├── execution/  # 计划、协调、放置、执行和遥测
@@ -103,7 +106,7 @@ packages/python/src/market_cell/
 
 数据源选择策略位于 `data/provider_selection.py`。它只生成 `ProviderSelectionPlan`，用于表达 primary / backups / disabled 的建议，不直接持有网络连接。`data/router_plan.py` 再把选择计划映射到实际 `CandleSource` 实例，生成可审计的 `RouterPlan`，最后显式创建 `MarketDataRouter`。`RouterPlan.to_run_metadata()` 可把选择计划和实际路由计划写入 `AnalysisRun.metadata`，不改变 `AnalysisReport` 和 Cell 输出结构。`AnalysisRun` 已经有 `analysis_run.v1` JSON Schema，后续服务化和跨语言模块必须按该契约保存运行审计。这样可以让策略、配置、取数运行时和分析报告分别测试，也避免把 Python 冷路径策略和后续 Rust 实时热路径耦合在一起。
 
-Cell 执行模块位于 `execution/`，按 `models / catalog / placement / planner / plan_validation / coordinator / executor / telemetry` 分层。planner 从 `ServiceCapabilityCatalog` 选择 binding 并生成 `CellExecutionPlan`；validator 固化合法 DAG 和拓扑层；coordinator 按 node_id 管理依赖、局部结果和执行顺序；`CellExecutor` 只负责执行一个已确定节点。当前 `LocalCellExecutor` 始终上报真实本地 service，并拒绝远程 binding；coordinator 复核 trace 与 plan 以及 CellResult 契约。ExecutionPlan 已成为强制运行边界。未来服务化时新增 Executor Router、远程 executor 和集群 coordinator，不需要把网络调用重新塞回 AnalysisEngine。
+Cell 组合模块位于 `graph/`，按 `models / defaults / validation / topology` 分层，不依赖 service binding。Cell 执行模块位于 `execution/`，按 `models / catalog / placement / planner / plan_validation / coordinator / executor / telemetry` 分层。planner 校验 Graph 和 Registry 能力，再从 `ServiceCapabilityCatalog` 选择 binding 并生成 `CellExecutionPlan`；coordinator 按 node_id 管理依赖、局部结果和执行顺序；`CellExecutor` 只负责执行一个已确定节点。当前 `LocalCellExecutor` 始终上报真实本地 service，并拒绝远程 binding；coordinator 复核 trace 与 plan 以及 CellResult 契约。未来服务化时新增 Executor Router、远程 executor 和集群 coordinator，不需要把网络调用重新塞回 AnalysisEngine。
 
 ## 5. Storage Layer
 
@@ -132,6 +135,8 @@ Historical batch  -> contracts/parquet/candle_schema.md
 Analysis input    -> contracts/json_schema/analysis_request.schema.json
 Analysis output   -> contracts/json_schema/analysis_report.schema.json
 Analysis run/audit -> contracts/json_schema/analysis_run.schema.json
+Cell graph       -> contracts/json_schema/cell_graph_definition.schema.json
+Graph validation -> contracts/json_schema/cell_graph_validation.schema.json
 Cell execution   -> contracts/json_schema/cell_execution_plan.schema.json
 Service binding  -> contracts/json_schema/cell_service_binding.schema.json
 Service catalog  -> contracts/json_schema/service_capability_catalog.schema.json
@@ -146,11 +151,10 @@ Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
 
 ## 7. 当前推进顺序
 
-冷热路径、共享契约、Rust 行情原语、Python 回放、数据源审计、ExecutionPlan、placement、plan-driven coordinator、executor 和运行遥测已经建立参考实现。
+冷热路径、共享契约、Rust 行情原语、Python 回放、数据源审计、CellGraphDefinition、Organ、ExecutionPlan、placement、plan-driven coordinator、executor 和运行遥测已经建立参考实现。
 
 当前运行时地基仍需补齐：
 
-- Cell Graph Definition。
 - Input Reference / Resolver。
 - 跨运行 Runtime Summary Store。
 - 性能基线。

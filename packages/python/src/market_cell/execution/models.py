@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 from market_cell.events import utc_now_iso
+from market_cell.graph.models import GraphNodeRole
 
 
 CELL_EXECUTION_PLAN_SCHEMA_VERSION = "cell_execution_plan.v2"
@@ -11,7 +12,7 @@ CELL_RUNTIME_TRACE_SCHEMA_VERSION = "cell_runtime_trace.v1"
 CELL_RUNTIME_SUMMARY_SCHEMA_VERSION = "cell_runtime_summary.v1"
 
 CellRuntime = Literal["python_local", "python_service", "rust_service", "external_service"]
-ExecutionRole = Literal["leaf", "aggregator", "root"]
+ExecutionRole = GraphNodeRole
 CpuWeight = Literal["unknown", "light", "medium", "heavy"]
 LatencySensitivity = Literal["low", "normal", "high"]
 RuntimeTraceStatus = Literal["succeeded", "failed", "skipped"]
