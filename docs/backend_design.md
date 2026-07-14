@@ -1,4 +1,4 @@
-# MarketCell 后端设计文档 v0.2
+# MarketCell 后端设计文档 v0.3
 
 ## 1. 后端目标
 
@@ -32,7 +32,8 @@ flowchart TD
     Catalog["ServiceCapabilityCatalog"] --> Planner
     Planner --> Plan["CellExecutionPlan"]
     Plan --> Engine
-    Engine --> Executor["CellExecutor"]
+    Engine --> Coordinator["CellExecutionCoordinator"]
+    Coordinator --> Executor["CellExecutor"]
     Executor --> Cells["Cell Library"]
     Cells --> Results["CellResult"]
     Results --> Decision["DecisionCell"]
@@ -49,12 +50,14 @@ flowchart TD
 | `events.py` | 轻量事件总线，记录分析开始、Cell 完成、报告保存等事件 |
 | `runs.py` | 定义 AnalysisRun，记录一次可复盘分析运行 |
 | `validation.py` | 校验输入数据 |
-| `registry.py` | 注册和列出 Cell |
-| `engine.py` | 编排一次分析运行，不持有具体执行实现 |
+| `registry.py` | 注册并按 cell_id 确定性解析一个本地 Cell 实现 |
+| `engine.py` | 编排规划、协调、报告和运行审计，不持有图执行细节 |
 | `execution/models.py` | 执行计划、binding、trace 和 summary 数据对象 |
 | `execution/catalog.py` | 服务能力目录和本地 binding 工厂 |
 | `execution/placement.py` | 运行时感知的服务放置策略 |
 | `execution/planner.py` | 从 Registry、Catalog 和 Policy 生成执行计划 |
+| `execution/plan_validation.py` | 校验 DAG、root、binding、环和可达性并生成稳定拓扑层 |
+| `execution/coordinator.py` | 按 ExecutionPlan 执行拓扑、管理 node_id 结果和失败局部状态 |
 | `execution/executor.py` | CellExecutor 协议、本地执行和一致性校验 |
 | `execution/telemetry.py` | trace 聚合和性能摘要 |
 | `scoring.py` | 评分和方向转换 |
@@ -75,6 +78,7 @@ sequenceDiagram
     participant V as Validator
     participant E as Engine
     participant P as Planner
+    participant O as Coordinator
     participant X as Executor
     participant C as Cell
     U->>CLI: analyze input.json
@@ -83,12 +87,14 @@ sequenceDiagram
     CLI->>E: run(request)
     E->>P: build(request, registry, catalog)
     P-->>E: CellExecutionPlan
-    E->>X: execute(cell, context)
+    E->>O: execute(validated plan)
+    O->>X: execute(node, binding, dependencies)
     X->>C: analyze(request)
     C-->>X: CellResult
-    X-->>E: outcome + runtime trace
-    E->>X: execute(decision, child_results)
-    X-->>E: decision + runtime trace
+    X-->>O: outcome + runtime trace
+    O->>X: execute(root node, dependency results)
+    X-->>O: root result + runtime trace
+    O-->>E: PlanExecutionOutcome
     E-->>CLI: AnalysisReport
 ```
 
@@ -134,10 +140,10 @@ PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --store
 
 扩展顺序只以 `roadmap.md` 为准。当前后端优先完成：
 
-1. plan-driven local coordinator。
-2. Cell Graph Definition。
-3. Input Reference / Resolver。
-4. Runtime Summary Store 和性能基线。
+1. Cell Graph Definition。
+2. Input Reference / Resolver。
+3. Runtime Summary Store。
+4. Performance baseline。
 
 这些边界稳定后再进入更多 Cell、多周期、API 和远程执行。
 
@@ -148,7 +154,7 @@ PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --store
 - 可解释的业务异常要进入报告。
 - 数据结构错误要直接失败。
 - 服务化前就应逐步分类 validation、planning、binding、execution、contract、data_source 和 persistence 错误。
-- 失败 AnalysisRun 必须保留已完成 trace、失败 trace 和 summary。
+- 失败 AnalysisRun 必须保留 execution_order、completed_node_ids、failed_node_id、已完成 trace、失败 trace 和 summary。
 
 ## 8. 配置原则
 

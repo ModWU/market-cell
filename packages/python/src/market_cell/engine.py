@@ -6,20 +6,20 @@ from uuid import uuid4
 from market_cell import __version__
 from market_cell.events import EventBus
 from market_cell.execution import (
-    CellExecutionContext,
+    CellExecutionCoordinator,
     CellExecutionPlan,
     CellExecutor,
     CellRuntimeTrace,
     ExecutionPlanValidationError,
     LocalCellExecutor,
+    NodeExecutionCompletion,
+    PlanDrivenLocalCoordinator,
+    PlanExecutionOutcome,
     build_local_execution_plan,
     summarize_runtime_traces,
-    validate_cell_result,
     validate_execution_plan,
-    validate_execution_trace,
 )
-from market_cell.cells.base import MarketCell
-from market_cell.models import AnalysisReport, AnalysisRequest, CellResult
+from market_cell.models import AnalysisReport, AnalysisRequest
 from market_cell.reports import ReportStore
 from market_cell.registry import CellRegistry, default_registry
 from market_cell.runs import AnalysisRun
@@ -35,13 +35,18 @@ class AnalysisEngine:
         run_metadata: dict[str, Any] | None = None,
         include_execution_plan: bool = True,
         executor: CellExecutor | None = None,
+        coordinator: CellExecutionCoordinator | None = None,
     ) -> None:
+        if not include_execution_plan:
+            raise ValueError(
+                "ExecutionPlan is mandatory; plan-free execution is no longer supported"
+            )
         self.registry = registry or default_registry()
         self.event_bus = event_bus or EventBus()
         self.report_store = report_store
         self.run_metadata = dict(run_metadata or {})
-        self.include_execution_plan = include_execution_plan
         self.executor = executor or LocalCellExecutor()
+        self.coordinator = coordinator or PlanDrivenLocalCoordinator()
 
     def run(
         self,
@@ -62,42 +67,26 @@ class AnalysisEngine:
         )
 
         execution_plan: CellExecutionPlan | None = None
+        execution_outcome: PlanExecutionOutcome | None = None
         try:
-            if self.include_execution_plan:
-                execution_plan = self._execution_plan(request)
-                run = run.with_metadata(execution_plan.to_run_metadata())
-                validate_execution_plan(execution_plan)
-            child_results: list[CellResult] = []
-            for cell in self.registry.leaf_cells:
-                result = self._execute_cell(
-                    cell=cell,
-                    request=request,
-                    run_id=run.run_id,
-                    trace_id=trace_id,
-                    runtime_traces=runtime_traces,
-                    execution_plan=execution_plan,
-                )
-                child_results.append(result)
-                self.event_bus.emit(
-                    "cell.completed",
-                    {
-                        "run_id": run.run_id,
-                        "cell_id": result.cell_id,
-                        "score": result.score,
-                        "direction": result.direction,
-                        "duration_ms": runtime_traces[-1].duration_ms if runtime_traces else None,
-                    },
-                )
-
-            decision = self._execute_cell(
-                cell=self.registry.decision_cell,
+            execution_plan = self._execution_plan(request)
+            run = run.with_metadata(execution_plan.to_run_metadata())
+            validated_plan = validate_execution_plan(execution_plan)
+            execution_outcome = self.coordinator.execute(
+                validated_plan=validated_plan,
+                registry=self.registry,
+                executor=self.executor,
                 request=request,
                 run_id=run.run_id,
                 trace_id=trace_id,
-                runtime_traces=runtime_traces,
-                execution_plan=execution_plan,
-                child_results=child_results,
+                on_node_completed=lambda completion: self._emit_node_completion(
+                    run.run_id,
+                    completion,
+                ),
             )
+            runtime_traces.extend(execution_outcome.runtime_traces)
+            run = run.with_metadata(execution_outcome.to_run_metadata())
+            decision = execution_outcome.unwrap()
             completed_run = run.with_metadata(_runtime_metadata(runtime_traces)).complete(run.run_id)
             report = AnalysisReport(
                 target=request.target,
@@ -131,6 +120,11 @@ class AnalysisEngine:
                     "run_id": failed_run.run_id,
                     "target": request.target,
                     "error": failed_run.error,
+                    "failed_node_id": (
+                        execution_outcome.failed_node_id
+                        if execution_outcome is not None
+                        else None
+                    ),
                     "persistence_error": persistence_error,
                 },
             )
@@ -144,34 +138,42 @@ class AnalysisEngine:
         )
         return build_local_execution_plan(self.registry, request, service_id)
 
-    def _execute_cell(
+    def _emit_node_completion(
         self,
-        cell: MarketCell,
-        request: AnalysisRequest,
         run_id: str,
-        trace_id: str,
-        runtime_traces: list[CellRuntimeTrace],
-        execution_plan: CellExecutionPlan | None,
-        child_results: list[CellResult] | None = None,
-    ) -> CellResult:
-        node = _node_for_cell(execution_plan, cell.cell_id)
-        outcome = self.executor.execute(
-            cell=cell,
-            request=request,
-            child_results=child_results,
-            context=CellExecutionContext(
-                run_id=run_id,
-                trace_id=trace_id,
-                plan_id=execution_plan.plan_id if execution_plan is not None else None,
-                node=node,
-                binding=_binding_for_node(execution_plan, node),
+        completion: NodeExecutionCompletion,
+    ) -> None:
+        payload = {
+            "run_id": run_id,
+            "node_id": completion.node_id,
+            "cell_id": completion.cell_id,
+            "binding_id": completion.binding_id,
+            "execution_role": completion.execution_role,
+            "duration_ms": (
+                completion.trace.duration_ms if completion.trace is not None else None
             ),
+        }
+        if completion.result is None:
+            self.event_bus.emit(
+                "cell.failed",
+                {
+                    **payload,
+                    "error": (
+                        str(completion.error)
+                        if completion.error is not None
+                        else "unknown cell execution failure"
+                    ),
+                },
+            )
+            return
+        self.event_bus.emit(
+            "cell.completed",
+            {
+                **payload,
+                "score": completion.result.score,
+                "direction": completion.result.direction,
+            },
         )
-        runtime_traces.append(outcome.trace)
-        result = outcome.unwrap()
-        validate_execution_trace(outcome.trace, execution_plan)
-        validate_cell_result(cell, request, result)
-        return result
 
 
 def _merge_metadata(
@@ -202,22 +204,4 @@ def _save_failed_run(
         report_store.save_run(failed_run)
     except Exception as exc:
         return str(exc)
-    return None
-
-
-def _node_for_cell(execution_plan: CellExecutionPlan | None, cell_id: str):
-    if execution_plan is None:
-        return None
-    for node in execution_plan.nodes:
-        if node.cell_id == cell_id:
-            return node
-    return None
-
-
-def _binding_for_node(execution_plan: CellExecutionPlan | None, node):
-    if execution_plan is None or node is None:
-        return None
-    for binding in execution_plan.service_bindings:
-        if binding.binding_id == node.binding_id:
-            return binding
     return None

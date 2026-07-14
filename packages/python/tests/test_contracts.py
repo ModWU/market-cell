@@ -154,6 +154,28 @@ class ContractTests(unittest.TestCase):
                 self.assertIn(field_name, summary)
         self.assertEqual(summary["schema_version"], "cell_runtime_summary.v1")
 
+    def test_plan_execution_contains_contract_required_fields(self):
+        schema = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "json_schema"
+                / "plan_execution.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = FileSystemReportStore(Path(temp_dir))
+            report = AnalysisEngine(report_store=store).run(_request())
+            run = store.load_run(report.run_id or "")
+            execution = run["metadata"]["plan_execution"]
+
+        for field_name in schema["required"]:
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, execution)
+        self.assertEqual(execution["schema_version"], "plan_execution.v1")
+        self.assertEqual(execution["status"], "succeeded")
+
     def test_service_capability_catalog_contains_contract_required_fields(self):
         schema = json.loads(
             (

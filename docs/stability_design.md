@@ -1,4 +1,4 @@
-# MarketCell 稳定性设计 v0.2
+# MarketCell 稳定性设计 v0.3
 
 ## 1. 目标
 
@@ -21,9 +21,10 @@ AnalysisRequest
 → validate_request
 → CellExecutionPlanner
 → CellExecutionPlan
-→ AnalysisEngine
+→ Plan Validator
+→ CellExecutionCoordinator
 → CellExecutor
-→ leaf CellResult[]
+→ node_id -> CellResult
 → DecisionPolicy / DecisionCell
 → AnalysisReport
 → ReportStore / ReplayRunner
@@ -32,12 +33,12 @@ AnalysisRequest
 稳定要求：
 
 - Engine 负责编排，不实现具体公式。
-- Registry 提供能力实现，后续不能继续隐式承担 Graph 拓扑。
-- Planner 选择实现和服务，Executor 负责真实执行。
+- Registry 只提供本地能力实现，不承担运行顺序。
+- Planner 选择实现和服务，Coordinator 负责图语义，Executor 负责单节点真实执行。
 - AnalysisReport 不包含服务、重试或队列信息。
 - 新数据源必须经过标准数据契约进入分析。
 
-当前缺口：ExecutionPlan 尚未驱动本地 DAG 顺序。完成 plan-driven coordinator 前，固定 Registry 循环仍是临时实现。
+当前本地运行已经完全由 ExecutionPlan 驱动。剩余结构缺口是 Graph Definition 尚未从 Registry 的叶子 / 根角色中独立出来。
 
 ## 3. Cell 输出稳定
 
@@ -99,22 +100,26 @@ MarketCell 长期保持方向和风险分离：
 计划和真实执行必须一致：
 
 ```text
-plan.node_id              = trace.node_id
-plan.implementation_id    = trace.implementation_id
-plan.binding.service_id   = trace.service_id
-plan.binding.runtime      = trace.runtime
+plan.node.node_id                = trace.node_id
+plan.node.binding_id             = binding.binding_id
+binding.implementation_id        = trace.implementation_id
+binding.service_id               = trace.service_id
+binding.runtime                  = trace.runtime
 ```
 
 稳定要求：
 
 - LocalCellExecutor 不得执行远程 binding。
 - trace 中的服务信息来自实际 executor，不来自计划复制。
-- 没有 plan 时 trace 仍保留真实服务归属。
+- ExecutionPlan 是强制边界，不允许无计划的第二执行路径。
 - 失败、超时、重试和降级必须区分。
 - 未来远程执行需要 run_id、plan_id、trace_id 和 parent_span_id 传播。
 - 非法 DAG 必须在任何 Cell 执行前失败。
 - `node_id` 是执行身份，`cell_id` 可以在不同节点重复。
 - 节点必须通过 `binding_id` 显式绑定 implementation 和 service。
+- 执行顺序来自 validator 输出的稳定拓扑层，不来自 Registry 或 plan.nodes 排列。
+- 聚合结果必须严格按 node.dependencies 顺序输入。
+- root 结果只能按 root_node_id 读取。
 
 ## 6. 运行审计稳定
 
@@ -124,6 +129,7 @@ plan.binding.runtime      = trace.runtime
 - formula versions 和 manifests
 - provider / router audit
 - execution plan 和 placement decisions
+- plan execution order、completed nodes 和 failed node
 - runtime traces 和 summaries
 - 成功或失败状态
 
@@ -152,6 +158,7 @@ plan.binding.runtime      = trace.runtime
 - `test_stability.py`：分析结构、Cell 输出和风险解释。
 - `test_contracts.py`：跨语言 JSON 契约。
 - `test_executor.py`：binding、执行、trace、结果和失败 run。
+- `test_coordinator.py`：拓扑顺序、多级聚合、重复 Cell、失败局部状态和节点事件。
 - `test_execution_plan.py`：计划、trace 和 summary 持久化。
 - `test_execution_placement.py`：多服务候选和运行时感知 placement。
 - `test_replay.py`：输入快照重跑和公式漂移。
@@ -169,10 +176,9 @@ make test
 
 当前仍需补齐：
 
-1. Plan-driven coordinator。
-2. Cell Graph Definition。
-3. Input Reference / Resolver。
-4. Runtime Summary Store。
-5. Performance baseline。
+1. Cell Graph Definition。
+2. Input Reference / Resolver。
+3. Runtime Summary Store。
+4. Performance baseline。
 
 顺序以 `roadmap.md` 为准。

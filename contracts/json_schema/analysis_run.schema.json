@@ -122,6 +122,9 @@
         "execution_plan_validation": {
           "$ref": "https://marketcell.local/schemas/execution_plan_validation.schema.json"
         },
+        "plan_execution": {
+          "$ref": "https://marketcell.local/schemas/plan_execution.schema.json"
+        },
         "data_sources": {
           "$ref": "#/$defs/data_source_audit"
         }

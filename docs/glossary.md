@@ -90,11 +90,21 @@ planner 为某个 Cell 选择 implementation 和 service 的审计记录。
 
 v2 中 `node_id` 是执行身份，`cell_id` 是可重复使用的能力身份，节点通过 `binding_id` 指向具体服务绑定。
 
+## CellExecutionCoordinator
+
+消费已校验 ExecutionPlan 并维护 DAG 语义的协调接口。
+
+Coordinator 决定何时执行节点、如何读取依赖结果、如何按 node_id 保存局部状态以及失败后停止在哪里；它不实现 Cell 公式。
+
 ## CellExecutor
 
 执行已计划 Cell 节点的运行时接口。
 
 Executor 必须上报实际服务位置和运行 trace，不能把计划位置当成真实执行结果。
+
+## PlanExecution
+
+一次已校验计划的协调审计，记录 coordinator、execution_order、completed_node_ids、failed_node_id 和最终状态。
 
 ## CellRuntimeTrace
 

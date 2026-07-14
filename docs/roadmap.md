@@ -38,6 +38,7 @@
 - `ServiceCapabilityCatalog` 和 `CellPlacementDecision`
 - `RuntimeAwarePlacementPolicy`
 - `CellExecutor` 和严格的 `LocalCellExecutor`
+- `PlanDrivenLocalCoordinator` 和 `plan_execution.v1` 运行审计
 - ExecutionPlan v2：node_id 与 cell_id 分离，节点显式引用 binding_id
 - Plan / Graph Validator：依赖、环、可达性、root 和 binding 一致性
 - plan / trace / CellResult 一致性校验
@@ -61,7 +62,7 @@
 - 稳定的拓扑层级输出
 - planning failure 在任何 Cell 执行前写入 failed AnalysisRun
 
-### P0.2 Plan-Driven Local Coordinator
+### P0.2 Plan-Driven Local Coordinator（已完成）
 
 目标：本地执行顺序真正由 ExecutionPlan 驱动。
 
@@ -70,8 +71,11 @@
 - 聚合节点从依赖结果读取 child_results
 - Registry 只提供实现，不再决定运行顺序
 - 执行事件和 trace 绑定 node_id
+- 同一 cell_id 的多个 node_id 独立执行并按节点保存结果
+- 成功和失败运行保存确定性 execution_order、completed_node_ids 和 failed_node_id
+- 禁止无 ExecutionPlan 的第二执行路径
 
-### P0.3 Cell Graph Definition
+### P0.3 Cell Graph Definition（下一步）
 
 目标：把 Cell 组合关系从 Registry 列表中拆出。
 
@@ -116,7 +120,7 @@
 以下条件全部满足后，才进入大规模 Cell 扩展：
 
 - 非法 DAG 在执行前被拒绝。（已完成）
-- 本地执行由 plan 驱动，Registry 不再隐式决定拓扑。
+- 本地执行由 plan 驱动，Registry 不再隐式决定拓扑。（已完成）
 - 至少一个多级 aggregator 图可以稳定运行和回放。
 - 关闭或更换 executor 时，trace 仍能准确表达实际位置。
 - placement 能消费跨运行历史窗口。

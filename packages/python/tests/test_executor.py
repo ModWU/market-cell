@@ -162,6 +162,18 @@ class LocalCellExecutorTests(unittest.TestCase):
         self.assertEqual(run["error"], "cell failed")
         self.assertEqual(run["metadata"]["cell_runtime_traces"][-1]["status"], "failed")
         self.assertEqual(run["metadata"]["cell_runtime_summaries"][0]["failed_count"], 1)
+        plan_execution = run["metadata"]["plan_execution"]
+        self.assertEqual(plan_execution["status"], "failed")
+        self.assertEqual(plan_execution["failed_node_id"], f"cell:{failing_cell.cell_id}")
+        self.assertEqual(
+            plan_execution["execution_order"][-1],
+            f"cell:{failing_cell.cell_id}",
+        )
+        self.assertEqual(
+            plan_execution["completed_node_ids"],
+            plan_execution["execution_order"][:-1],
+        )
+        self.assertEqual(failed_event.payload["failed_node_id"], f"cell:{failing_cell.cell_id}")
         self.assertIsNone(failed_event.payload["persistence_error"])
 
 

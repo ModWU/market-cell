@@ -20,10 +20,10 @@ v0.1 提供一个最小闭环：
 
 ```text
 输入市场样例数据
-→ 执行多个分析 Cell
+→ 校验并按 ExecutionPlan 执行 Cell DAG
 → 聚合成根节点判断
 → 输出结构化 JSON 分析报告
-→ 保存可复盘运行记录、Cell 执行计划、trace 和性能摘要
+→ 保存可复盘运行记录、计划执行顺序、trace 和性能摘要
 ```
 
 ## 项目结构
@@ -64,7 +64,7 @@ market-cell/
 │       │   ├── cli.py          # 命令行入口
 │       │   ├── data/           # K 线数据源协议、质量检查、缓存和适配器
 │       │   ├── engine.py       # 分析执行器
-│       │   ├── execution/      # 能力目录、放置策略、执行计划和运行遥测
+│       │   ├── execution/      # 能力目录、放置、计划、协调、执行和运行遥测
 │       │   ├── features/       # K 线基础特征快照
 │       │   ├── models.py       # 核心数据结构
 │       │   ├── policies/       # 决策策略和风险分层
@@ -162,6 +162,8 @@ MarketCell 输出的是分析结果和风险解释，不是投资建议，也不
 - 每次分析运行可以保存数据源选择和路由计划审计信息
 - 运行记录遵守 `analysis_run.v1` 契约，便于后续跨语言和服务化复盘
 - Cell 执行计划遵守 `cell_execution_plan.v2` 契约，使用唯一 node_id 和显式 binding_id 对齐 DAG 与服务
+- 本地 DAG 由 `PlanDrivenLocalCoordinator` 按稳定拓扑层执行，Registry 只解析实现，不决定运行顺序
+- 每次协调遵守 `plan_execution.v1` 契约，保存 execution_order、completed_node_ids 和 failed_node_id
 - 服务能力目录遵守 `service_capability_catalog.v2` 契约，一个 Cell 可有多个实现，一个服务也可承载多个 Cell
 - 每个 Cell 的实现选择会生成 `cell_placement_decision.v2` 审计记录，并基于优先级、历史失败率和 P95 延迟做稳定放置
 - `CellExecutor` 将计划与实际执行解耦；当前 `LocalCellExecutor` 会拒绝远程 binding，并校验 CellResult 与运行 trace 的一致性

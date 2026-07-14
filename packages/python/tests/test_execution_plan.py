@@ -75,6 +75,26 @@ class CellExecutionPlanTests(unittest.TestCase):
         )
         self.assertTrue(all(trace["duration_ms"] >= 0 for trace in traces))
 
+    def test_plan_execution_order_is_persisted_by_node_id(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = FileSystemReportStore(Path(temp_dir))
+            report = AnalysisEngine(report_store=store).run(_request())
+            run = store.load_run(report.run_id or "")
+
+        plan = run["metadata"]["cell_execution_plan"]
+        execution = run["metadata"]["plan_execution"]
+        expected_order = [
+            node_id
+            for level in plan["metadata"]["topological_levels"]
+            for node_id in level
+        ]
+        self.assertEqual(execution["schema_version"], "plan_execution.v1")
+        self.assertEqual(execution["status"], "succeeded")
+        self.assertEqual(execution["plan_id"], plan["plan_id"])
+        self.assertEqual(execution["execution_order"], expected_order)
+        self.assertEqual(execution["completed_node_ids"], expected_order)
+        self.assertIsNone(execution["failed_node_id"])
+
     def test_cell_runtime_summaries_are_persisted_in_run_metadata(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             store = FileSystemReportStore(Path(temp_dir))
@@ -112,19 +132,9 @@ class CellExecutionPlanTests(unittest.TestCase):
         self.assertEqual(python_summary.average_duration_ms, 20)
         self.assertEqual(python_summary.p95_duration_ms, 30)
 
-    def test_engine_can_disable_execution_plan_metadata(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            store = FileSystemReportStore(Path(temp_dir))
-            report = AnalysisEngine(report_store=store, include_execution_plan=False).run(_request())
-            run = store.load_run(report.run_id or "")
-
-        self.assertNotIn("cell_execution_plan", run["metadata"])
-        self.assertIn("cell_runtime_traces", run["metadata"])
-        self.assertEqual({trace["plan_id"] for trace in run["metadata"]["cell_runtime_traces"]}, {None})
-        self.assertEqual(
-            {trace["service_id"] for trace in run["metadata"]["cell_runtime_traces"]},
-            {"python-local"},
-        )
+    def test_engine_rejects_plan_free_execution(self):
+        with self.assertRaisesRegex(ValueError, "ExecutionPlan is mandatory"):
+            AnalysisEngine(include_execution_plan=False)
 
 
 def _request() -> AnalysisRequest:

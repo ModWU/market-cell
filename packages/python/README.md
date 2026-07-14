@@ -19,7 +19,9 @@ It owns:
 - Auditable router plans that map provider selection plans to concrete candle sources
 - Run metadata persistence for provider selection and router plan audits
 - AnalysisRun schema versioning for replayable run records
-- Local CellExecutionPlan generation for future service-fabric execution
+- Mandatory local CellExecutionPlan generation and validation
+- Plan-driven local DAG coordination with node-scoped results and dependency ordering
+- Versioned PlanExecution audit metadata for completed and failed runs
 - Local CellRuntimeTrace records for per-Cell latency and status audits
 - Local CellRuntimeSummary aggregation for service, Cell, formula, implementation, and runtime performance profiling
 - ServiceCapabilityCatalog contracts for one-Cell/many-service and one-service/many-Cell mappings
@@ -28,11 +30,13 @@ It owns:
 - Plan/trace and CellResult contract validation at the execution boundary
 - Failed AnalysisRun persistence with failure traces and summaries
 - ExecutionPlan v2 node/binding identity and deterministic DAG validation
+- Deterministic CellRegistry resolution with duplicate local cell_id rejection
 
 Execution code is split by responsibility:
 
 - `execution/models.py`: stable execution data objects
 - `execution/catalog.py`: service capability discovery model
+- `execution/coordinator.py`: plan-driven topology execution and node state
 - `execution/executor.py`: execution protocol, local runtime, and consistency checks
 - `execution/placement.py`: implementation selection policy and audit decisions
 - `execution/planner.py`: Cell DAG and binding plan generation

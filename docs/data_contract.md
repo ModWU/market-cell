@@ -207,6 +207,11 @@ avoid_chasing
 ```text
 metadata.data_sources.provider_selection_plan
 metadata.data_sources.router_plan
+metadata.cell_execution_plan
+metadata.execution_plan_validation
+metadata.plan_execution
+metadata.cell_runtime_traces
+metadata.cell_runtime_summaries
 ```
 
 规则：
@@ -255,7 +260,33 @@ endpoint = null
 
 未来多服务集群可以替换 service binding 和 executor，但不能改变 `CellResult` 输出契约。
 
-## 10. CellRuntimeTrace
+## 10. PlanExecution
+
+一次已校验计划的协调执行审计：
+
+```json
+{
+  "schema_version": "plan_execution.v1",
+  "coordinator": "plan_driven_local_coordinator_v0.1",
+  "plan_id": "plan123",
+  "root_node_id": "cell:root.decision",
+  "status": "succeeded",
+  "execution_order": [
+    "cell:technical.trend",
+    "cell:root.decision"
+  ],
+  "completed_node_ids": [
+    "cell:technical.trend",
+    "cell:root.decision"
+  ],
+  "failed_node_id": null,
+  "error": null
+}
+```
+
+`PlanExecution` 关注“计划实际按什么节点顺序推进，以及停在哪里”。结果按 node_id 管理；相同 cell_id 的多个节点必须独立出现。失败时 `execution_order` 保留所有已尝试节点，`completed_node_ids` 只保留成功节点，`failed_node_id` 指向失败执行身份。它进入 `AnalysisRun.metadata.plan_execution`，不复制 CellResult 和 runtime trace。
+
+## 11. CellRuntimeTrace
 
 单个 Cell 节点的实际执行记录。
 
@@ -286,9 +317,9 @@ endpoint = null
 }
 ```
 
-`CellRuntimeTrace` 关注“实际如何执行”，用于性能分析、失败定位和多服务复盘。`service_id / runtime / implementation_id` 必须来自实际 executor，计划信息只进入 trace metadata。成功 trace 必须与 `CellExecutionPlan` 完全一致；关闭计划记录时 trace 仍需保留真实服务归属。它进入 `AnalysisRun.metadata.cell_runtime_traces`，不进入 `AnalysisReport`。
+`CellRuntimeTrace` 关注“实际如何执行”，用于性能分析、失败定位和多服务复盘。`service_id / runtime / implementation_id` 必须来自实际 executor，计划信息只进入 trace metadata。成功 trace 必须与 `CellExecutionPlan` 完全一致；ExecutionPlan 是强制运行边界。它进入 `AnalysisRun.metadata.cell_runtime_traces`，不进入 `AnalysisReport`。
 
-## 11. CellRuntimeSummary
+## 12. CellRuntimeSummary
 
 一次运行内按 Cell、公式版本、实现、服务和运行时聚合后的性能摘要。
 
@@ -317,7 +348,7 @@ endpoint = null
 
 它不替代 `CellRuntimeTrace`：trace 是逐次证据，summary 是稳定聚合口径。未来多服务集群中，Rust worker、Python worker 或外部服务只要上报同一类 trace，就可以生成一致的 summary。
 
-## 12. ServiceCapabilityCatalog
+## 13. ServiceCapabilityCatalog
 
 服务能力目录描述当前有哪些 Cell 实现可供 planner 选择：
 
@@ -340,7 +371,7 @@ endpoint = null
 - 一个 `service_id` 可以承载多个 `cell_id`。
 - catalog 只描述能力和当前绑定，不保存市场输入或 CellResult。
 
-## 13. CellPlacementDecision
+## 14. CellPlacementDecision
 
 planner 为每个 Cell 选择实现时生成放置决策：
 
@@ -361,7 +392,7 @@ planner 为每个 Cell 选择实现时生成放置决策：
 
 放置策略先保证公式兼容；有足够历史样本时避开高失败率实现；其余候选按显式优先级和 P95 延迟确定性排序。决策进入 `CellExecutionPlan.metadata.placement_decisions`，用于解释“为什么本次由这个服务执行”。
 
-## 14. ExecutionPlanValidation
+## 15. ExecutionPlanValidation
 
 非法计划使用结构化校验结果：
 
@@ -384,7 +415,7 @@ planner 为每个 Cell 选择实现时生成放置决策：
 
 它进入 failed `AnalysisRun.metadata.execution_plan_validation`。不同语言 planner 必须使用相同 issue code，且 planning failure 发生在任何 Cell 执行之前。
 
-## 15. 版本策略
+## 16. 版本策略
 
 当前已经在 `AnalysisReport` 中加入：
 
@@ -452,6 +483,19 @@ binding_id
 node_id / cell_id 身份分离
 topological_levels
 execution_plan_validation
+```
+
+PlanExecution v1 固定：
+
+```text
+coordinator
+plan_id
+root_node_id
+status
+execution_order
+completed_node_ids
+failed_node_id
+error
 ```
 
 跨语言 schema 保存在：

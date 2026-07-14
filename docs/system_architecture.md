@@ -50,7 +50,8 @@ flowchart TD
     Planner --> Plan["CellExecutionPlan"]
     Plan --> Engine
 
-    Engine --> Executor["CellExecutor"]
+    Engine --> Coordinator["CellExecutionCoordinator"]
+    Coordinator --> Executor["CellExecutor"]
     Executor --> Local["LocalCellExecutor"]
     Local --> Cells["Python Cell Implementations"]
     Cells --> Results["CellResult"]
@@ -69,7 +70,7 @@ flowchart TD
     Rust["Rust Market Data / Realtime Core"] -. shared contracts .-> Data
 ```
 
-当前运行仍是同步单进程，但 planner、binding、executor 和 trace 已经分层。这个阶段不引入消息队列或服务发现。
+当前运行仍是同步单进程，但 planner、coordinator、binding、executor 和 trace 已经分层。这个阶段不引入消息队列或服务发现。
 
 ## 5. 分层和依赖方向
 
@@ -97,6 +98,7 @@ flowchart TD
 - `AnalysisRun`
 - `CellServiceBinding`
 - `CellExecutionPlan`
+- `PlanExecution`
 - `CellRuntimeTrace`
 - `CellRuntimeSummary`
 
@@ -125,7 +127,7 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 
 `Organ` 应理解为一个有名称、有版本的 Cell 子图，而不是新的执行协议。多个 Organ 可以共享 Cell，也可以在一次分析中组合。
 
-当前 `CellRegistry` 仍然使用“叶子 Cell 列表 + 一个 DecisionCell”生成固定 DAG。这适合本地闭环，但还不能表达任意 Organ、共享子图和多级聚合。因此后续应新增图定义契约，不能继续把组合关系塞进 Registry 列表。
+当前 planner 仍然从 `CellRegistry` 的“叶子 Cell 列表 + 一个 DecisionCell”生成固定 DAG。这适合本地闭环，但还不能表达任意 Organ、共享子图和多级聚合。Coordinator 已经只把 Registry 当作本地实现解析表，实际顺序完全服从 ExecutionPlan；下一步应新增图定义契约，把组合关系也从 Registry 中拆出。
 
 ## 8. Execution Fabric 当前状态
 
@@ -138,12 +140,15 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 - ExecutionPlan v2：node_id 与 cell_id 分离，节点显式引用 binding_id。
 - implementation、service 和 runtime 由 binding 单点定义，node 不保存重复副本。
 - Plan / Graph Validator：检查 root、依赖、binding、环和可达性，并输出稳定拓扑层。
+- `PlanDrivenLocalCoordinator`：按拓扑层执行，按 node_id 保存结果，并按节点依赖顺序传递 child_results。
+- `plan_execution.v1`：审计执行顺序、完成节点和失败节点。
 - plan、trace、CellResult 一致性校验。
 - 成功和失败 AnalysisRun 的 trace / summary 审计。
+- Registry 的本地 cell_id 唯一解析和重复注册拒绝。
 
 仍未完成：
 
-1. ExecutionPlan 还没有真正驱动 DAG 调度。Engine 当前仍按 Registry 顺序执行叶子 Cell，再执行根 Cell。
+1. Graph Definition 尚未独立，planner 仍从 Registry 的叶子和根角色生成图。
 2. `input_keys` 只是描述字段，尚无 Input Resolver；服务化后不能继续把大体积 candles 直接嵌入任务计划。
 3. 缺少 Executor Router，当前只有本地 Python executor。
 4. Runtime summary 只有单次运行聚合，缺少跨运行、带时间窗口的历史存储。
@@ -231,7 +236,7 @@ Runtime State   服务健康、容量和短期状态
 进入大规模 Cell 扩展前，至少应满足：
 
 - Plan / Graph Validator 能拒绝非法 DAG。（已完成）
-- 本地执行顺序由 ExecutionPlan 驱动，而不是 Registry 固定循环。
+- 本地执行顺序由 ExecutionPlan 驱动，而不是 Registry 固定循环。（已完成）
 - Input Reference / Resolver 边界确定。
 - Runtime summary 可以跨运行聚合并进入 placement。
 - 有最小性能基线和回归阈值。

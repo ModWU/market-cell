@@ -1,4 +1,4 @@
-# MarketCell 后端架构文档 v0.2
+# MarketCell 后端架构文档 v0.3
 
 ## 1. 架构阶段
 
@@ -7,7 +7,7 @@ MarketCell 后端分三阶段演进。
 ### 阶段一：本地分析内核
 
 ```text
-CLI + AnalysisEngine + Planner + LocalCellExecutor + AnalysisRun + FileSystemReportStore
+CLI + AnalysisEngine + Planner + Validator + Coordinator + LocalCellExecutor + AnalysisRun + FileSystemReportStore
 ```
 
 目标是把 Cell 协议和分析闭环做稳定。
@@ -39,7 +39,8 @@ flowchart TD
     Catalog["Service Capability Catalog"] --> Planner
     Policy["Placement Policy"] --> Planner
     Planner --> Plan["CellExecutionPlan"]
-    Plan --> Runtime["Cell Execution Fabric"]
+    Plan --> Coordinator["Cell Execution Coordinator"]
+    Coordinator --> Runtime["Executor Router / Cell Runtime"]
     Runtime --> PyExecutor["Python Executor"]
     Runtime --> RustExecutor["Rust Executor"]
     Runtime --> Feature["Feature Service"]
@@ -73,14 +74,17 @@ flowchart TD
 - `CellExecutionPlan`
 - `ServiceCapabilityCatalog`
 - `RuntimeAwarePlacementPolicy`
+- `Plan / Graph Validator`
+- `PlanDrivenLocalCoordinator`
 - `CellExecutor` / `LocalCellExecutor`
+- `PlanExecution` audit
 - `CellRuntimeTrace` / `CellRuntimeSummary`
 - `FileSystemReportStore`
 - CLI `reports`
 - CLI `replay`
 - `ReplayRunner`
 
-当前不立即实现复杂消息队列。Plan Validator 已完成，下一步先让 ExecutionPlan 真正驱动本地 DAG，再完成图定义和输入引用边界。
+当前不立即实现复杂消息队列。ExecutionPlan 已经真正驱动本地 DAG，下一步先把 Cell Graph Definition 从 Registry 中拆出，再完成输入引用边界。
 
 ## 3. 后端分层
 
@@ -131,6 +135,7 @@ AnalysisRun {
   formula_versions
   cell_manifests
   execution_plan
+  plan_execution
   runtime_traces
   runtime_summaries
   status

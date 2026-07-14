@@ -1,4 +1,4 @@
-# MarketCell Cell 协议 v0.1
+# MarketCell Cell 协议 v0.2
 
 ## 1. Cell 是什么
 
@@ -155,6 +155,15 @@ Cell 可以：
 - 输出不确定性
 - 输出冲突状态
 
+本地 Registry 可能让同一 Cell implementation 服务多个 node_id。默认 Cell 必须是无状态、可重入的：
+
+- 不在实例字段中保存某次 run 的中间结果。
+- 不依赖调用顺序产生输出。
+- 同一输入、公式版本和依赖结果应产生确定性结果。
+- 可变状态应进入显式 runtime state、输入或结果，不进入共享 Cell 实例。
+
+确实需要状态的实现必须声明 `resource_hints.stateful = true`，并由未来 actor / worker 生命周期管理；在该能力落地前不能并行共享执行。
+
 ## 10. 执行位置和服务绑定
 
 Cell 协议只描述输入、输出、公式版本和解释结构，不描述运行位置。
@@ -166,6 +175,7 @@ CellManifest          描述能力
 CellGraphDefinition   描述 Cell 组合和依赖
 CellServiceBinding    描述哪个服务承载该能力
 CellExecutionPlan     描述本次分析如何执行 Cell DAG
+CellExecutionCoordinator 维护 DAG 顺序和 node_id 结果
 CellExecutor          执行已经确定的节点
 ```
 

@@ -1,4 +1,4 @@
-# MarketCell 运行时架构 v0.2
+# MarketCell 运行时架构 v0.3
 
 ## 1. 目标
 
@@ -22,7 +22,8 @@ flowchart LR
     Aggregation --> Store["Storage Layer<br/>Parquet / DuckDB / cache"]
     Store --> Cold["Python Cold Path"]
     Cold --> Plan["CellExecutionPlan"]
-    Plan --> Cells["Execution Fabric / Cells"]
+    Plan --> Coordinator["CellExecutionCoordinator"]
+    Coordinator --> Cells["Executors / Cells"]
     Cells --> Report["AnalysisReport / Replay"]
 
     Store --> Replay["ReplayRunner"]
@@ -66,6 +67,7 @@ Python 负责静态数据分析和研究效率。
 - AnalysisRequest / AnalysisReport
 - Cell 编排和参考实现
 - CellExecutionPlan 本地构建和服务绑定参考实现
+- Plan-driven DAG 协调、节点结果管理和执行审计
 - 决策策略、风险解释、报告生成
 - 历史回放、公式对比、评估实验
 - 数据商适配器的低频 backfill 和校验
@@ -85,6 +87,7 @@ packages/python/src/market_cell/
 ├── features/   # 可读参考特征实现
 ├── replay/     # 基于 input_snapshot 的重跑和漂移比较
 ├── reports/    # 报告和运行记录保存
+├── execution/  # 计划、协调、放置、执行和遥测
 └── cells/      # Cell 参考实现
 ```
 
@@ -100,7 +103,7 @@ packages/python/src/market_cell/
 
 数据源选择策略位于 `data/provider_selection.py`。它只生成 `ProviderSelectionPlan`，用于表达 primary / backups / disabled 的建议，不直接持有网络连接。`data/router_plan.py` 再把选择计划映射到实际 `CandleSource` 实例，生成可审计的 `RouterPlan`，最后显式创建 `MarketDataRouter`。`RouterPlan.to_run_metadata()` 可把选择计划和实际路由计划写入 `AnalysisRun.metadata`，不改变 `AnalysisReport` 和 Cell 输出结构。`AnalysisRun` 已经有 `analysis_run.v1` JSON Schema，后续服务化和跨语言模块必须按该契约保存运行审计。这样可以让策略、配置、取数运行时和分析报告分别测试，也避免把 Python 冷路径策略和后续 Rust 实时热路径耦合在一起。
 
-Cell 执行模块位于 `execution/`，按 `models / catalog / placement / planner / executor / telemetry` 分层。planner 先从 `ServiceCapabilityCatalog` 选择 binding 并生成 `CellExecutionPlan`；`CellExecutor` 只负责执行已确定的节点。当前 `LocalCellExecutor` 始终上报真实本地 service，即使关闭 plan metadata 也不会丢失执行归属；它会拒绝远程 binding、校验 CellResult，并由引擎复核成功 trace 是否与 plan 完全一致。未来服务化时新增 Executor Router 和远程 executor，不需要把网络调用重新塞回 AnalysisEngine。
+Cell 执行模块位于 `execution/`，按 `models / catalog / placement / planner / plan_validation / coordinator / executor / telemetry` 分层。planner 从 `ServiceCapabilityCatalog` 选择 binding 并生成 `CellExecutionPlan`；validator 固化合法 DAG 和拓扑层；coordinator 按 node_id 管理依赖、局部结果和执行顺序；`CellExecutor` 只负责执行一个已确定节点。当前 `LocalCellExecutor` 始终上报真实本地 service，并拒绝远程 binding；coordinator 复核 trace 与 plan 以及 CellResult 契约。ExecutionPlan 已成为强制运行边界。未来服务化时新增 Executor Router、远程 executor 和集群 coordinator，不需要把网络调用重新塞回 AnalysisEngine。
 
 ## 5. Storage Layer
 
@@ -134,6 +137,7 @@ Service binding  -> contracts/json_schema/cell_service_binding.schema.json
 Service catalog  -> contracts/json_schema/service_capability_catalog.schema.json
 Cell placement   -> contracts/json_schema/cell_placement_decision.schema.json
 Plan validation  -> contracts/json_schema/execution_plan_validation.schema.json
+Plan execution   -> contracts/json_schema/plan_execution.schema.json
 Cell trace       -> contracts/json_schema/cell_runtime_trace.schema.json
 Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
 ```
@@ -142,11 +146,11 @@ Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
 
 ## 7. 当前推进顺序
 
-冷热路径、共享契约、Rust 行情原语、Python 回放、数据源审计、ExecutionPlan、placement、executor 和运行遥测已经建立参考实现。
+冷热路径、共享契约、Rust 行情原语、Python 回放、数据源审计、ExecutionPlan、placement、plan-driven coordinator、executor 和运行遥测已经建立参考实现。
 
 当前运行时地基仍需补齐：
 
-- plan-driven local coordinator。
+- Cell Graph Definition。
 - Input Reference / Resolver。
 - 跨运行 Runtime Summary Store。
 - 性能基线。

@@ -18,6 +18,7 @@ Directory policy:
 - `json_schema/service_capability_catalog.schema.json`: language-neutral catalog of the Cell implementations currently provided by local or remote services.
 - `json_schema/cell_placement_decision.schema.json`: auditable selection record for the implementation and service chosen for each Cell.
 - `json_schema/execution_plan_validation.schema.json`: structured DAG, root, dependency, binding, cycle, and reachability validation failures.
+- `json_schema/plan_execution.schema.json`: coordinator, node execution order, completed nodes, and failed-node audit for one validated plan run.
 - `json_schema/cell_runtime_trace.schema.json`: per-Cell execution trace records for latency, errors, retry count, and service attribution.
 - `json_schema/cell_runtime_summary.schema.json`: per-run aggregated runtime profile grouped by Cell, formula version, implementation, service, and runtime.
 - `protobuf/market_data.proto`: realtime event contract for Rust hot-path producers and later services.

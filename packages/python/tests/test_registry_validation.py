@@ -1,8 +1,14 @@
 import unittest
 
 from market_cell.engine import AnalysisEngine
+from market_cell.cells import TrendCell
 from market_cell.models import AnalysisRequest, Candle, MarketEvent
-from market_cell.registry import default_registry
+from market_cell.registry import (
+    CellNotRegisteredError,
+    CellRegistry,
+    DuplicateCellRegistrationError,
+    default_registry,
+)
 from market_cell.validation import ValidationError
 
 
@@ -13,6 +19,22 @@ class RegistryValidationTests(unittest.TestCase):
         self.assertGreaterEqual(len(manifests), 6)
         self.assertTrue(all(manifest.cell_id for manifest in manifests))
         self.assertTrue(all(manifest.formula_version for manifest in manifests))
+
+    def test_registry_resolves_one_local_implementation_by_cell_id(self):
+        registry = default_registry()
+        cell = registry.all_cells()[0]
+
+        self.assertIs(registry.resolve(cell.cell_id), cell)
+
+    def test_registry_rejects_duplicate_local_cell_id(self):
+        decision = default_registry().decision_cell
+
+        with self.assertRaises(DuplicateCellRegistrationError):
+            CellRegistry([TrendCell(), TrendCell()], decision)
+
+    def test_registry_reports_missing_local_implementation(self):
+        with self.assertRaises(CellNotRegisteredError):
+            default_registry().resolve("missing.cell")
 
     def test_engine_rejects_invalid_candle_shape(self):
         request = AnalysisRequest(
