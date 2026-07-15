@@ -24,6 +24,7 @@ from market_cell.graph import (
     default_analysis_graph,
     validate_cell_graph_definition,
 )
+from market_cell.inputs import InputReference, InputSnapshot
 from market_cell.models import AnalysisRequest, CellManifest
 from market_cell.registry import CellRegistry
 
@@ -45,8 +46,13 @@ class CellExecutionPlanner:
         registry: CellRegistry,
         request: AnalysisRequest,
         graph_definition: CellGraphDefinition | None = None,
+        input_references: list[InputReference] | None = None,
     ) -> CellExecutionPlan:
         graph = graph_definition or default_analysis_graph()
+        references = list(
+            input_references
+            or [InputSnapshot.from_analysis_request(request).to_reference()]
+        )
         registry_manifests = registry.manifests()
         validate_cell_graph_definition(graph, registry_manifests)
         manifest_by_cell = {
@@ -62,6 +68,7 @@ class CellExecutionPlanner:
                 graph_node,
                 manifest_by_cell[graph_node.cell_id],
                 decision_by_cell[graph_node.cell_id].selected_binding.binding_id,
+                references,
             )
             for graph_node in graph.nodes
         ]
@@ -72,12 +79,13 @@ class CellExecutionPlanner:
             horizon=request.horizon,
             root_node_id=graph.root_node_id,
             nodes=nodes,
+            input_references=references,
             service_bindings=[
                 decision_by_cell[manifest.cell_id].selected_binding
                 for manifest in manifests
             ],
             metadata={
-                "planner": "cell_graph_service_placement_v0.3",
+                "planner": "cell_graph_service_placement_v0.4",
                 "catalog_id": self.catalog.catalog_id,
                 "catalog_schema_version": self.catalog.schema_version,
                 "graph_id": graph.graph_id,
@@ -96,6 +104,7 @@ class CellExecutionPlanner:
                 "cell_count": len(manifests),
                 "node_count": len(graph.nodes),
                 "organ_count": len(graph.organs),
+                "input_reference_count": len(references),
             },
         )
         validated = validate_execution_plan(plan)
@@ -121,6 +130,7 @@ def build_execution_plan(
     catalog: ServiceCapabilityCatalog,
     *,
     graph_definition: CellGraphDefinition | None = None,
+    input_references: list[InputReference] | None = None,
     placement_policy: CellPlacementPolicy | None = None,
     runtime_summaries: list[CellRuntimeSummary] | None = None,
 ) -> CellExecutionPlan:
@@ -128,7 +138,7 @@ def build_execution_plan(
         catalog,
         placement_policy=placement_policy,
         runtime_summaries=runtime_summaries,
-    ).build(registry, request, graph_definition)
+    ).build(registry, request, graph_definition, input_references)
 
 
 def build_local_execution_plan(
@@ -137,6 +147,7 @@ def build_local_execution_plan(
     service_id: str = "python-local",
     *,
     graph_definition: CellGraphDefinition | None = None,
+    input_references: list[InputReference] | None = None,
 ) -> CellExecutionPlan:
     catalog = build_local_capability_catalog(registry, service_id)
     return build_execution_plan(
@@ -144,6 +155,7 @@ def build_local_execution_plan(
         request,
         catalog,
         graph_definition=graph_definition,
+        input_references=input_references,
     )
 
 
@@ -151,6 +163,7 @@ def _node_for_graph_node(
     graph_node: CellGraphNode,
     manifest: CellManifest,
     binding_id: str,
+    input_references: list[InputReference],
 ) -> CellExecutionNode:
     return CellExecutionNode(
         node_id=graph_node.node_id,
@@ -159,6 +172,9 @@ def _node_for_graph_node(
         execution_role=graph_node.execution_role,
         binding_id=binding_id,
         dependencies=list(graph_node.dependencies),
+        input_reference_ids=[
+            reference.reference_id for reference in input_references
+        ],
         input_keys=list(manifest.inputs),
         output_keys=list(manifest.outputs),
         metadata=dict(graph_node.metadata),

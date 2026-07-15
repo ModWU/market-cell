@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from typing import Any
 
 from market_cell.models import Candle
 from market_cell.scoring import clamp
 
 
 FEATURE_VERSION = "market_features_v0.1"
+FEATURE_SNAPSHOT_SCHEMA_VERSION = "feature_snapshot.v1"
 
 
 @dataclass(frozen=True)
@@ -24,9 +26,18 @@ class FeatureSnapshot:
     total_move_pct: float
     path_distance_pct: float
     trend_efficiency: float
+    feature_version: str = FEATURE_VERSION
+    source_input_hash: str | None = None
+    schema_version: str = FEATURE_SNAPSHOT_SCHEMA_VERSION
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
-def build_feature_snapshot(candles: list[Candle]) -> FeatureSnapshot:
+def build_feature_snapshot(
+    candles: list[Candle],
+    source_input_hash: str | None = None,
+) -> FeatureSnapshot:
     candle_count = len(candles)
     if not candles:
         return FeatureSnapshot(
@@ -43,6 +54,7 @@ def build_feature_snapshot(candles: list[Candle]) -> FeatureSnapshot:
             total_move_pct=0,
             path_distance_pct=0,
             trend_efficiency=0,
+            source_input_hash=source_input_hash,
         )
 
     first = candles[0]
@@ -87,4 +99,5 @@ def build_feature_snapshot(candles: list[Candle]) -> FeatureSnapshot:
         total_move_pct=close_change_pct,
         path_distance_pct=path_distance_pct,
         trend_efficiency=trend_efficiency,
+        source_input_hash=source_input_hash,
     )

@@ -24,6 +24,13 @@ from market_cell.graph import (
     CellGraphValidationError,
     default_analysis_graph,
 )
+from market_cell.inputs import (
+    InputReference,
+    InputResolutionRecord,
+    InputSnapshot,
+    InputSnapshotStore,
+    LocalInputResolver,
+)
 from market_cell.models import AnalysisReport, AnalysisRequest, CellManifest
 from market_cell.reports import ReportStore
 from market_cell.registry import CellRegistry, default_registry
@@ -42,6 +49,9 @@ class AnalysisEngine:
         executor: CellExecutor | None = None,
         coordinator: CellExecutionCoordinator | None = None,
         graph_definition: CellGraphDefinition | None = None,
+        input_resolver: InputSnapshotStore | None = None,
+        input_source: str = "analysis_request",
+        input_data_version: str = "analysis_request.v1",
     ) -> None:
         if not include_execution_plan:
             raise ValueError(
@@ -54,6 +64,9 @@ class AnalysisEngine:
         self.executor = executor or LocalCellExecutor()
         self.coordinator = coordinator or PlanDrivenLocalCoordinator()
         self.graph_definition = graph_definition or default_analysis_graph()
+        self.input_resolver = input_resolver
+        self.input_source = input_source
+        self.input_data_version = input_data_version
 
     def run(
         self,
@@ -63,6 +76,17 @@ class AnalysisEngine:
         validate_request(request)
         trace_id = uuid4().hex
         runtime_traces: list[CellRuntimeTrace] = []
+        input_resolution_records: list[InputResolutionRecord] = []
+        input_snapshot = InputSnapshot.from_analysis_request(
+            request,
+            source=self.input_source,
+            data_version=self.input_data_version,
+        )
+        input_resolver = (
+            self.input_resolver
+            if self.input_resolver is not None
+            else LocalInputResolver()
+        )
         run = AnalysisRun.start(
             request,
             self._graph_manifests(),
@@ -70,7 +94,9 @@ class AnalysisEngine:
                 self.run_metadata,
                 metadata,
                 self.graph_definition.to_run_metadata(),
+                input_snapshot.to_run_metadata(),
             ),
+            replay_input=input_snapshot,
         )
         self.event_bus.emit(
             "analysis.started",
@@ -80,20 +106,23 @@ class AnalysisEngine:
                 "horizon": request.horizon,
                 "graph_id": self.graph_definition.graph_id,
                 "graph_version": self.graph_definition.graph_version,
+                "input_snapshot_id": input_snapshot.snapshot_id,
+                "input_hash": input_snapshot.content_hash,
             },
         )
 
         execution_plan: CellExecutionPlan | None = None
         execution_outcome: PlanExecutionOutcome | None = None
         try:
-            execution_plan = self._execution_plan(request)
+            input_reference = input_resolver.register(input_snapshot)
+            execution_plan = self._execution_plan(request, [input_reference])
             run = run.with_metadata(execution_plan.to_run_metadata())
             validated_plan = validate_execution_plan(execution_plan)
             execution_outcome = self.coordinator.execute(
                 validated_plan=validated_plan,
                 registry=self.registry,
                 executor=self.executor,
-                request=request,
+                input_resolver=input_resolver,
                 run_id=run.run_id,
                 trace_id=trace_id,
                 on_node_completed=lambda completion: self._emit_node_completion(
@@ -102,9 +131,14 @@ class AnalysisEngine:
                 ),
             )
             runtime_traces.extend(execution_outcome.runtime_traces)
+            input_resolution_records.extend(
+                execution_outcome.input_resolution_records
+            )
             run = run.with_metadata(execution_outcome.to_run_metadata())
             decision = execution_outcome.unwrap()
-            completed_run = run.with_metadata(_runtime_metadata(runtime_traces)).complete(run.run_id)
+            completed_run = run.with_metadata(
+                _execution_metadata(runtime_traces, input_resolution_records)
+            ).complete(run.run_id)
             report = AnalysisReport(
                 target=request.target,
                 horizon=request.horizon,
@@ -133,7 +167,9 @@ class AnalysisEngine:
                 if "cell_graph_definition" not in run.metadata:
                     run = run.with_metadata(exc.graph.to_run_metadata())
                 run = run.with_metadata({"cell_graph_validation": exc.to_dict()})
-            failed_run = run.with_metadata(_runtime_metadata(runtime_traces)).fail(str(exc))
+            failed_run = run.with_metadata(
+                _execution_metadata(runtime_traces, input_resolution_records)
+            ).fail(str(exc))
             persistence_error = _save_failed_run(self.report_store, failed_run)
             self.event_bus.emit(
                 "analysis.failed",
@@ -151,7 +187,11 @@ class AnalysisEngine:
             )
             raise
 
-    def _execution_plan(self, request: AnalysisRequest) -> CellExecutionPlan:
+    def _execution_plan(
+        self,
+        request: AnalysisRequest,
+        input_references: list[InputReference],
+    ) -> CellExecutionPlan:
         service_id = (
             self.executor.service_id
             if isinstance(self.executor, LocalCellExecutor)
@@ -162,6 +202,7 @@ class AnalysisEngine:
             request,
             service_id,
             graph_definition=self.graph_definition,
+            input_references=input_references,
         )
 
     def _graph_manifests(self) -> list[CellManifest]:
@@ -183,6 +224,7 @@ class AnalysisEngine:
             "cell_id": completion.cell_id,
             "binding_id": completion.binding_id,
             "execution_role": completion.execution_role,
+            "input_reference_ids": list(completion.input_reference_ids),
             "duration_ms": (
                 completion.trace.duration_ms if completion.trace is not None else None
             ),
@@ -219,11 +261,17 @@ def _merge_metadata(
     return payload
 
 
-def _runtime_metadata(runtime_traces: list[CellRuntimeTrace]) -> dict[str, Any]:
+def _execution_metadata(
+    runtime_traces: list[CellRuntimeTrace],
+    input_resolution_records: list[InputResolutionRecord],
+) -> dict[str, Any]:
     return {
         "cell_runtime_traces": [trace.to_dict() for trace in runtime_traces],
         "cell_runtime_summaries": [
             summary.to_dict() for summary in summarize_runtime_traces(runtime_traces)
+        ],
+        "input_resolution_records": [
+            record.to_dict() for record in input_resolution_records
         ],
     }
 

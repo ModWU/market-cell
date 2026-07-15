@@ -1,4 +1,4 @@
-# MarketCell 多语言架构文档 v0.4
+# MarketCell 多语言架构文档 v0.5
 
 ## 1. 为什么提前设计多语言边界
 
@@ -41,6 +41,11 @@ contracts/
 │   ├── analysis_request.schema.json
 │   ├── analysis_report.schema.json
 │   ├── analysis_run.schema.json
+│   ├── input_snapshot.schema.json
+│   ├── input_snapshot_audit.schema.json
+│   ├── input_reference.schema.json
+│   ├── input_resolution_record.schema.json
+│   ├── feature_snapshot.schema.json
 │   ├── cell_graph_definition.schema.json
 │   ├── cell_graph_validation.schema.json
 │   ├── cell_execution_plan.schema.json
@@ -53,8 +58,10 @@ contracts/
 │   └── cell_runtime_summary.schema.json
 ├── protobuf/
 │   └── market_data.proto
-└── parquet/
-    └── candle_schema.md
+├── parquet/
+│   └── candle_schema.md
+└── test_vectors/
+    └── input_identity_v1.json
 ```
 
 所有语言模块都必须围绕 `contracts/` 对齐输入输出。
@@ -65,6 +72,7 @@ contracts/
 - Rust / TypeScript / API 服务不能私自定义不兼容字段。
 - 实时行情事件走 Protobuf，历史批量 K 线走 Parquet schema，分析输入输出走 JSON Schema。
 - Cell 执行计划走 JSON Schema，后续 Python / Rust / API worker 都不能私自定义不兼容调度字段。
+- InputSnapshot、InputReference 和 resolution audit 走 JSON Schema；计划只携带引用，所有语言必须使用相同 canonical JSON hash 和 identity 字段。
 - Cell Graph 和 Organ 走 JSON Schema，所有语言共享同一组合关系，但各 runtime 可以选择不同 implementation 和 service binding。
 - 服务能力目录和 Cell 放置决策走 JSON Schema，使 Python planner、Rust worker 和未来控制面共享同一能力描述与选择审计。
 - Plan execution 走 JSON Schema，使本地 coordinator 和未来集群 scheduler 使用同一节点顺序、完成状态和失败身份审计。

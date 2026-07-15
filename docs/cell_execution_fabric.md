@@ -1,4 +1,4 @@
-# MarketCell Cell Execution Fabric v0.4
+# MarketCell Cell Execution Fabric v0.5
 
 ## 1. 为什么需要 Execution Fabric
 
@@ -52,7 +52,11 @@ CellGraphDefinition 是组合契约，不是服务部署清单。
 
 ```mermaid
 flowchart TB
-    Request["AnalysisRequest"] --> Planner["Analysis Planner"]
+    Request["AnalysisRequest"] --> Snapshot["InputSnapshot"]
+    Snapshot --> InputStore["InputSnapshotStore"]
+    InputStore --> Reference["InputReference"]
+    Request --> Planner["Analysis Planner"]
+    Reference --> Planner
     Graph["CellGraphDefinition"] --> Planner
     Registry["Cell Implementation Registry"] --> Planner
     Catalog["Service Capability Catalog"] --> Planner
@@ -60,6 +64,8 @@ flowchart TB
 
     Planner --> Plan["CellExecutionPlan<br/>DAG + bindings"]
     Plan --> Coordinator["CellExecutionCoordinator<br/>topology + node state"]
+    Coordinator --> Resolver["InputResolver<br/>integrity + per-run cache"]
+    Resolver --> InputStore
 
     Coordinator --> Local["Local Python Executor"]
     Coordinator --> PySvc["Python Cell Services"]
@@ -75,6 +81,8 @@ flowchart TB
     Root --> Report["AnalysisReport"]
     Graph --> Run["AnalysisRun.metadata"]
     Plan --> Run["AnalysisRun.metadata"]
+    Snapshot --> Run
+    Resolver --> Run
 ```
 
 ## 4. 核心对象
@@ -213,7 +221,21 @@ candidate_evaluations
 
 候选评估区分 `no_history / insufficient_history / healthy / unhealthy`，并保留 trace 数量、失败率和 P95 延迟。这样调度结论可以复盘，而不是只看到最终 binding。
 
-### 4.7 Cell Execution Plan
+### 4.7 Input Snapshot / Reference / Resolver
+
+输入边界分成三层：
+
+```text
+InputSnapshot   完整逻辑载荷、来源、数据版本、内容哈希和大小
+InputReference  reference_id、URI 和完整性字段，不包含 payload
+InputResolver   按引用读取并验证快照
+```
+
+`AnalysisRun.input_snapshot` 继续承担完整回放；ExecutionPlan 只携带 `input_reference.v1`。`snapshot_id` 同时绑定 input kind、target、horizon、payload hash、data version 和 source，因此相同 payload 来自不同 provider 时不会混成一个数据血缘。
+
+当前 `LocalInputResolver` 是内存参考实现，默认 store 生命周期限定在一次 run，显式注入的持久 store 由调用方管理。Coordinator 在每次 run 内按 reference_id 缓存解析结果和已物化 AnalysisRequest，同一引用最多进行一次实际 resolve 和一次类型转换；每个使用该引用的节点仍保存 `input_resolution_record.v1`，区分首次读取和 cache hit。未来对象存储、Parquet、Feature Store 或 Rust realtime resolver 只能替换 adapter，不能让 Cell 自己读取存储。
+
+### 4.8 Cell Execution Plan
 
 ExecutionPlan 描述本次分析实际要执行的 DAG：
 
@@ -223,21 +245,23 @@ target
 horizon
 nodes
 dependencies
+input_references
 service_bindings
 root_node_id
 metadata
 ```
 
-v2 中 `node_id` 是执行身份，`cell_id` 是能力身份。同一个 Cell 可以在图中出现多次，但每个节点必须有唯一 node_id，并通过 binding_id 指向明确服务。
+v3 中 `node_id` 是执行身份，`cell_id` 是能力身份。同一个 Cell 可以在图中出现多次，但每个节点必须有唯一 node_id，通过 binding_id 指向明确服务，并通过 input_reference_ids 指向本次节点输入。计划顶层保存引用的来源、版本、哈希、大小和 URI，但不保存 candles 或 FeatureSnapshot payload。
 
 它应该能表达：
 
 - 哪些 Cell 可并行执行。
 - 哪些 Cell 依赖其他 Cell 输出。
 - 哪个节点优先使用哪个 implementation。
+- 每个节点消费哪些稳定输入引用。
 - 本次计划落在本地单服务，还是未来的多服务集群。
 
-### 4.8 Plan-Driven Coordinator
+### 4.9 Plan-Driven Coordinator
 
 Coordinator 消费已经通过校验的 ExecutionPlan，并负责执行图语义：
 
@@ -252,6 +276,8 @@ failed_node_id
 当前 `PlanDrivenLocalCoordinator` 逐层执行，同层第一版保持确定性顺序，但接口保留后续并行实现。它遵守以下约束：
 
 - Registry 只按 cell_id 解析一个本地实现，不决定执行顺序。
+- 输入只通过 node.input_reference_ids 和 InputResolver 获取，不从计划复制 payload。
+- 每个 reference 在一次 run 内最多实际解析一次，cache hit 仍逐节点审计。
 - 每个 node_id 独立执行；相同 cell_id 的多个节点不会互相覆盖。
 - 聚合节点严格按 `node.dependencies` 顺序读取依赖结果。
 - executor context 使用节点指定的 node 和 binding。
@@ -273,7 +299,7 @@ error
 
 无 ExecutionPlan 的执行旁路已禁止，避免本地和多服务形成两套拓扑语义。
 
-### 4.9 Cell Runtime Trace
+### 4.10 Cell Runtime Trace
 
 每个节点执行都应该产生 runtime trace：
 
@@ -296,7 +322,7 @@ span_id
 
 当前本地 `AnalysisEngine` 已经为每个 Cell 节点生成 `cell_runtime_trace.v1` 记录，并写入 `AnalysisRun.metadata.cell_runtime_traces`。未来远程 worker 也必须上报同一类记录。
 
-### 4.10 Cell Runtime Summary
+### 4.11 Cell Runtime Summary
 
 Runtime summary 是 trace 的聚合层：
 
@@ -334,9 +360,13 @@ retry_count
 ```mermaid
 flowchart LR
     Graph["CellGraphDefinition"] --> Planner["Local Plan Builder"]
-    Engine["AnalysisEngine"] --> Planner
+    Engine["AnalysisEngine"] --> Snapshot["InputSnapshot"]
+    Snapshot --> Store["LocalInputResolver / Store"]
+    Store --> Reference["InputReference"]
+    Reference --> Planner
     Planner --> Plan["CellExecutionPlan"]
     Plan --> Coordinator["PlanDrivenLocalCoordinator"]
+    Coordinator --> Store
     Coordinator --> Local["python-local service binding"]
     Local --> Cells["In-process Cell classes"]
     Cells --> Report["AnalysisReport"]
@@ -360,17 +390,22 @@ sequenceDiagram
     participant API as API / Task Service
     participant P as Planner
     participant C as Capability Catalog
+    participant I as Input Store / Resolver
     participant Q as Task Queue / Scheduler
     participant W1 as Python Worker
     participant W2 as Rust Worker
     participant S as Store
 
     API->>P: AnalysisRequest
+    API->>I: 注册 InputSnapshot
+    I-->>P: InputReference
     P->>C: 查询 Cell 实现和服务状态
     C-->>P: 可用 implementation / service binding
     P->>Q: 提交 CellExecutionPlan
     Q->>W1: 派发轻量 Cell
     Q->>W2: 派发热点 Cell
+    W1->>I: resolve(reference)
+    W2->>I: resolve(reference)
     W1-->>S: CellResult
     W2-->>S: CellResult
     Q-->>API: 根节点完成
@@ -414,7 +449,7 @@ Cell 不能直接决定自己跑在哪个服务。
 
 Service 不能改变 CellResult 协议。
 
-ExecutionPlan 不能包含大体积市场数据，只引用输入键、特征键、依赖和绑定。
+ExecutionPlan 不能包含大体积市场数据，只保存 input references、输入键、特征键、依赖和绑定。
 
 AnalysisReport 不能混入调度细节。
 
@@ -426,11 +461,10 @@ Cell 执行异常时，`FileSystemReportStore.save_run` 会单独保存 failed A
 
 ## 8. 当前状态和进入集群前的门槛
 
-Graph、Organ、Graph Validator、计划、binding、catalog、placement、Plan Validator、plan-driven coordinator、executor、trace 和 summary 已有本地参考实现。
+Graph、Organ、Graph Validator、计划、input resolver、binding、catalog、placement、Plan Validator、plan-driven coordinator、executor、trace 和 summary 已有本地参考实现。
 
 进入远程执行前还必须完成：
 
-- Input Reference / Resolver。
 - 跨运行性能历史。
 - Executor Router。
 - 幂等、超时、重试、背压和取消语义。

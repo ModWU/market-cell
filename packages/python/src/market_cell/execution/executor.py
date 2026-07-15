@@ -105,7 +105,7 @@ class LocalCellExecutor:
         actual_binding = build_local_service_binding(manifest, self.service_id)
         started_at = utc_now_iso()
         started = perf_counter()
-        trace_metadata = _trace_metadata(self.name, context.binding)
+        trace_metadata = _trace_metadata(self.name, context)
 
         try:
             _validate_local_execution_context(
@@ -288,11 +288,17 @@ def _runtime_trace(
 
 def _trace_metadata(
     executor_name: str,
-    planned_binding: CellServiceBinding | None,
+    context: CellExecutionContext,
 ) -> dict[str, Any]:
+    planned_binding = context.binding
     metadata: dict[str, Any] = {
         "executor": executor_name,
         "planned_binding": planned_binding is not None,
+        "input_reference_ids": (
+            list(context.node.input_reference_ids)
+            if context.node is not None
+            else []
+        ),
     }
     if planned_binding is not None:
         metadata.update(

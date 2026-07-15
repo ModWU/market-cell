@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/feature_snapshot.schema.json",
+  "title": "MarketCell FeatureSnapshot",
+  "type": "object",
+  "required": [
+    "candle_count",
+    "first_close",
+    "last_close",
+    "close_change_pct",
+    "latest_close_change",
+    "previous_average_volume",
+    "latest_volume_ratio",
+    "average_range_pct",
+    "latest_range_pct",
+    "latest_wick_ratio",
+    "total_move_pct",
+    "path_distance_pct",
+    "trend_efficiency",
+    "feature_version",
+    "source_input_hash",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "candle_count": {"type": "integer", "minimum": 0},
+    "first_close": {"type": ["number", "null"]},
+    "last_close": {"type": ["number", "null"]},
+    "close_change_pct": {"type": "number"},
+    "latest_close_change": {"type": "number"},
+    "previous_average_volume": {"type": "number"},
+    "latest_volume_ratio": {"type": "number"},
+    "average_range_pct": {"type": "number"},
+    "latest_range_pct": {"type": "number"},
+    "latest_wick_ratio": {"type": "number"},
+    "total_move_pct": {"type": "number"},
+    "path_distance_pct": {"type": "number"},
+    "trend_efficiency": {"type": "number"},
+    "feature_version": {"type": "string", "minLength": 1},
+    "source_input_hash": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "schema_version": {"const": "feature_snapshot.v1"}
+  }
+}

@@ -1,4 +1,4 @@
-# MarketCell 后端架构文档 v0.4
+# MarketCell 后端架构文档 v0.5
 
 ## 1. 架构阶段
 
@@ -7,7 +7,7 @@ MarketCell 后端分三阶段演进。
 ### 阶段一：本地分析内核
 
 ```text
-CLI + AnalysisEngine + Graph + Planner + Validators + Coordinator + LocalCellExecutor + AnalysisRun + FileSystemReportStore
+CLI + AnalysisEngine + InputSnapshot/Resolver + Graph + Planner + Validators + Coordinator + LocalCellExecutor + AnalysisRun + FileSystemReportStore
 ```
 
 目标是把 Cell 协议和分析闭环做稳定。
@@ -34,13 +34,18 @@ FastAPI + Task Service + Runtime + Storage + AI + Rust Realtime Core
 flowchart TD
     Client["CLI / Web UI / Future Trading Gateway"] --> API["FastAPI Gateway"]
     API --> Task["Analysis Task Service"]
+    Task --> InputStore["Input Snapshot Store"]
+    InputStore --> InputRef["InputReference"]
     Task --> Planner["Analysis Planner"]
+    InputRef --> Planner
     Graph["CellGraphDefinition"] --> Planner
     Registry["Cell Implementation Registry"] --> Planner
     Catalog["Service Capability Catalog"] --> Planner
     Policy["Placement Policy"] --> Planner
     Planner --> Plan["CellExecutionPlan"]
     Plan --> Coordinator["Cell Execution Coordinator"]
+    Coordinator --> Resolver["Input Resolver"]
+    Resolver --> InputStore
     Coordinator --> Runtime["Executor Router / Cell Runtime"]
     Runtime --> PyExecutor["Python Executor"]
     Runtime --> RustExecutor["Rust Executor"]
@@ -79,6 +84,8 @@ flowchart TD
 - `RuntimeAwarePlacementPolicy`
 - `CellGraphValidation` / `ExecutionPlanValidation`
 - `PlanDrivenLocalCoordinator`
+- `InputSnapshot` / `InputReference` / `InputResolutionRecord`
+- `LocalInputResolver` / `InputSnapshotStore`
 - `CellExecutor` / `LocalCellExecutor`
 - `PlanExecution` audit
 - `CellRuntimeTrace` / `CellRuntimeSummary`
@@ -87,7 +94,7 @@ flowchart TD
 - CLI `replay`
 - `ReplayRunner`
 
-当前不立即实现复杂消息队列。Graph 已经从 Registry 拆出，ExecutionPlan 也真正驱动本地 DAG；下一步完成输入引用和大数据解析边界。
+当前不立即实现复杂消息队列。Graph 已经从 Registry 拆出，ExecutionPlan 也真正驱动本地 DAG，输入 payload 已经从计划中拆成可校验引用；下一步建立跨运行 Runtime Summary Store。
 
 ## 3. 后端分层
 
@@ -135,11 +142,14 @@ AnalysisRun {
   task_id
   engine_version
   input_hash
+  input_snapshot
+  input_snapshot_audit
   formula_versions
   cell_manifests
   cell_graph_definition
   cell_graph_validation
   execution_plan
+  input_resolution_records
   plan_execution
   runtime_traces
   runtime_summaries
@@ -164,6 +174,7 @@ CellExecutionPlan {
   horizon
   root_node_id
   nodes
+  input_references
   service_bindings
   schema_version
 }
@@ -258,6 +269,8 @@ flowchart LR
 - cell_id
 - formula_version
 - input_hash
+- input_snapshot_id / input_reference_id
+- input source / data_version / resolution status / cache_hit
 - implementation_id / service_id / runtime
 - duration_ms / status / error / retry_count
 - report_id
@@ -293,4 +306,4 @@ flowchart LR
 - 太晚定义数据契约会导致 Cell 输出混乱。
 - 太晚做回放会导致历史判断不可验证。
 - ExecutionPlan 如果长期只用于审计而不驱动执行，会出现计划拓扑和真实顺序分裂。
-- 没有 Input Reference 时直接把大体积 K 线跨服务传递，会迅速成为性能和稳定性瓶颈。
+- Input Reference 已避免计划复制大体积 K 线；下一风险是生产 Snapshot Store、权限、生命周期和跨服务数据局部性尚未落地。

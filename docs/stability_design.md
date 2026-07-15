@@ -1,13 +1,14 @@
-# MarketCell 稳定性设计 v0.4
+# MarketCell 稳定性设计 v0.5
 
 ## 1. 目标
 
-地基阶段需要同时稳定五件事：
+地基阶段需要同时稳定六件事：
 
 - 分析结构稳定
 - Cell 输出稳定
 - 风险解释稳定
 - 执行语义稳定
+- 输入身份和解析稳定
 - 运行审计稳定
 
 前三项保证产品结果可信，后两项保证大量 Cell 和多服务运行后仍能定位、复盘和扩展。
@@ -107,6 +108,9 @@ plan.node.binding_id             = binding.binding_id
 binding.implementation_id        = trace.implementation_id
 binding.service_id               = trace.service_id
 binding.runtime                  = trace.runtime
+plan.node.input_reference_ids    ⊆ plan.input_references.reference_id
+reference.content_hash           = resolved_snapshot.content_hash
+reference.payload_size_bytes     = resolved_snapshot.payload_size_bytes
 ```
 
 稳定要求：
@@ -123,12 +127,20 @@ binding.runtime                  = trace.runtime
 - 执行顺序来自 validator 输出的稳定拓扑层，不来自 Registry 或 plan.nodes 排列。
 - 聚合结果必须严格按 node.dependencies 顺序输入。
 - root 结果只能按 root_node_id 读取。
+- ExecutionPlan 不能携带 InputSnapshot payload。
+- 同一 run 内每个 reference_id 最多进行一次实际解析。
+- 同一 run 内已解析 AnalysisRequest 最多物化一次，不能按 Cell 数重复反序列化大输入。
+- 默认内存 InputSnapshotStore 必须是 run-scoped，避免长生命周期 Engine 无界持有历史 payload。
+- Resolver 必须校验来源、数据版本、hash、size、target 和 horizon，URI 可读不等于完整性通过。
+- Plan Validator 必须在执行前拒绝 target 或 horizon 与计划不一致的 InputReference。
+- 相同逻辑快照重复注册必须幂等，created_at 不得改变 snapshot identity。
 
 ## 6. 运行审计稳定
 
 `AnalysisRun` 负责保存：
 
 - input snapshot 和 input hash
+- input snapshot audit、input references 和 resolution records
 - formula versions 和 manifests
 - cell graph snapshot 和 graph validation
 - provider / router audit
@@ -164,6 +176,7 @@ binding.runtime                  = trace.runtime
 - `test_cell_graph.py`：默认图、多级聚合、共享 Organ、重复 Cell 和 Graph 失败审计。
 - `test_executor.py`：binding、执行、trace、结果和失败 run。
 - `test_coordinator.py`：拓扑顺序、多级聚合、重复 Cell、失败局部状态和节点事件。
+- `test_inputs.py`：确定性输入身份、Resolver 完整性、幂等注册、运行内缓存、失败审计和计划无 payload。
 - `test_execution_plan.py`：计划、trace 和 summary 持久化。
 - `test_execution_placement.py`：多服务候选和运行时感知 placement。
 - `test_replay.py`：输入快照重跑、公式漂移和 Graph 身份 / 版本 / 内容漂移。
@@ -181,8 +194,8 @@ make test
 
 当前仍需补齐：
 
-1. Input Reference / Resolver。
-2. Runtime Summary Store。
-3. Performance baseline。
+1. Runtime Summary Store。
+2. Performance baseline。
+3. 远程 Executor 的幂等、超时、重试、背压和取消语义。
 
 顺序以 `roadmap.md` 为准。

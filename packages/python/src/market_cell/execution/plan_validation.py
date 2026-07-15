@@ -9,6 +9,7 @@ from market_cell.execution.models import (
     CellServiceBinding,
 )
 from market_cell.graph.topology import dependency_closure, stable_topological_levels
+from market_cell.inputs import InputReference
 
 
 EXECUTION_PLAN_VALIDATION_SCHEMA_VERSION = "execution_plan_validation.v1"
@@ -17,6 +18,8 @@ EXECUTION_PLAN_VALIDATION_SCHEMA_VERSION = "execution_plan_validation.v1"
 PlanValidationCode = Literal[
     "duplicate_node_id",
     "duplicate_binding_id",
+    "duplicate_input_reference_id",
+    "input_reference_scope_mismatch",
     "missing_root",
     "invalid_root_role",
     "unexpected_root_role",
@@ -28,6 +31,10 @@ PlanValidationCode = Literal[
     "binding_cell_mismatch",
     "binding_formula_mismatch",
     "unused_binding",
+    "missing_node_input_reference",
+    "duplicate_node_input_reference",
+    "missing_input_reference",
+    "unused_input_reference",
     "cycle_detected",
     "unreachable_node",
 ]
@@ -39,6 +46,7 @@ class PlanValidationIssue:
     message: str
     node_id: str | None = None
     binding_id: str | None = None
+    reference_id: str | None = None
     dependency_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -47,6 +55,7 @@ class PlanValidationIssue:
             "message": self.message,
             "node_id": self.node_id,
             "binding_id": self.binding_id,
+            "reference_id": self.reference_id,
             "dependency_id": self.dependency_id,
         }
 
@@ -77,9 +86,12 @@ def validate_execution_plan(plan: CellExecutionPlan) -> ValidatedExecutionPlan:
     issues: list[PlanValidationIssue] = []
     node_by_id = _unique_nodes(plan, issues)
     binding_by_id = _unique_bindings(plan, issues)
+    reference_by_id = _unique_input_references(plan, issues)
+    _validate_input_reference_scope(plan, issues)
     _validate_root(plan, node_by_id, issues)
-    _validate_nodes(plan, node_by_id, binding_by_id, issues)
+    _validate_nodes(plan, node_by_id, binding_by_id, reference_by_id, issues)
     _validate_binding_usage(plan, issues)
+    _validate_input_reference_usage(plan, issues)
 
     topological_levels, cyclic_nodes = stable_topological_levels(node_by_id)
     if cyclic_nodes:
@@ -134,6 +146,47 @@ def _unique_bindings(
     return binding_by_id
 
 
+def _unique_input_references(
+    plan: CellExecutionPlan,
+    issues: list[PlanValidationIssue],
+) -> dict[str, InputReference]:
+    reference_by_id: dict[str, InputReference] = {}
+    for reference in plan.input_references:
+        if reference.reference_id in reference_by_id:
+            issues.append(
+                PlanValidationIssue(
+                    code="duplicate_input_reference_id",
+                    message=(
+                        f"input reference {reference.reference_id} appears more than once"
+                    ),
+                    reference_id=reference.reference_id,
+                )
+            )
+            continue
+        reference_by_id[reference.reference_id] = reference
+    return reference_by_id
+
+
+def _validate_input_reference_scope(
+    plan: CellExecutionPlan,
+    issues: list[PlanValidationIssue],
+) -> None:
+    for reference in plan.input_references:
+        if reference.target == plan.target and reference.horizon == plan.horizon:
+            continue
+        issues.append(
+            PlanValidationIssue(
+                code="input_reference_scope_mismatch",
+                message=(
+                    f"input reference {reference.reference_id} has scope "
+                    f"{reference.target}/{reference.horizon}, expected "
+                    f"{plan.target}/{plan.horizon}"
+                ),
+                reference_id=reference.reference_id,
+            )
+        )
+
+
 def _validate_root(
     plan: CellExecutionPlan,
     node_by_id: dict[str, CellExecutionNode],
@@ -171,6 +224,7 @@ def _validate_nodes(
     plan: CellExecutionPlan,
     node_by_id: dict[str, CellExecutionNode],
     binding_by_id: dict[str, CellServiceBinding],
+    reference_by_id: dict[str, InputReference],
     issues: list[PlanValidationIssue],
 ) -> None:
     for node in plan.nodes:
@@ -190,6 +244,34 @@ def _validate_nodes(
                     node_id=node.node_id,
                 )
             )
+        if not node.input_reference_ids:
+            issues.append(
+                PlanValidationIssue(
+                    code="missing_node_input_reference",
+                    message=f"node {node.node_id} has no input reference",
+                    node_id=node.node_id,
+                )
+            )
+        if len(node.input_reference_ids) != len(set(node.input_reference_ids)):
+            issues.append(
+                PlanValidationIssue(
+                    code="duplicate_node_input_reference",
+                    message=f"node {node.node_id} repeats an input reference",
+                    node_id=node.node_id,
+                )
+            )
+        for reference_id in node.input_reference_ids:
+            if reference_id not in reference_by_id:
+                issues.append(
+                    PlanValidationIssue(
+                        code="missing_input_reference",
+                        message=(
+                            f"node {node.node_id} references missing input {reference_id}"
+                        ),
+                        node_id=node.node_id,
+                        reference_id=reference_id,
+                    )
+                )
         for dependency_id in node.dependencies:
             if dependency_id == node.node_id:
                 issues.append(
@@ -252,6 +334,28 @@ def _validate_binding_usage(
                     code="unused_binding",
                     message=f"binding {binding.binding_id} is not used by any node",
                     binding_id=binding.binding_id,
+                )
+            )
+
+
+def _validate_input_reference_usage(
+    plan: CellExecutionPlan,
+    issues: list[PlanValidationIssue],
+) -> None:
+    used_reference_ids = {
+        reference_id
+        for node in plan.nodes
+        for reference_id in node.input_reference_ids
+    }
+    for reference in plan.input_references:
+        if reference.reference_id not in used_reference_ids:
+            issues.append(
+                PlanValidationIssue(
+                    code="unused_input_reference",
+                    message=(
+                        f"input reference {reference.reference_id} is not used by any node"
+                    ),
+                    reference_id=reference.reference_id,
                 )
             )
 

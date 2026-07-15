@@ -1,4 +1,4 @@
-# MarketCell 运行时架构 v0.4
+# MarketCell 运行时架构 v0.5
 
 ## 1. 目标
 
@@ -135,6 +135,10 @@ Historical batch  -> contracts/parquet/candle_schema.md
 Analysis input    -> contracts/json_schema/analysis_request.schema.json
 Analysis output   -> contracts/json_schema/analysis_report.schema.json
 Analysis run/audit -> contracts/json_schema/analysis_run.schema.json
+Input snapshot    -> contracts/json_schema/input_snapshot.schema.json
+Input reference   -> contracts/json_schema/input_reference.schema.json
+Input resolution  -> contracts/json_schema/input_resolution_record.schema.json
+Feature snapshot  -> contracts/json_schema/feature_snapshot.schema.json
 Cell graph       -> contracts/json_schema/cell_graph_definition.schema.json
 Graph validation -> contracts/json_schema/cell_graph_validation.schema.json
 Cell execution   -> contracts/json_schema/cell_execution_plan.schema.json
@@ -151,11 +155,10 @@ Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
 
 ## 7. 当前推进顺序
 
-冷热路径、共享契约、Rust 行情原语、Python 回放、数据源审计、CellGraphDefinition、Organ、ExecutionPlan、placement、plan-driven coordinator、executor 和运行遥测已经建立参考实现。
+冷热路径、共享契约、Rust 行情原语、Python 回放、数据源审计、CellGraphDefinition、Organ、ExecutionPlan、Input Resolver、placement、plan-driven coordinator、executor 和运行遥测已经建立参考实现。
 
 当前运行时地基仍需补齐：
 
-- Input Reference / Resolver。
 - 跨运行 Runtime Summary Store。
 - 性能基线。
 

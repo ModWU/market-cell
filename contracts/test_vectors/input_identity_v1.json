@@ -1,0 +1,30 @@
+{
+  "schema_version": "input_identity_test_vector.v1",
+  "input_kind": "analysis_request",
+  "target": "BTC/USD",
+  "horizon": "1h",
+  "data_version": "analysis_request.v1",
+  "source": "contract.test_vector",
+  "payload": {
+    "target": "BTC/USD",
+    "horizon": "1h",
+    "candles": [
+      {
+        "timestamp": "2026-07-15T00:00:00Z",
+        "open": 100.0,
+        "high": 102.5,
+        "low": 99.5,
+        "close": 101.25,
+        "volume": 1200.0
+      }
+    ],
+    "events": [],
+    "context": {
+      "venue": "spot"
+    }
+  },
+  "expected_content_hash": "a16d822895f1b974fa6d54319dfcc3bab65926f0593fe35147670d65058917e0",
+  "expected_payload_size_bytes": 191,
+  "expected_snapshot_id": "snapshot:analysis_request:2f6e7536e019cb8ad46863b5",
+  "expected_reference_id": "input:analysis_request:2f6e7536e019cb8ad46863b5"
+}

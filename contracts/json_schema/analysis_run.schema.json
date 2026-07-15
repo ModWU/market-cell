@@ -97,7 +97,7 @@
               "minLength": 1
             },
             "schema_version": {
-              "enum": ["cell_execution_plan.v1", "cell_execution_plan.v2"]
+              "enum": ["cell_execution_plan.v1", "cell_execution_plan.v2", "cell_execution_plan.v3"]
             },
             "nodes": {
               "type": "array"
@@ -130,6 +130,15 @@
         },
         "plan_execution": {
           "$ref": "https://marketcell.local/schemas/plan_execution.schema.json"
+        },
+        "input_snapshot_audit": {
+          "$ref": "https://marketcell.local/schemas/input_snapshot_audit.schema.json"
+        },
+        "input_resolution_records": {
+          "type": "array",
+          "items": {
+            "$ref": "https://marketcell.local/schemas/input_resolution_record.schema.json"
+          }
         },
         "data_sources": {
           "$ref": "#/$defs/data_source_audit"

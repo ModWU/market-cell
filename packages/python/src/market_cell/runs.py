@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field, replace
 from typing import Any
@@ -9,15 +7,12 @@ from uuid import uuid4
 
 from market_cell import __version__
 from market_cell.events import utc_now_iso
+from market_cell.hashing import stable_json_hash
+from market_cell.inputs.models import InputSnapshot
 from market_cell.models import AnalysisRequest, CellManifest
 
 
 RUN_SCHEMA_VERSION = "analysis_run.v1"
-
-
-def stable_json_hash(data: dict[str, Any]) -> str:
-    raw = json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def request_to_snapshot(request: AnalysisRequest) -> dict[str, Any]:
@@ -56,14 +51,28 @@ class AnalysisRun:
         request: AnalysisRequest,
         manifests: list[CellManifest],
         metadata: dict[str, Any] | None = None,
+        *,
+        replay_input: InputSnapshot | None = None,
     ) -> "AnalysisRun":
-        snapshot = request_to_snapshot(request)
+        if replay_input is not None:
+            if replay_input.input_kind != "analysis_request":
+                raise ValueError("AnalysisRun replay input must be an analysis_request")
+            if (
+                replay_input.target != request.target
+                or replay_input.horizon != request.horizon
+            ):
+                raise ValueError("AnalysisRun replay input does not match the request scope")
+            snapshot = deepcopy(replay_input.payload)
+            input_hash = replay_input.content_hash
+        else:
+            snapshot = request_to_snapshot(request)
+            input_hash = stable_json_hash(snapshot)
         return cls(
             run_id=uuid4().hex,
             target=request.target,
             horizon=request.horizon,
             engine_version=__version__,
-            input_hash=stable_json_hash(snapshot),
+            input_hash=input_hash,
             input_snapshot=snapshot,
             formula_versions=formula_versions(manifests),
             cell_manifests=manifests_to_dicts(manifests),

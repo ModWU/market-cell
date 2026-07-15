@@ -14,6 +14,15 @@ from market_cell.execution.models import (
     ExecutionRole,
 )
 from market_cell.execution.plan_validation import ValidatedExecutionPlan
+from market_cell.inputs import (
+    InputCompositionError,
+    InputReference,
+    InputResolutionError,
+    InputResolutionRecord,
+    InputResolutionStatus,
+    InputResolver,
+    InputSnapshot,
+)
 from market_cell.models import AnalysisRequest, CellResult
 from market_cell.registry import CellRegistry
 
@@ -27,6 +36,7 @@ class NodeExecutionCompletion:
     cell_id: str
     binding_id: str
     execution_role: ExecutionRole
+    input_reference_ids: list[str]
     result: CellResult | None
     trace: CellRuntimeTrace | None
     error: Exception | None = field(default=None, repr=False, compare=False)
@@ -42,6 +52,7 @@ class PlanExecutionOutcome:
     root_node_id: str
     results_by_node_id: dict[str, CellResult]
     runtime_traces: list[CellRuntimeTrace]
+    input_resolution_records: list[InputResolutionRecord]
     execution_order: list[str]
     root_result: CellResult | None = None
     failed_node_id: str | None = None
@@ -103,7 +114,7 @@ class CellExecutionCoordinator(Protocol):
         validated_plan: ValidatedExecutionPlan,
         registry: CellRegistry,
         executor: CellExecutor,
-        request: AnalysisRequest,
+        input_resolver: InputResolver,
         run_id: str,
         trace_id: str,
         on_node_completed: NodeCompletionHandler | None = None,
@@ -114,7 +125,7 @@ class CellExecutionCoordinator(Protocol):
 class PlanDrivenLocalCoordinator:
     @property
     def name(self) -> str:
-        return "plan_driven_local_coordinator_v0.1"
+        return "plan_driven_local_coordinator_v0.2"
 
     def execute(
         self,
@@ -122,7 +133,7 @@ class PlanDrivenLocalCoordinator:
         validated_plan: ValidatedExecutionPlan,
         registry: CellRegistry,
         executor: CellExecutor,
-        request: AnalysisRequest,
+        input_resolver: InputResolver,
         run_id: str,
         trace_id: str,
         on_node_completed: NodeCompletionHandler | None = None,
@@ -132,8 +143,14 @@ class PlanDrivenLocalCoordinator:
         bindings_by_id = {
             binding.binding_id: binding for binding in plan.service_bindings
         }
+        references_by_id = {
+            reference.reference_id: reference for reference in plan.input_references
+        }
         results_by_node_id: dict[str, CellResult] = {}
         runtime_traces: list[CellRuntimeTrace] = []
+        input_resolution_records: list[InputResolutionRecord] = []
+        resolved_inputs: dict[str, InputSnapshot] = {}
+        materialized_requests: dict[str, AnalysisRequest] = {}
         execution_order: list[str] = []
 
         for level in validated_plan.topological_levels:
@@ -144,6 +161,15 @@ class PlanDrivenLocalCoordinator:
                 trace: CellRuntimeTrace | None = None
                 try:
                     cell = registry.resolve(node.cell_id)
+                    request = _resolve_analysis_request(
+                        node_id=node.node_id,
+                        reference_ids=node.input_reference_ids,
+                        references_by_id=references_by_id,
+                        input_resolver=input_resolver,
+                        resolved_inputs=resolved_inputs,
+                        materialized_requests=materialized_requests,
+                        resolution_records=input_resolution_records,
+                    )
                     child_results = (
                         [results_by_node_id[dependency_id] for dependency_id in node.dependencies]
                         if node.dependencies
@@ -172,6 +198,7 @@ class PlanDrivenLocalCoordinator:
                         cell_id=node.cell_id,
                         binding_id=node.binding_id,
                         execution_role=node.execution_role,
+                        input_reference_ids=list(node.input_reference_ids),
                         result=None,
                         trace=trace,
                         error=exc,
@@ -184,6 +211,7 @@ class PlanDrivenLocalCoordinator:
                         root_node_id=plan.root_node_id,
                         results_by_node_id=results_by_node_id,
                         runtime_traces=runtime_traces,
+                        input_resolution_records=input_resolution_records,
                         execution_order=execution_order,
                         failed_node_id=node.node_id,
                         error=exc,
@@ -197,6 +225,7 @@ class PlanDrivenLocalCoordinator:
                             cell_id=node.cell_id,
                             binding_id=node.binding_id,
                             execution_role=node.execution_role,
+                            input_reference_ids=list(node.input_reference_ids),
                             result=result,
                             trace=trace,
                         )
@@ -213,6 +242,7 @@ class PlanDrivenLocalCoordinator:
                 root_node_id=plan.root_node_id,
                 results_by_node_id=results_by_node_id,
                 runtime_traces=runtime_traces,
+                input_resolution_records=input_resolution_records,
                 execution_order=execution_order,
                 failed_node_id=plan.root_node_id,
                 error=error,
@@ -223,6 +253,114 @@ class PlanDrivenLocalCoordinator:
             root_node_id=plan.root_node_id,
             results_by_node_id=results_by_node_id,
             runtime_traces=runtime_traces,
+            input_resolution_records=input_resolution_records,
             execution_order=execution_order,
             root_result=root_result,
         )
+
+
+def _resolve_analysis_request(
+    *,
+    node_id: str,
+    reference_ids: list[str],
+    references_by_id: dict[str, InputReference],
+    input_resolver: InputResolver,
+    resolved_inputs: dict[str, InputSnapshot],
+    materialized_requests: dict[str, AnalysisRequest],
+    resolution_records: list[InputResolutionRecord],
+) -> AnalysisRequest:
+    snapshots_by_reference_id: dict[str, InputSnapshot] = {}
+    for reference_id in reference_ids:
+        reference = references_by_id[reference_id]
+        cache_hit = reference_id in resolved_inputs
+        if cache_hit:
+            snapshot = resolved_inputs[reference_id]
+        else:
+            try:
+                snapshot = input_resolver.resolve(reference)
+            except Exception as exc:
+                resolution_records.append(
+                    _resolution_record(
+                        node_id=node_id,
+                        reference=reference,
+                        resolver=input_resolver.name,
+                        status="failed",
+                        cache_hit=False,
+                        actual_content_hash=(
+                            exc.actual_content_hash
+                            if isinstance(exc, InputResolutionError)
+                            else None
+                        ),
+                        actual_payload_size_bytes=(
+                            exc.actual_payload_size_bytes
+                            if isinstance(exc, InputResolutionError)
+                            else None
+                        ),
+                        error=str(exc),
+                    )
+                )
+                raise
+            resolved_inputs[reference_id] = snapshot
+        resolution_records.append(
+            _resolution_record(
+                node_id=node_id,
+                reference=reference,
+                resolver=input_resolver.name,
+                status="succeeded",
+                cache_hit=cache_hit,
+                actual_content_hash=snapshot.content_hash,
+                actual_payload_size_bytes=snapshot.payload_size_bytes,
+            )
+        )
+        snapshots_by_reference_id[reference_id] = snapshot
+
+    request_reference_ids = [
+        reference_id
+        for reference_id, snapshot in snapshots_by_reference_id.items()
+        if snapshot.input_kind == "analysis_request"
+    ]
+    if len(request_reference_ids) != 1:
+        raise InputCompositionError(
+            f"node {node_id} requires exactly one analysis_request input, "
+            f"received {len(request_reference_ids)}"
+        )
+    request_reference_id = request_reference_ids[0]
+    if request_reference_id not in materialized_requests:
+        try:
+            materialized_requests[request_reference_id] = snapshots_by_reference_id[
+                request_reference_id
+            ].to_analysis_request()
+        except Exception as exc:
+            raise InputCompositionError(
+                f"node {node_id} could not materialize analysis_request "
+                f"{request_reference_id}"
+            ) from exc
+    return materialized_requests[request_reference_id]
+
+
+def _resolution_record(
+    *,
+    node_id: str,
+    reference: InputReference,
+    resolver: str,
+    status: InputResolutionStatus,
+    cache_hit: bool,
+    actual_content_hash: str | None,
+    actual_payload_size_bytes: int | None,
+    error: str | None = None,
+) -> InputResolutionRecord:
+    return InputResolutionRecord(
+        node_id=node_id,
+        reference_id=reference.reference_id,
+        input_kind=reference.input_kind,
+        resolver=resolver,
+        status=status,
+        cache_hit=cache_hit,
+        expected_content_hash=reference.content_hash,
+        actual_content_hash=actual_content_hash,
+        expected_payload_size_bytes=reference.payload_size_bytes,
+        actual_payload_size_bytes=actual_payload_size_bytes,
+        data_version=reference.data_version,
+        source=reference.source,
+        error=error,
+    )

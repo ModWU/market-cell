@@ -41,7 +41,7 @@ Registry 改为通用 implementation 集合，不再暴露 leaf/root 角色。Pl
 约束和代价：
 
 - 新增默认 Cell 时必须同时更新 Registry、默认 Graph 和契约测试。
-- Graph v1 的 Organ 是依赖闭合子图；跨 Organ 外部输入后续通过显式输入引用设计处理。
+- Graph v1 的 Organ 是依赖闭合子图；外部输入通过 ADR-0002 的显式 Input Reference 进入 ExecutionPlan，不写入 Graph。
 - 当前 placement 仍按唯一 Cell capability 选择一次 binding；需要节点级资源差异时再升级 placement 决策契约。
 
 ## 放弃的方案

@@ -1,4 +1,4 @@
-# MarketCell 实施路线图 v0.3
+# MarketCell 实施路线图 v0.4
 
 ## 1. 文档职责
 
@@ -41,8 +41,12 @@
 - `PlanDrivenLocalCoordinator` 和 `plan_execution.v1` 运行审计
 - `CellGraphDefinition`、命名 Organ 子图和 `cell_graph_validation.v1`
 - ExecutionPlan v2：node_id 与 cell_id 分离，节点显式引用 binding_id
+- ExecutionPlan v3：计划保存 payload-free input references，节点显式引用输入身份
+- InputSnapshot / InputReference / InputResolutionRecord 跨语言契约
+- LocalInputResolver 完整性校验、幂等注册和运行内单次解析缓存
+- FeatureSnapshot 独立 schema、公式版本和 source input hash
 - Graph Validator：组合依赖、Organ、环、可达性和 Registry 兼容性
-- ExecutionPlan Validator：运行依赖、环、可达性、root 和 binding 一致性
+- ExecutionPlan Validator：运行依赖、环、可达性、root、binding 和 input reference 一致性
 - plan / trace / CellResult 一致性校验
 - 成功和失败 AnalysisRun 的运行审计
 - GitHub Actions Python / Rust CI
@@ -90,7 +94,7 @@
 - Graph、Plan Validator 共享确定性拓扑算法
 - Graph snapshot 和结构化校验失败进入 AnalysisRun
 
-### P0.4 Input Reference / Resolver（下一步）
+### P0.4 Input Reference / Resolver（已完成）
 
 目标：为大数据输入和远程执行建立引用边界。
 
@@ -99,8 +103,12 @@
 - 本地 resolver 参考实现
 - 数据版本、来源和哈希进入运行审计
 - 避免跨服务复制整段历史 K 线
+- 同一 reference 在一次 run 内最多实际解析一次
+- 同一 AnalysisRequest 在一次 run 内最多物化一次
+- target / horizon 与计划不一致的引用在任何 Cell 启动前被拒绝
+- 成功和失败 AnalysisRun 保存输入来源、版本、哈希、大小与解析状态
 
-### P0.5 Runtime Summary Store
+### P0.5 Runtime Summary Store（下一步）
 
 目标：让 placement 使用跨运行历史，而不是单次摘要。
 
@@ -127,6 +135,7 @@
 - 非法 DAG 在执行前被拒绝。（已完成）
 - 本地执行由 plan 驱动，Registry 不再隐式决定拓扑。（已完成）
 - 至少一个多级 aggregator 图可以稳定运行和回放。（已完成）
+- ExecutionPlan 不携带 K 线 payload，Input Resolver 可校验并审计输入。（已完成）
 - 关闭或更换 executor 时，trace 仍能准确表达实际位置。
 - placement 能消费跨运行历史窗口。
 - 失败、超时、重试和降级拥有明确审计结构。

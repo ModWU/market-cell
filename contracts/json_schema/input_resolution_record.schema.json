@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/input_resolution_record.schema.json",
+  "title": "MarketCell InputResolutionRecord",
+  "type": "object",
+  "required": [
+    "node_id",
+    "reference_id",
+    "input_kind",
+    "resolver",
+    "status",
+    "cache_hit",
+    "expected_content_hash",
+    "actual_content_hash",
+    "expected_payload_size_bytes",
+    "actual_payload_size_bytes",
+    "data_version",
+    "source",
+    "resolved_at",
+    "error",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "node_id": {"type": "string", "minLength": 1},
+    "reference_id": {"type": "string", "minLength": 1},
+    "input_kind": {
+      "enum": ["analysis_request", "candle_batch", "feature_snapshot"]
+    },
+    "resolver": {"type": "string", "minLength": 1},
+    "status": {"enum": ["succeeded", "failed"]},
+    "cache_hit": {"type": "boolean"},
+    "expected_content_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "actual_content_hash": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "expected_payload_size_bytes": {"type": "integer", "minimum": 2},
+    "actual_payload_size_bytes": {
+      "type": ["integer", "null"],
+      "minimum": 2
+    },
+    "data_version": {"type": "string", "minLength": 1},
+    "source": {"type": "string", "minLength": 1},
+    "resolved_at": {"type": "string", "minLength": 1},
+    "error": {"type": ["string", "null"]},
+    "schema_version": {"const": "input_resolution_record.v1"}
+  }
+}

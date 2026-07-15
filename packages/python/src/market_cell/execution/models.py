@@ -5,9 +5,10 @@ from typing import Any, Literal
 
 from market_cell.events import utc_now_iso
 from market_cell.graph.models import GraphNodeRole
+from market_cell.inputs import InputReference
 
 
-CELL_EXECUTION_PLAN_SCHEMA_VERSION = "cell_execution_plan.v2"
+CELL_EXECUTION_PLAN_SCHEMA_VERSION = "cell_execution_plan.v3"
 CELL_RUNTIME_TRACE_SCHEMA_VERSION = "cell_runtime_trace.v1"
 CELL_RUNTIME_SUMMARY_SCHEMA_VERSION = "cell_runtime_summary.v1"
 
@@ -64,6 +65,7 @@ class CellExecutionNode:
     execution_role: ExecutionRole
     binding_id: str
     dependencies: list[str] = field(default_factory=list)
+    input_reference_ids: list[str] = field(default_factory=list)
     input_keys: list[str] = field(default_factory=list)
     output_keys: list[str] = field(default_factory=list)
     resource_hints: ResourceHints = field(default_factory=ResourceHints)
@@ -77,6 +79,7 @@ class CellExecutionPlan:
     horizon: str
     root_node_id: str
     nodes: list[CellExecutionNode]
+    input_references: list[InputReference]
     service_bindings: list[CellServiceBinding]
     schema_version: str = CELL_EXECUTION_PLAN_SCHEMA_VERSION
     created_at: str = field(default_factory=utc_now_iso)

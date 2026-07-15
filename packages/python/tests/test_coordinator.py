@@ -1,3 +1,4 @@
+from dataclasses import replace
 import unittest
 
 from market_cell.cells.base import MarketCell
@@ -12,6 +13,7 @@ from market_cell.execution import (
     validate_execution_plan,
 )
 from market_cell.models import AnalysisRequest, Candle, CellResult
+from market_cell.inputs import InputSnapshot, LocalInputResolver
 from market_cell.registry import CellNotRegisteredError, CellRegistry
 
 
@@ -188,6 +190,9 @@ class PlanDrivenLocalCoordinatorTests(unittest.TestCase):
         self.assertTrue(completed)
         self.assertTrue(all(event.payload["node_id"] for event in completed))
         self.assertTrue(all(event.payload["binding_id"] for event in completed))
+        self.assertTrue(
+            all(event.payload["input_reference_ids"] for event in completed)
+        )
         self.assertEqual(
             {event.payload["execution_role"] for event in completed},
             {"leaf", "root"},
@@ -287,6 +292,7 @@ def _node(node_id, cell, execution_role, dependencies=None):
 
 
 def _plan(nodes, root_node_id, cells):
+    reference = _input_snapshot().to_reference()
     bindings = []
     seen_binding_ids = set()
     for cell in cells:
@@ -299,21 +305,31 @@ def _plan(nodes, root_node_id, cells):
         target="BTC/USD",
         horizon="1h",
         root_node_id=root_node_id,
-        nodes=nodes,
+        nodes=[
+            replace(node, input_reference_ids=[reference.reference_id])
+            for node in nodes
+        ],
+        input_references=[reference],
         service_bindings=bindings,
     )
 
 
 def _execute(plan, registry, on_node_completed=None, executor=None):
+    input_resolver = LocalInputResolver()
+    input_resolver.register(_input_snapshot())
     return PlanDrivenLocalCoordinator().execute(
         validated_plan=validate_execution_plan(plan),
         registry=registry,
         executor=executor or LocalCellExecutor(),
-        request=_request(),
+        input_resolver=input_resolver,
         run_id="test-run",
         trace_id="test-trace",
         on_node_completed=on_node_completed,
     )
+
+
+def _input_snapshot():
+    return InputSnapshot.from_analysis_request(_request())
 
 
 def _request() -> AnalysisRequest:

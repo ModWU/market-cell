@@ -1,4 +1,4 @@
-# MarketCell 系统架构基线 v0.4
+# MarketCell 系统架构基线 v0.5
 
 ## 1. 文档职责
 
@@ -43,15 +43,21 @@ Trading Gateway 只能消费分析结果，不能反向污染 Cell。
 flowchart TD
     Input["CLI / JSON Input"] --> Validate["Input Validator"]
     Validate --> Engine["AnalysisEngine"]
+    Engine --> Snapshot["InputSnapshot"]
+    Snapshot --> InputStore["InputSnapshotStore"]
+    InputStore --> InputRef["InputReference"]
 
     Graph["CellGraphDefinition"] --> Planner["CellExecutionPlanner"]
     Registry["Cell Implementation Registry"] --> Planner
     Catalog["ServiceCapabilityCatalog"] --> Planner
     Placement["RuntimeAwarePlacementPolicy"] --> Planner
+    InputRef --> Planner
     Planner --> Plan["CellExecutionPlan"]
     Plan --> Engine
 
     Engine --> Coordinator["CellExecutionCoordinator"]
+    Coordinator --> Resolver["InputResolver"]
+    Resolver --> InputStore
     Coordinator --> Executor["CellExecutor"]
     Executor --> Local["LocalCellExecutor"]
     Local --> Cells["Python Cell Implementations"]
@@ -63,6 +69,8 @@ flowchart TD
     Trace --> Summary["CellRuntimeSummary"]
     Plan --> Run["AnalysisRun"]
     Graph --> Run
+    Snapshot --> Run
+    Resolver --> Run
     Trace --> Run
     Summary --> Run
     Report --> Store["ReportStore"]
@@ -81,7 +89,7 @@ flowchart TD
 | Interface | CLI、JSON 输入输出 | Application、Contracts | 分析公式、服务放置 |
 | Application | Engine、Planner、Replay、运行编排 | Domain、Execution、Storage ports | 具体指标公式 |
 | Domain | Cell、Manifest、Graph、Organ、Result、Evidence、DecisionPolicy | 基础数据模型 | 网络、数据库、任务队列、服务位置 |
-| Execution | Catalog、Placement、Plan、Executor、Telemetry | Domain contracts | 用户报告语义、行情采集 |
+| Execution | Catalog、Placement、Plan、Input Resolver ports、Executor、Telemetry | Domain contracts | 用户报告语义、行情采集 |
 | Data / Feature | 数据源、质量、缓存、基础特征 | Domain data contracts | Cell 决策聚合 |
 | Infrastructure | 文件、Parquet、DuckDB、交易所、Rust 服务 | Ports、共享契约 | 修改领域输出语义 |
 
@@ -99,6 +107,10 @@ flowchart TD
 - `AnalysisReport`
 - `AnalysisRun`
 - `CellGraphDefinition`
+- `InputSnapshot`
+- `InputReference`
+- `InputResolutionRecord`
+- `FeatureSnapshot`
 - `CellServiceBinding`
 - `CellExecutionPlan`
 - `PlanExecution`
@@ -142,9 +154,12 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 - `CellExecutor` / `LocalCellExecutor`：把执行从 AnalysisEngine 中拆出。
 - `CellGraphDefinition`：版本化保存 node、dependency、root 和命名 Organ，不包含服务位置。
 - Graph Validator：检查 root、依赖、环、可达性、Organ 闭包和 Registry 能力兼容性。
-- ExecutionPlan v2：node_id 与 cell_id 分离，节点显式引用 binding_id。
+- ExecutionPlan v3：node_id 与 cell_id 分离，节点显式引用 binding_id 和 input_reference_ids。
+- `InputSnapshot`、`InputReference`、`InputResolutionRecord` 和 `FeatureSnapshot` 版本化契约。
+- `LocalInputResolver`：内容寻址、来源/版本身份、payload hash/size 完整性校验和幂等注册。
+- Coordinator 运行内按 reference_id 缓存，同一输入最多实际解析和物化一次，同时保留逐节点解析审计。
 - implementation、service 和 runtime 由 binding 单点定义，node 不保存重复副本。
-- Plan Validator：检查 root、依赖、binding、环和可达性，并输出稳定拓扑层。
+- Plan Validator：检查 root、依赖、binding、input reference、环和可达性，并输出稳定拓扑层。
 - Graph 与 Plan Validator 共用确定性拓扑算法。
 - `PlanDrivenLocalCoordinator`：按拓扑层执行，按 node_id 保存结果，并按节点依赖顺序传递 child_results。
 - `plan_execution.v1`：审计执行顺序、完成节点和失败节点。
@@ -154,18 +169,16 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 
 仍未完成：
 
-1. `input_keys` 只是描述字段，尚无 Input Resolver；服务化后不能继续把大体积 candles 直接嵌入任务计划。
-2. 缺少 Executor Router，当前只有本地 Python executor。
-3. Runtime summary 只有单次运行聚合，缺少跨运行、带时间窗口的历史存储。
-4. 缺少性能预算和回归阈值，CI 目前只守功能正确性。
+1. 缺少 Executor Router，当前只有本地 Python executor。
+2. Runtime summary 只有单次运行聚合，缺少跨运行、带时间窗口的历史存储。
+3. 缺少性能预算和回归阈值，CI 目前只守功能正确性。
+4. 当前 planner 把 analysis request reference 分配给所有节点；未来 Graph 输入声明稳定后再收窄到节点所需引用。
 
 这些缺口应先于大规模新增业务 Cell 解决。
 
 ## 9. 数据和输入边界
 
-当前 `AnalysisRequest` 直接携带 candles、events 和 context，适合本地分析和可复盘快照。
-
-多服务阶段需要区分：
+当前 `AnalysisRequest` 仍直接携带 candles、events 和 context，作为本地入口和 `AnalysisRun.input_snapshot` 的完整回放载荷。执行边界已经区分：
 
 ```text
 Input Snapshot   可复盘的逻辑输入
@@ -173,7 +186,9 @@ Input Reference  executor 获取大数据的引用
 Feature Snapshot Cell 消费的稳定特征
 ```
 
-ExecutionPlan 只能保存引用、键和版本，不能复制大体积行情。Input Resolver 负责把引用解析为本地对象、共享存储窗口或远程数据流。
+ExecutionPlan v3 只保存引用、键和版本，不复制大体积行情。Input Resolver 负责把引用解析为本地快照，并校验来源、数据版本、内容哈希和 payload 大小；本地 coordinator 在一次 run 内缓存每个 reference 和已物化 AnalysisRequest。默认内存 store 也是 run-scoped，避免长生命周期 Engine 无界保留历史 payload。
+
+`AnalysisRun.input_snapshot` 与 `InputSnapshot` 不是重复职责：前者是当前回放权威载荷，后者定义多服务可寻址和可校验的输入对象。生产级对象存储、Parquet 窗口或 Rust 实时状态只替换 resolver/store adapter，不能改变 ExecutionPlan、Graph 或 CellResult。
 
 ## 10. Python 与 Rust 边界
 
@@ -243,7 +258,7 @@ Runtime State   服务健康、容量和短期状态
 - Graph Validator 和 Plan Validator 能分别拒绝非法组合图与非法执行计划。（已完成）
 - Registry 与 Graph 拓扑解耦，多级 aggregator 和共享 Organ 可稳定执行。（已完成）
 - 本地执行顺序由 ExecutionPlan 驱动，而不是 Registry 固定循环。（已完成）
-- Input Reference / Resolver 边界确定。
+- Input Reference / Resolver 边界确定。（已完成）
 - Runtime summary 可以跨运行聚合并进入 placement。
 - 有最小性能基线和回归阈值。
 - 失败运行、重试和降级都有可复盘记录。

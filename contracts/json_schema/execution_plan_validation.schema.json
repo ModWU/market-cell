@@ -37,6 +37,7 @@
         "message",
         "node_id",
         "binding_id",
+        "reference_id",
         "dependency_id"
       ],
       "additionalProperties": false,
@@ -45,6 +46,8 @@
           "enum": [
             "duplicate_node_id",
             "duplicate_binding_id",
+            "duplicate_input_reference_id",
+            "input_reference_scope_mismatch",
             "missing_root",
             "invalid_root_role",
             "unexpected_root_role",
@@ -56,6 +59,10 @@
             "binding_cell_mismatch",
             "binding_formula_mismatch",
             "unused_binding",
+            "missing_node_input_reference",
+            "duplicate_node_input_reference",
+            "missing_input_reference",
+            "unused_input_reference",
             "cycle_detected",
             "unreachable_node"
           ]
@@ -68,6 +75,9 @@
           "type": ["string", "null"]
         },
         "binding_id": {
+          "type": ["string", "null"]
+        },
+        "reference_id": {
           "type": ["string", "null"]
         },
         "dependency_id": {

@@ -1,4 +1,4 @@
-# MarketCell 数据契约 v0.3
+# MarketCell 数据契约 v0.4
 
 ## 1. 契约目标
 
@@ -211,6 +211,8 @@ metadata.cell_graph_definition
 metadata.cell_graph_validation
 metadata.cell_execution_plan
 metadata.execution_plan_validation
+metadata.input_snapshot_audit
+metadata.input_resolution_records
 metadata.plan_execution
 metadata.cell_runtime_traces
 metadata.cell_runtime_summaries
@@ -298,8 +300,24 @@ Graph 只描述 node、dependency、root 和 Organ，不保存 formula implement
   "horizon": "1h",
   "root_node_id": "cell:root.decision",
   "nodes": [],
+  "input_references": [
+    {
+      "reference_id": "input:analysis_request:abc123",
+      "snapshot_id": "snapshot:analysis_request:abc123",
+      "input_kind": "analysis_request",
+      "uri": "memory://market-cell-input/snapshot:analysis_request:abc123",
+      "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "data_version": "analysis_request.v1",
+      "source": "analysis_request",
+      "target": "BTC/USD",
+      "horizon": "1h",
+      "payload_size_bytes": 1024,
+      "schema_version": "input_reference.v1",
+      "metadata": {}
+    }
+  ],
   "service_bindings": [],
-  "schema_version": "cell_execution_plan.v2",
+  "schema_version": "cell_execution_plan.v3",
   "created_at": "2026-07-10T00:00:00+00:00",
   "metadata": {}
 }
@@ -307,11 +325,14 @@ Graph 只描述 node、dependency、root 和 Organ，不保存 formula implement
 
 `CellExecutionPlan` 关注“本次分析如何执行 Cell DAG”，不是 Cell 输出本身。
 
-v2 执行身份规则：
+v3 执行身份和输入规则：
 
 - `node_id` 在一次计划内唯一。
 - `cell_id` 表示能力，同一个 Cell 可以出现在多个节点。
 - 每个节点通过 `binding_id` 显式引用服务 binding。
+- 每个节点通过 `input_reference_ids` 显式引用计划顶层的轻量输入。
+- `input_references` 只保存定位和完整性字段，禁止保存 payload、candles 或 FeatureSnapshot 内容。
+- 每个 InputReference 的 target 和 horizon 必须与计划 scope 一致，否则 planning 阶段拒绝执行。
 - implementation_id、service_id 和 runtime 只在 binding 中维护，节点不复制第二份。
 - dependency 始终引用 `node_id`，不能引用 `cell_id`。
 - `binding_id` 由 implementation 和逻辑 service 稳定生成。
@@ -326,6 +347,69 @@ endpoint = null
 
 未来多服务集群可以替换 service binding 和 executor，但不能改变 `CellResult` 输出契约。
 
+### 11.1 InputSnapshot / InputReference
+
+`InputSnapshot` 是完整、可验证的逻辑输入：
+
+```json
+{
+  "snapshot_id": "snapshot:analysis_request:abc123",
+  "input_kind": "analysis_request",
+  "target": "BTC/USD",
+  "horizon": "1h",
+  "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "data_version": "analysis_request.v1",
+  "source": "analysis_request",
+  "payload": {},
+  "payload_size_bytes": 1024,
+  "created_at": "2026-07-15T00:00:00+00:00",
+  "schema_version": "input_snapshot.v1",
+  "metadata": {}
+}
+```
+
+规则：
+
+- `content_hash` 是 canonical JSON payload 的 SHA-256。
+- canonical JSON 使用 UTF-8、键排序、紧凑分隔符，并拒绝 NaN 和 Infinity。
+- snapshot identity 同时包含 input_kind、target、horizon、content_hash、data_version 和 source。
+- created_at 和 metadata 不参与 identity，因此重复注册同一逻辑快照必须幂等。
+- `input_snapshot_audit.v1` 与 InputSnapshot 字段一致，但移除 payload，写入 `AnalysisRun.metadata.input_snapshot_audit`。
+- `input_reference.v1` 从 Snapshot 派生，保存 URI 和完整性字段，不保存 payload。
+- InputReference metadata 默认不继承 Snapshot metadata；adapter 只能显式加入小型定位信息，不能借 metadata 复制行情载荷。
+
+`AnalysisRun.input_snapshot` 仍是完整 AnalysisRequest 回放载荷。它与 metadata 中的 payload-free audit 各有职责，不能用临时 URI 取代回放证据。
+
+### 11.2 FeatureSnapshot
+
+FeatureSnapshot 使用 `feature_snapshot.v1`，并包含独立的 `feature_version` 和 `source_input_hash`。它可以注册为 `input_kind = feature_snapshot` 的 InputSnapshot，由多个节点复用；特征 schema 升级不要求修改 CellResult 或 AnalysisReport。
+
+### 11.3 InputResolutionRecord
+
+每个节点使用输入引用时生成解析审计：
+
+```json
+{
+  "node_id": "cell:technical.trend",
+  "reference_id": "input:analysis_request:abc123",
+  "input_kind": "analysis_request",
+  "resolver": "local_memory_input_resolver_v0.1",
+  "status": "succeeded",
+  "cache_hit": false,
+  "expected_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "actual_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "expected_payload_size_bytes": 1024,
+  "actual_payload_size_bytes": 1024,
+  "data_version": "analysis_request.v1",
+  "source": "analysis_request",
+  "resolved_at": "2026-07-15T00:00:00+00:00",
+  "error": null,
+  "schema_version": "input_resolution_record.v1"
+}
+```
+
+同一 run 内每个 reference_id 最多发生一次实际 resolve；后续节点仍生成记录并设置 `cache_hit = true`。解析失败记录 `status = failed` 和 error，并进入 failed AnalysisRun。
+
 ## 12. PlanExecution
 
 一次已校验计划的协调执行审计：
@@ -333,7 +417,7 @@ endpoint = null
 ```json
 {
   "schema_version": "plan_execution.v1",
-  "coordinator": "plan_driven_local_coordinator_v0.1",
+  "coordinator": "plan_driven_local_coordinator_v0.2",
   "plan_id": "plan123",
   "root_node_id": "cell:root.decision",
   "status": "succeeded",
@@ -378,7 +462,8 @@ endpoint = null
   "metadata": {
     "executor": "local_python_executor_v0.1",
     "planned_binding": true,
-    "planned_service_id": "python-local"
+    "planned_service_id": "python-local",
+    "input_reference_ids": ["input:analysis_request:abc123"]
   }
 }
 ```
@@ -472,6 +557,7 @@ planner 为每个 Cell 选择实现时生成放置决策：
       "message": "node cell:root depends on missing node cell:missing",
       "node_id": "cell:root",
       "binding_id": null,
+      "reference_id": null,
       "dependency_id": "cell:missing"
     }
   ],
@@ -500,6 +586,8 @@ input_hash
 input_snapshot
 formula_versions
 metadata
+metadata.input_snapshot_audit
+metadata.input_resolution_records
 ```
 
 CellGraphDefinition v1 固定：
@@ -563,13 +651,26 @@ reason_codes
 candidate_evaluations
 ```
 
-ExecutionPlan v2 新增：
+ExecutionPlan v3 固定：
 
 ```text
 binding_id
 node_id / cell_id 身份分离
+input_references
+node.input_reference_ids
 topological_levels
 execution_plan_validation
+```
+
+Input contracts v1 固定：
+
+```text
+input_snapshot.v1
+input_snapshot_audit.v1
+input_reference.v1
+input_resolution_record.v1
+feature_snapshot.v1
+content_hash / data_version / source / payload_size_bytes
 ```
 
 PlanExecution v1 固定：

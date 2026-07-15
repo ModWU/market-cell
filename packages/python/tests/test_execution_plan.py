@@ -16,7 +16,11 @@ class CellExecutionPlanTests(unittest.TestCase):
 
         plan = build_local_execution_plan(registry, request)
 
-        self.assertEqual(plan.schema_version, "cell_execution_plan.v2")
+        self.assertEqual(plan.schema_version, "cell_execution_plan.v3")
+        self.assertEqual(
+            plan.metadata["planner"],
+            "cell_graph_service_placement_v0.4",
+        )
         self.assertEqual(plan.target, "BTC/USD")
         self.assertEqual(plan.horizon, "1h")
         self.assertEqual(len(plan.nodes), len(registry.all_cells()))
@@ -46,7 +50,7 @@ class CellExecutionPlanTests(unittest.TestCase):
             run = store.load_run(report.run_id or "")
 
         plan = run["metadata"]["cell_execution_plan"]
-        self.assertEqual(plan["schema_version"], "cell_execution_plan.v2")
+        self.assertEqual(plan["schema_version"], "cell_execution_plan.v3")
         self.assertEqual(plan["root_node_id"], "cell:root.decision")
 
     def test_cell_runtime_traces_are_persisted_in_run_metadata(self):
@@ -89,6 +93,10 @@ class CellExecutionPlanTests(unittest.TestCase):
             for node_id in level
         ]
         self.assertEqual(execution["schema_version"], "plan_execution.v1")
+        self.assertEqual(
+            execution["coordinator"],
+            "plan_driven_local_coordinator_v0.2",
+        )
         self.assertEqual(execution["status"], "succeeded")
         self.assertEqual(execution["plan_id"], plan["plan_id"])
         self.assertEqual(execution["execution_order"], expected_order)

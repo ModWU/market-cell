@@ -1,4 +1,4 @@
-# MarketCell Feature Layer 设计 v0.1
+# MarketCell Feature Layer 设计 v0.2
 
 ## 1. 目标
 
@@ -30,6 +30,7 @@ FeatureSnapshot
 
 ```text
 market_features_v0.1
+feature_snapshot.v1
 ```
 
 ## 3. 当前特征
@@ -49,6 +50,9 @@ market_features_v0.1
 - `total_move_pct`
 - `path_distance_pct`
 - `trend_efficiency`
+- `feature_version`
+- `source_input_hash`
+- `schema_version`
 
 这些特征被以下 Cell 复用：
 
@@ -72,11 +76,11 @@ Feature Layer 不可以：
 - 输出交易建议
 - 直接访问外部数据源
 - 直接保存报告
-- 私自绕过 `AnalysisRequest`
+- 绕过版本化 InputSnapshot / InputReference 边界读取未审计数据
 
 ## 5. 性能演进
 
-当前阶段每个 Cell 调用 `build_feature_snapshot`。这保持简单和可读。
+当前阶段每个 Cell 调用 `build_feature_snapshot`。这保持简单和可读。FeatureSnapshot 已经可以注册为 `feature_snapshot` 类型的 InputSnapshot，并通过 source_input_hash 绑定上游输入，但默认图尚未把它作为共享节点输入。
 
 数据源层已经有 `CandleCache`，负责减少外部行情请求。Feature Layer 后续会增加 `FeatureCache`，负责减少同一批 K 线在多个 Cell 中重复计算。
 
@@ -84,6 +88,7 @@ Feature Layer 不可以：
 
 ```text
 AnalysisEngine
+→ InputResolver
 → FeatureRuntime / FeatureCache
 → CellRuntime
 → Cell

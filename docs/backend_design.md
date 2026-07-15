@@ -1,4 +1,4 @@
-# MarketCell 后端设计文档 v0.4
+# MarketCell 后端设计文档 v0.5
 
 ## 1. 后端目标
 
@@ -28,12 +28,15 @@ flowchart TD
     Loader --> Models["Domain Models"]
     Models --> Validator["Validator"]
     Validator --> Engine["AnalysisEngine"]
+    Engine --> Inputs["InputSnapshot / Resolver"]
     Graph["CellGraphDefinition"] --> Planner["CellExecutionPlanner"]
     Registry["CellRegistry"] --> Planner
     Catalog["ServiceCapabilityCatalog"] --> Planner
+    Inputs --> Planner
     Planner --> Plan["CellExecutionPlan"]
     Plan --> Engine
     Engine --> Coordinator["CellExecutionCoordinator"]
+    Coordinator --> Inputs
     Coordinator --> Executor["CellExecutor"]
     Executor --> Cells["Cell Library"]
     Cells --> Results["CellResult"]
@@ -53,13 +56,14 @@ flowchart TD
 | `validation.py` | 校验输入数据 |
 | `registry.py` | 注册并按 cell_id 确定性解析一个本地 Cell 实现，不保存拓扑角色 |
 | `graph/` | Graph、Organ、默认组合、共享拓扑算法和结构校验 |
+| `inputs/` | InputSnapshot、InputReference、解析协议、本地存储和完整性校验 |
 | `engine.py` | 编排规划、协调、报告和运行审计，不持有图执行细节 |
 | `execution/models.py` | 执行计划、binding、trace 和 summary 数据对象 |
 | `execution/catalog.py` | 服务能力目录和本地 binding 工厂 |
 | `execution/placement.py` | 运行时感知的服务放置策略 |
 | `execution/planner.py` | 从 Graph、Registry、Catalog 和 Policy 生成执行计划 |
-| `execution/plan_validation.py` | 校验 DAG、root、binding、环和可达性并生成稳定拓扑层 |
-| `execution/coordinator.py` | 按 ExecutionPlan 执行拓扑、管理 node_id 结果和失败局部状态 |
+| `execution/plan_validation.py` | 校验 DAG、root、binding、input reference、环和可达性并生成稳定拓扑层 |
+| `execution/coordinator.py` | 按 ExecutionPlan 执行拓扑、解析并缓存输入、管理 node_id 结果和失败局部状态 |
 | `execution/executor.py` | CellExecutor 协议、本地执行和一致性校验 |
 | `execution/telemetry.py` | trace 聚合和性能摘要 |
 | `scoring.py` | 评分和方向转换 |
@@ -81,6 +85,7 @@ sequenceDiagram
     participant E as Engine
     participant G as Graph Validator
     participant P as Planner
+    participant I as Input Resolver
     participant O as Coordinator
     participant X as Executor
     participant C as Cell
@@ -88,11 +93,15 @@ sequenceDiagram
     CLI->>V: AnalysisRequest
     V-->>CLI: valid
     CLI->>E: run(request)
-    E->>P: build(graph, request, registry, catalog)
+    E->>I: register(InputSnapshot)
+    I-->>E: InputReference
+    E->>P: build(graph, request, references, registry, catalog)
     P->>G: validate(graph, registry manifests)
     G-->>P: stable topology
     P-->>E: CellExecutionPlan
     E->>O: execute(validated plan)
+    O->>I: resolve(reference)
+    I-->>O: verified AnalysisRequest snapshot
     O->>X: execute(node, binding, dependencies)
     X->>C: analyze(request)
     C-->>X: CellResult
@@ -145,9 +154,9 @@ PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --store
 
 扩展顺序只以 `roadmap.md` 为准。当前后端优先完成：
 
-1. Input Reference / Resolver。
-2. Runtime Summary Store。
-3. Performance baseline。
+1. Runtime Summary Store。
+2. Performance baseline。
+3. Executor Router、超时、重试和背压语义。
 
 这些边界稳定后再进入更多 Cell、多周期、API 和远程执行。
 
@@ -159,6 +168,7 @@ PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --store
 - 数据结构错误要直接失败。
 - 服务化前就应逐步分类 validation、planning、binding、execution、contract、data_source 和 persistence 错误。
 - 失败 AnalysisRun 必须保留 execution_order、completed_node_ids、failed_node_id、已完成 trace、失败 trace 和 summary。
+- 输入解析失败必须保留 snapshot audit 和 input resolution records，且任何 Cell 不得绕过 resolver 自行读取计划外 payload。
 
 ## 8. 配置原则
 

@@ -11,6 +11,7 @@ from market_cell.execution import (
     build_local_execution_plan,
     validate_execution_plan,
 )
+from market_cell.inputs import InputSnapshot
 from market_cell.models import AnalysisRequest, Candle
 from market_cell.registry import default_registry
 from market_cell.reports import FileSystemReportStore
@@ -66,6 +67,78 @@ class ExecutionPlanValidationTests(unittest.TestCase):
         error = _validation_error(invalid)
 
         self.assertIn("duplicate_binding_id", _issue_codes(error))
+
+    def test_validator_rejects_duplicate_input_reference_id(self):
+        plan = build_local_execution_plan(default_registry(), _request())
+        invalid = replace(
+            plan,
+            input_references=[*plan.input_references, plan.input_references[0]],
+        )
+
+        error = _validation_error(invalid)
+
+        self.assertIn("duplicate_input_reference_id", _issue_codes(error))
+
+    def test_validator_rejects_input_reference_scope_mismatch(self):
+        plan = build_local_execution_plan(default_registry(), _request())
+        reference = replace(plan.input_references[0], target="ETH/USD")
+        invalid = replace(plan, input_references=[reference])
+
+        error = _validation_error(invalid)
+
+        self.assertIn("input_reference_scope_mismatch", _issue_codes(error))
+
+    def test_validator_rejects_node_without_input_reference(self):
+        plan = build_local_execution_plan(default_registry(), _request())
+        node = plan.nodes[0]
+        invalid_node = replace(node, input_reference_ids=[])
+        invalid = replace(plan, nodes=_replace_node(plan, invalid_node))
+
+        error = _validation_error(invalid)
+
+        self.assertIn("missing_node_input_reference", _issue_codes(error))
+
+    def test_validator_rejects_duplicate_node_input_reference(self):
+        plan = build_local_execution_plan(default_registry(), _request())
+        node = plan.nodes[0]
+        reference_id = node.input_reference_ids[0]
+        invalid_node = replace(
+            node,
+            input_reference_ids=[reference_id, reference_id],
+        )
+        invalid = replace(plan, nodes=_replace_node(plan, invalid_node))
+
+        error = _validation_error(invalid)
+
+        self.assertIn("duplicate_node_input_reference", _issue_codes(error))
+
+    def test_validator_rejects_missing_input_reference(self):
+        plan = build_local_execution_plan(default_registry(), _request())
+        node = plan.nodes[0]
+        invalid_node = replace(node, input_reference_ids=["input:missing"])
+        invalid = replace(plan, nodes=_replace_node(plan, invalid_node))
+
+        error = _validation_error(invalid)
+
+        self.assertIn("missing_input_reference", _issue_codes(error))
+
+    def test_validator_rejects_unused_input_reference(self):
+        plan = build_local_execution_plan(default_registry(), _request())
+        unused = InputSnapshot.from_analysis_request(
+            AnalysisRequest(
+                target="ETH/USD",
+                horizon="1h",
+                candles=_request().candles,
+            )
+        ).to_reference()
+        invalid = replace(
+            plan,
+            input_references=[*plan.input_references, unused],
+        )
+
+        error = _validation_error(invalid)
+
+        self.assertIn("unused_input_reference", _issue_codes(error))
 
     def test_validator_rejects_missing_dependency(self):
         plan = build_local_execution_plan(default_registry(), _request())
@@ -152,7 +225,7 @@ class ExecutionPlanValidationTests(unittest.TestCase):
         self.assertEqual(run["status"], "failed")
         self.assertEqual(
             run["metadata"]["cell_execution_plan"]["schema_version"],
-            "cell_execution_plan.v2",
+            "cell_execution_plan.v3",
         )
         self.assertEqual(run["metadata"]["cell_runtime_traces"], [])
         validation = run["metadata"]["execution_plan_validation"]
@@ -169,7 +242,7 @@ class _FixedPlanEngine(AnalysisEngine):
         super().__init__(**kwargs)
         self.plan = plan
 
-    def _execution_plan(self, request):
+    def _execution_plan(self, request, input_references):
         return self.plan
 
 

@@ -20,7 +20,8 @@ v0.1 提供一个最小闭环：
 
 ```text
 输入市场样例数据
-→ 校验 CellGraphDefinition 并生成 ExecutionPlan
+→ 建立 InputSnapshot 和轻量 InputReference
+→ 校验 CellGraphDefinition 并生成 ExecutionPlan v3
 → 按计划执行 Cell DAG
 → 聚合成根节点判断
 → 输出结构化 JSON 分析报告
@@ -34,7 +35,8 @@ market-cell/
 ├── contracts/
 │   ├── json_schema/            # 跨语言共享 JSON Schema 契约
 │   ├── protobuf/               # 实时行情事件契约
-│   └── parquet/                # 历史 K 线批量存储契约
+│   ├── parquet/                # 历史 K 线批量存储契约
+│   └── test_vectors/           # 跨语言哈希和身份算法固定向量
 ├── docs/
 │   ├── adr/                    # 重大架构决策记录
 │   ├── product_design.md      # 产品设计文档 v0.2
@@ -68,6 +70,7 @@ market-cell/
 │       │   ├── engine.py       # 分析执行器
 │       │   ├── execution/      # 能力目录、放置、计划、协调、执行和运行遥测
 │       │   ├── graph/          # Cell 组合图、Organ、默认图和结构校验
+│       │   ├── inputs/         # 输入快照、轻量引用、解析器和完整性校验
 │       │   ├── features/       # K 线基础特征快照
 │       │   ├── models.py       # 核心数据结构
 │       │   ├── policies/       # 决策策略和风险分层
@@ -167,7 +170,9 @@ MarketCell 输出的是分析结果和风险解释，不是投资建议，也不
 - 运行记录遵守 `analysis_run.v1` 契约，便于后续跨语言和服务化复盘
 - Cell 组合遵守 `cell_graph_definition.v1`，Registry 只注册实现，Graph 独立定义 leaf、aggregator、root 和 Organ
 - Graph 不包含服务位置；`cell_graph_validation.v1` 在 planning 前拒绝非法依赖、Organ 或未注册能力
-- Cell 执行计划遵守 `cell_execution_plan.v2` 契约，使用唯一 node_id 和显式 binding_id 对齐 DAG 与服务
+- Cell 执行计划遵守 `cell_execution_plan.v3` 契约，使用唯一 node_id、显式 binding_id 和 payload-free input references 对齐 DAG、服务与输入
+- `input_snapshot.v1` 保存可回放逻辑输入，`input_reference.v1` 只携带地址、来源、版本、哈希和大小，计划不复制 K 线 payload
+- Coordinator 在一次 run 内对同一引用只执行一次实际解析，并用 `input_resolution_record.v1` 审计每个节点的解析状态和缓存命中
 - 本地 DAG 由 `PlanDrivenLocalCoordinator` 按稳定拓扑层执行，Registry 只解析实现，不决定运行顺序
 - 每次协调遵守 `plan_execution.v1` 契约，保存 execution_order、completed_node_ids 和 failed_node_id
 - 服务能力目录遵守 `service_capability_catalog.v2` 契约，一个 Cell 可有多个实现，一个服务也可承载多个 Cell
