@@ -145,6 +145,18 @@ make test
 
 GitHub Actions 会在 `main` 分支 push 和 pull request 时自动运行同一组测试。
 
+性能基准与功能测试独立运行：
+
+```bash
+make benchmark
+```
+
+也可以直接运行并保存结构化结果：
+
+```bash
+PYTHONPATH=packages/python/src python3 -m market_cell benchmark benchmarks/default_analysis.json --pretty --output benchmark-result.json
+```
+
 也可以分别运行：
 
 ```bash
@@ -180,4 +192,6 @@ MarketCell 输出的是分析结果和风险解释，不是投资建议，也不
 - `CellExecutor` 将计划与实际执行解耦；当前 `LocalCellExecutor` 会拒绝远程 binding，并校验 CellResult 与运行 trace 的一致性
 - 每个 Cell 节点会生成 `cell_runtime_trace.v1` 运行轨迹，记录服务、状态和耗时
 - 每次运行会生成 `cell_runtime_summary.v1` 性能摘要，按 Cell、公式版本、实现、服务和运行时聚合耗时与失败信息
+- `runtime_summary_snapshot.v1` 从跨运行 trace 生成明确时间窗口，保留 P50/P95/P99、失败率、重试率和最近状态供 placement 使用
+- `performance_baseline.v1` 使用固定输入分别守护结果身份、总运行 P95 和节点 P95，CI 将功能测试与 benchmark 分开执行
 - 后期可以接入真实数据、AI、可视化和自动交易模块

@@ -1,4 +1,4 @@
-# MarketCell 系统架构基线 v0.5
+# MarketCell 系统架构基线 v0.6
 
 ## 1. 文档职责
 
@@ -163,6 +163,8 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 - Graph 与 Plan Validator 共用确定性拓扑算法。
 - `PlanDrivenLocalCoordinator`：按拓扑层执行，按 node_id 保存结果，并按节点依赖顺序传递 child_results。
 - `plan_execution.v1`：审计执行顺序、完成节点和失败节点。
+- `RuntimeSummaryStore`：保存跨运行 trace，并生成带明确时间边界的 placement 快照。
+- `performance_baseline.v1`：固定输入、结果身份、总耗时和节点 P95 的 CI 守护。
 - plan、trace、CellResult 一致性校验。
 - 成功和失败 AnalysisRun 的 trace / summary 审计。
 - Registry 的本地 cell_id 唯一解析和重复注册拒绝。
@@ -170,9 +172,7 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 仍未完成：
 
 1. 缺少 Executor Router，当前只有本地 Python executor。
-2. Runtime summary 只有单次运行聚合，缺少跨运行、带时间窗口的历史存储。
-3. 缺少性能预算和回归阈值，CI 目前只守功能正确性。
-4. 当前 planner 把 analysis request reference 分配给所有节点；未来 Graph 输入声明稳定后再收窄到节点所需引用。
+2. 当前 planner 把 analysis request reference 分配给所有节点；未来 Graph 输入声明稳定后再收窄到节点所需引用。
 
 这些缺口应先于大规模新增业务 Cell 解决。
 
@@ -260,7 +260,7 @@ Runtime State   服务健康、容量和短期状态
 - 本地执行顺序由 ExecutionPlan 驱动，而不是 Registry 固定循环。（已完成）
 - Input Reference / Resolver 边界确定。（已完成）
 - Runtime summary 可以跨运行聚合并进入 placement。
-- 有最小性能基线和回归阈值。
+- 有最小性能基线和回归阈值。（已完成）
 - 失败运行、重试和降级都有可复盘记录。
 
 具体实施顺序只维护在 `roadmap.md`。

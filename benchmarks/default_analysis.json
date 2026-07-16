@@ -1,0 +1,37 @@
+{
+  "benchmark_id": "default_analysis_btc_usd_v1",
+  "input_file": "../examples/btc_usd_sample.json",
+  "input_hash": "621556c97a735a846291a92264331b45a5dbfee167ed585be64fed7b3c83b84e",
+  "warmup_runs": 3,
+  "measured_runs": 20,
+  "expected_node_count": 7,
+  "thresholds": {
+    "total_p95_ms": 100.0,
+    "node_p95_ms": 10.0,
+    "rationale": "Warm-process reference P95 is below 5ms total and 0.1ms per node; wide thresholds only block order-of-magnitude regressions on shared CI."
+  },
+  "expected_decision": {
+    "cell_id": "root.decision",
+    "direction": "bullish",
+    "score": 22.6194,
+    "risk_level": "medium",
+    "action_posture": "wait_for_confirmation",
+    "child_count": 6
+  },
+  "expected_formula_versions": {
+    "technical.trend": "trend_close_change_v0.1",
+    "technical.volume": "volume_ratio_v0.1",
+    "technical.volatility": "average_range_volatility_v0.1",
+    "technical.market_regime": "trend_efficiency_regime_v0.1",
+    "external.news": "weighted_event_sentiment_v0.1",
+    "risk.manipulation": "price_volume_shape_manipulation_v0.1",
+    "root.decision": "decision_weighted_score_v0.2"
+  },
+  "reference_measurement": {
+    "environment": "Local warm-process Python 3.11 reference run",
+    "measured_at": "2026-07-16T00:00:00+08:00",
+    "total_p95_ms": 5.0,
+    "slowest_node_p95_ms": 0.1
+  },
+  "schema_version": "performance_baseline.v1"
+}

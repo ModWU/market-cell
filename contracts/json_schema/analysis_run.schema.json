@@ -125,6 +125,12 @@
             "$ref": "#/$defs/cell_runtime_summary"
           }
         },
+        "runtime_summary_snapshot": {
+          "$ref": "https://marketcell.local/schemas/runtime_summary_snapshot.schema.json"
+        },
+        "runtime_summary_write": {
+          "$ref": "https://marketcell.local/schemas/runtime_summary_write.schema.json"
+        },
         "execution_plan_validation": {
           "$ref": "https://marketcell.local/schemas/execution_plan_validation.schema.json"
         },

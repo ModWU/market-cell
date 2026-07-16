@@ -1,4 +1,4 @@
-# MarketCell 评估与验证策略 v0.1
+# MarketCell 评估与验证策略 v0.2
 
 ## 1. 为什么需要评估策略
 
@@ -181,6 +181,17 @@ AI 输出需要评估：
 - 历史大规模回测
 - 真实交易表现评估
 - 自动交易验证
+
+## 8.1 性能验证
+
+功能正确性和性能回归使用两个独立入口：
+
+```bash
+make test
+make benchmark
+```
+
+固定基准同时校验 input hash、公式版本和稳定决策字段，再分别评估总运行 P95 与每个 node 的 P95。correctness failure 与 performance failure 必须分开报告。基准阈值是 CI 数量级守护，不是生产 SLA，也不能单独作为迁移 Rust 的依据。
 
 ## 9. 进入 validated 的标准
 

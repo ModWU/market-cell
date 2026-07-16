@@ -1,4 +1,4 @@
-# MarketCell 多语言架构文档 v0.5
+# MarketCell 多语言架构文档 v0.6
 
 ## 1. 为什么提前设计多语言边界
 
@@ -55,7 +55,11 @@ contracts/
 │   ├── execution_plan_validation.schema.json
 │   ├── plan_execution.schema.json
 │   ├── cell_runtime_trace.schema.json
-│   └── cell_runtime_summary.schema.json
+│   ├── cell_runtime_summary.schema.json
+│   ├── runtime_summary_snapshot.schema.json
+│   ├── runtime_summary_write.schema.json
+│   ├── performance_baseline.schema.json
+│   └── performance_benchmark_result.schema.json
 ├── protobuf/
 │   └── market_data.proto
 ├── parquet/

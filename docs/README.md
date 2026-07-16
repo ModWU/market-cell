@@ -28,8 +28,8 @@
 |---|---|---|
 | 文档治理 | `documentation_architecture.md` | baseline v0.2 |
 | 产品定位 | `product_design.md` | baseline v0.2 |
-| 系统基线 | `system_architecture.md` | baseline v0.5 |
-| 实施顺序 | `roadmap.md` | baseline v0.4 |
+| 系统基线 | `system_architecture.md` | baseline v0.6 |
+| 实施顺序 | `roadmap.md` | baseline v0.6 |
 | 后端模块 | `backend_design.md` | baseline |
 | 服务化演进 | `backend_architecture.md` | baseline |
 | Cell 协议 | `cell_protocol.md` | baseline |
@@ -62,6 +62,8 @@
 
 - `adr/0001-cell-graph-definition.md`：Graph、Organ、Registry 和 ExecutionPlan 的职责边界。
 - `adr/0002-input-reference-resolver.md`：InputSnapshot、InputReference、Resolver 和执行计划的数据边界。
+- `adr/0003-runtime-summary-store.md`：跨运行 trace 存储、时间窗口快照和 placement 历史边界。
+- `adr/0004-performance-baseline.md`：固定输入、宽松 CI 阈值、失败分类和热点迁移证据。
 
 ## 未来专项
 

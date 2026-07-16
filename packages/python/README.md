@@ -26,6 +26,8 @@ It owns:
 - Versioned PlanExecution audit metadata for completed and failed runs
 - Local CellRuntimeTrace records for per-Cell latency and status audits
 - Local CellRuntimeSummary aggregation for service, Cell, formula, implementation, and runtime performance profiling
+- Cross-run RuntimeSummaryStore snapshots with explicit windows, tail latency, failure/retry rates, and latest status
+- Versioned fixed-input performance baselines with separate correctness and performance failures
 - ServiceCapabilityCatalog contracts for one-Cell/many-service and one-service/many-Cell mappings
 - Runtime-aware placement decisions with formula compatibility, failure-rate protection, deterministic priority, and P95 latency selection
 - CellExecutor protocol and strict LocalCellExecutor reference implementation
@@ -48,6 +50,8 @@ Execution code is split by responsibility:
 - `execution/planner.py`: Cell DAG and binding plan generation
 - `execution/plan_validation.py`: structural, binding, cycle, reachability, and topology validation
 - `execution/telemetry.py`: runtime trace aggregation
+- `execution/runtime_store.py`: idempotent cross-run trace storage and placement history snapshots
+- `performance.py`: fixed-input benchmark runner, duration distributions, and regression classification
 
 Optional local storage extras:
 

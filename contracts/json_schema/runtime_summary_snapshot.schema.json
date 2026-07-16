@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/runtime_summary_snapshot.schema.json",
+  "title": "MarketCell RuntimeSummarySnapshot",
+  "type": "object",
+  "required": [
+    "snapshot_id",
+    "store",
+    "window_started_at",
+    "window_ended_at",
+    "generated_at",
+    "trace_count",
+    "entries",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "snapshot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "store": {
+      "type": "string",
+      "minLength": 1
+    },
+    "window_started_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "window_ended_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trace_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    },
+    "schema_version": {
+      "const": "runtime_summary_snapshot.v1"
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": [
+        "cell_id",
+        "formula_version",
+        "implementation_id",
+        "service_id",
+        "runtime",
+        "trace_count",
+        "run_count",
+        "succeeded_count",
+        "failed_count",
+        "skipped_count",
+        "retried_trace_count",
+        "failure_rate",
+        "retry_rate",
+        "average_duration_ms",
+        "max_duration_ms",
+        "min_duration_ms",
+        "p50_duration_ms",
+        "p95_duration_ms",
+        "p99_duration_ms",
+        "error_count",
+        "retry_count",
+        "latest_status",
+        "latest_finished_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cell_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "formula_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "implementation_id": {
+          "type": ["string", "null"]
+        },
+        "service_id": {
+          "type": ["string", "null"]
+        },
+        "runtime": {
+          "type": ["string", "null"],
+          "enum": ["python_local", "python_service", "rust_service", "external_service", null]
+        },
+        "trace_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "run_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "succeeded_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "skipped_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retried_trace_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failure_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "retry_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "average_duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "min_duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "p50_duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "p95_duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "p99_duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "error_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retry_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "latest_status": {
+          "enum": ["succeeded", "failed", "skipped"]
+        },
+        "latest_finished_at": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

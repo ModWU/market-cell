@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import timedelta
 from uuid import uuid4
 
 from market_cell.execution.catalog import (
@@ -10,7 +11,6 @@ from market_cell.execution.catalog import (
 from market_cell.execution.models import (
     CellExecutionNode,
     CellExecutionPlan,
-    CellRuntimeSummary,
 )
 from market_cell.execution.placement import (
     CellPlacementDecision,
@@ -18,6 +18,7 @@ from market_cell.execution.placement import (
     RuntimeAwarePlacementPolicy,
 )
 from market_cell.execution.plan_validation import validate_execution_plan
+from market_cell.execution.runtime_store import RuntimeSummarySnapshot
 from market_cell.graph import (
     CellGraphDefinition,
     CellGraphNode,
@@ -35,11 +36,14 @@ class CellExecutionPlanner:
         catalog: ServiceCapabilityCatalog,
         *,
         placement_policy: CellPlacementPolicy | None = None,
-        runtime_summaries: list[CellRuntimeSummary] | None = None,
+        runtime_summary_snapshot: RuntimeSummarySnapshot | None = None,
     ) -> None:
         self.catalog = catalog
         self.placement_policy = placement_policy or RuntimeAwarePlacementPolicy()
-        self.runtime_summaries = list(runtime_summaries or [])
+        self.runtime_summary_snapshot = (
+            runtime_summary_snapshot
+            or RuntimeSummarySnapshot.empty(window=timedelta(days=30))
+        )
 
     def build(
         self,
@@ -85,7 +89,7 @@ class CellExecutionPlanner:
                 for manifest in manifests
             ],
             metadata={
-                "planner": "cell_graph_service_placement_v0.4",
+                "planner": "cell_graph_service_placement_v0.5",
                 "catalog_id": self.catalog.catalog_id,
                 "catalog_schema_version": self.catalog.schema_version,
                 "graph_id": graph.graph_id,
@@ -99,6 +103,7 @@ class CellExecutionPlanner:
                     for organ in graph.organs
                 ],
                 "placement_policy": self.placement_policy.name,
+                "runtime_summary_snapshot": self.runtime_summary_snapshot.to_dict(),
                 "placement_decisions": [decision.to_dict() for decision in decisions],
                 "candidate_binding_count": len(self.catalog.bindings),
                 "cell_count": len(manifests),
@@ -120,7 +125,7 @@ class CellExecutionPlanner:
         return self.placement_policy.select(
             manifest,
             self.catalog.candidates_for(manifest),
-            self.runtime_summaries,
+            self.runtime_summary_snapshot,
         )
 
 
@@ -132,12 +137,12 @@ def build_execution_plan(
     graph_definition: CellGraphDefinition | None = None,
     input_references: list[InputReference] | None = None,
     placement_policy: CellPlacementPolicy | None = None,
-    runtime_summaries: list[CellRuntimeSummary] | None = None,
+    runtime_summary_snapshot: RuntimeSummarySnapshot | None = None,
 ) -> CellExecutionPlan:
     return CellExecutionPlanner(
         catalog,
         placement_policy=placement_policy,
-        runtime_summaries=runtime_summaries,
+        runtime_summary_snapshot=runtime_summary_snapshot,
     ).build(registry, request, graph_definition, input_references)
 
 
@@ -148,6 +153,7 @@ def build_local_execution_plan(
     *,
     graph_definition: CellGraphDefinition | None = None,
     input_references: list[InputReference] | None = None,
+    runtime_summary_snapshot: RuntimeSummarySnapshot | None = None,
 ) -> CellExecutionPlan:
     catalog = build_local_capability_catalog(registry, service_id)
     return build_execution_plan(
@@ -156,6 +162,7 @@ def build_local_execution_plan(
         catalog,
         graph_definition=graph_definition,
         input_references=input_references,
+        runtime_summary_snapshot=runtime_summary_snapshot,
     )
 
 

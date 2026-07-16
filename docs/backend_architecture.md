@@ -1,4 +1,4 @@
-# MarketCell 后端架构文档 v0.5
+# MarketCell 后端架构文档 v0.6
 
 ## 1. 架构阶段
 
@@ -89,12 +89,13 @@ flowchart TD
 - `CellExecutor` / `LocalCellExecutor`
 - `PlanExecution` audit
 - `CellRuntimeTrace` / `CellRuntimeSummary`
+- `RuntimeSummaryStore` / `RuntimeSummarySnapshot`
 - `FileSystemReportStore`
 - CLI `reports`
 - CLI `replay`
 - `ReplayRunner`
 
-当前不立即实现复杂消息队列。Graph 已经从 Registry 拆出，ExecutionPlan 也真正驱动本地 DAG，输入 payload 已经从计划中拆成可校验引用；下一步建立跨运行 Runtime Summary Store。
+当前不立即实现复杂消息队列。Graph、plan-driven DAG、Input Resolver、跨运行 Runtime Summary Store 和固定性能基线已经完成；下一步补齐远程 Executor Router 与失败控制语义。
 
 ## 3. 后端分层
 
@@ -153,6 +154,8 @@ AnalysisRun {
   plan_execution
   runtime_traces
   runtime_summaries
+  runtime_summary_snapshot
+  runtime_summary_write
   status
   started_at
   finished_at

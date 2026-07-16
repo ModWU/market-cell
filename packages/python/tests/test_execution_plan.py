@@ -19,7 +19,7 @@ class CellExecutionPlanTests(unittest.TestCase):
         self.assertEqual(plan.schema_version, "cell_execution_plan.v3")
         self.assertEqual(
             plan.metadata["planner"],
-            "cell_graph_service_placement_v0.4",
+            "cell_graph_service_placement_v0.5",
         )
         self.assertEqual(plan.target, "BTC/USD")
         self.assertEqual(plan.horizon, "1h")

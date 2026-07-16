@@ -1,4 +1,4 @@
-# MarketCell 后端设计文档 v0.5
+# MarketCell 后端设计文档 v0.6
 
 ## 1. 后端目标
 
@@ -154,9 +154,7 @@ PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --store
 
 扩展顺序只以 `roadmap.md` 为准。当前后端优先完成：
 
-1. Runtime Summary Store。
-2. Performance baseline。
-3. Executor Router、超时、重试和背压语义。
+1. Executor Router、超时、重试和背压语义。
 
 这些边界稳定后再进入更多 Cell、多周期、API 和远程执行。
 

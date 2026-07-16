@@ -36,3 +36,6 @@ jobs:
 
       - name: Run workspace tests
         run: make test
+
+      - name: Run performance baseline
+        run: make benchmark

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from market_cell.engine import AnalysisEngine
 from market_cell.models import AnalysisRequest
+from market_cell.performance import run_performance_benchmark
 from market_cell.registry import default_registry
 from market_cell.replay import ReplayRunner
 from market_cell.reports import FileSystemReportStore
@@ -32,6 +33,28 @@ def create_parser() -> argparse.ArgumentParser:
     replay.add_argument("--report-dir", type=Path, default=Path("reports"), help="Report storage directory.")
     replay.add_argument("--stored-only", action="store_true", help="Only print the stored report without rerunning.")
     replay.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
+
+    benchmark = subparsers.add_parser(
+        "benchmark",
+        help="Run a versioned fixed-input performance baseline.",
+    )
+    benchmark.add_argument(
+        "baseline",
+        nargs="?",
+        type=Path,
+        default=Path("benchmarks/default_analysis.json"),
+        help="Path to the performance baseline JSON.",
+    )
+    benchmark.add_argument(
+        "--output",
+        type=Path,
+        help="Optional path for the benchmark result JSON.",
+    )
+    benchmark.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print JSON output.",
+    )
 
     return parser
 
@@ -83,6 +106,25 @@ def main(argv: list[str] | None = None) -> int:
 
         indent = 2 if args.pretty else None
         print(json.dumps(output, ensure_ascii=False, indent=indent))
+        return 0
+
+    if args.command == "benchmark":
+        try:
+            result = run_performance_benchmark(args.baseline)
+        except Exception as exc:
+            print(f"性能基准失败：{exc}", file=sys.stderr)
+            return 1
+
+        indent = 2 if args.pretty else None
+        output = json.dumps(result.to_dict(), ensure_ascii=False, indent=indent)
+        if args.output is not None:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(output + "\n", encoding="utf-8")
+        print(output)
+        if result.correctness_failures:
+            return 2
+        if result.performance_failures:
+            return 3
         return 0
 
     parser.print_help()

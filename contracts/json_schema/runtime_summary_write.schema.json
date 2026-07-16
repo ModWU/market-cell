@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/runtime_summary_write.schema.json",
+  "title": "MarketCell RuntimeSummaryWrite",
+  "type": "object",
+  "required": [
+    "store",
+    "status",
+    "attempted_trace_count",
+    "stored_trace_count",
+    "duplicate_trace_count",
+    "recorded_at",
+    "error",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "store": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": ["disabled", "succeeded", "failed"]
+    },
+    "attempted_trace_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "stored_trace_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "duplicate_trace_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "recorded_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "error": {
+      "type": ["string", "null"]
+    },
+    "schema_version": {
+      "const": "runtime_summary_write.v1"
+    }
+  }
+}

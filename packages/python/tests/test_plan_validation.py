@@ -242,7 +242,12 @@ class _FixedPlanEngine(AnalysisEngine):
         super().__init__(**kwargs)
         self.plan = plan
 
-    def _execution_plan(self, request, input_references):
+    def _execution_plan(
+        self,
+        request,
+        input_references,
+        runtime_summary_snapshot,
+    ):
         return self.plan
 
 

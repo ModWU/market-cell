@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from math import inf
 from typing import Any, Literal, Protocol
 
-from market_cell.execution.models import CellRuntimeSummary, CellServiceBinding
+from market_cell.execution.models import CellServiceBinding
+from market_cell.execution.runtime_store import RuntimeSummarySnapshot
 from market_cell.models import CellManifest
 
 
@@ -82,7 +83,7 @@ class CellPlacementPolicy(Protocol):
         self,
         manifest: CellManifest,
         candidates: list[CellServiceBinding],
-        runtime_summaries: list[CellRuntimeSummary] | None = None,
+        runtime_summary_snapshot: RuntimeSummarySnapshot | None = None,
     ) -> CellPlacementDecision:
         ...
 
@@ -109,7 +110,7 @@ class RuntimeAwarePlacementPolicy:
         self,
         manifest: CellManifest,
         candidates: list[CellServiceBinding],
-        runtime_summaries: list[CellRuntimeSummary] | None = None,
+        runtime_summary_snapshot: RuntimeSummarySnapshot | None = None,
     ) -> CellPlacementDecision:
         candidates = [
             candidate
@@ -123,7 +124,7 @@ class RuntimeAwarePlacementPolicy:
             )
 
         evaluations = [
-            self._evaluate(candidate, runtime_summaries or [])
+            self._evaluate(candidate, runtime_summary_snapshot)
             for candidate in candidates
         ]
         non_unhealthy = [
@@ -156,27 +157,27 @@ class RuntimeAwarePlacementPolicy:
     def _evaluate(
         self,
         candidate: CellServiceBinding,
-        runtime_summaries: list[CellRuntimeSummary],
+        runtime_summary_snapshot: RuntimeSummarySnapshot | None,
     ) -> PlacementCandidateEvaluation:
-        summaries = [
-            summary
-            for summary in runtime_summaries
-            if summary.cell_id == candidate.cell_id
-            and summary.formula_version == candidate.formula_version
-            and summary.implementation_id == candidate.implementation_id
-            and summary.service_id == candidate.service_id
-            and summary.runtime == candidate.runtime
-        ]
-        trace_count = sum(summary.trace_count for summary in summaries)
-        failed_count = sum(summary.failed_count for summary in summaries)
-        failure_rate = (
-            round(failed_count / trace_count, 6) if trace_count else None
+        history = next(
+            (
+                entry
+                for entry in (
+                    runtime_summary_snapshot.entries
+                    if runtime_summary_snapshot is not None
+                    else []
+                )
+                if entry.cell_id == candidate.cell_id
+                and entry.formula_version == candidate.formula_version
+                and entry.implementation_id == candidate.implementation_id
+                and entry.service_id == candidate.service_id
+                and entry.runtime == candidate.runtime
+            ),
+            None,
         )
-        p95_duration_ms = (
-            max(summary.p95_duration_ms for summary in summaries)
-            if summaries
-            else None
-        )
+        trace_count = history.trace_count if history is not None else 0
+        failure_rate = history.failure_rate if history is not None else None
+        p95_duration_ms = history.p95_duration_ms if history is not None else None
 
         if trace_count == 0:
             history_status: PlacementHistoryStatus = "no_history"

@@ -1,4 +1,4 @@
-# MarketCell 稳定性设计 v0.5
+# MarketCell 稳定性设计 v0.6
 
 ## 1. 目标
 
@@ -194,8 +194,6 @@ make test
 
 当前仍需补齐：
 
-1. Runtime Summary Store。
-2. Performance baseline。
-3. 远程 Executor 的幂等、超时、重试、背压和取消语义。
+1. 远程 Executor 的幂等、超时、重试、背压和取消语义。
 
 顺序以 `roadmap.md` 为准。

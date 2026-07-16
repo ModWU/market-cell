@@ -28,6 +28,10 @@ Directory policy:
 - `json_schema/plan_execution.schema.json`: coordinator, node execution order, completed nodes, and failed-node audit for one validated plan run.
 - `json_schema/cell_runtime_trace.schema.json`: per-Cell execution trace records for latency, errors, retry count, and service attribution.
 - `json_schema/cell_runtime_summary.schema.json`: per-run aggregated runtime profile grouped by Cell, formula version, implementation, service, and runtime.
+- `json_schema/runtime_summary_snapshot.schema.json`: explicit cross-run time-window snapshot with sample counts, tail latency, failure/retry rates, and latest status.
+- `json_schema/runtime_summary_write.schema.json`: idempotent runtime-history persistence result for one AnalysisRun.
+- `json_schema/performance_baseline.schema.json`: versioned fixed-input benchmark, expected result identity, reference measurement, and regression thresholds.
+- `json_schema/performance_benchmark_result.schema.json`: total and per-node duration distributions with separate correctness and performance failures.
 - `protobuf/market_data.proto`: realtime event contract for Rust hot-path producers and later services.
 - `parquet/candle_schema.md`: batch candle storage contract for professional historical data and replay.
 - `test_vectors/input_identity_v1.json`: shared canonical JSON, content hash, payload size, snapshot identity, and reference identity vector for every language runtime.

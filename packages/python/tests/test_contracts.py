@@ -1,4 +1,5 @@
 from dataclasses import replace
+from datetime import timedelta
 import json
 import unittest
 from pathlib import Path
@@ -9,6 +10,8 @@ from market_cell.engine import AnalysisEngine
 from market_cell.execution import (
     ExecutionPlanValidationError,
     PlanValidationCode,
+    RuntimeSummarySnapshot,
+    RuntimeSummaryWriteRecord,
     build_local_capability_catalog,
     build_local_execution_plan,
     validate_execution_plan,
@@ -22,6 +25,13 @@ from market_cell.graph import (
 from market_cell.features import build_feature_snapshot
 from market_cell.inputs import InputResolutionRecord, InputSnapshot
 from market_cell.models import AnalysisRequest, Candle
+from market_cell.performance import (
+    DurationDistribution,
+    NodePerformance,
+    PerformanceBenchmarkResult,
+    PerformanceThresholds,
+    ReferenceMeasurement,
+)
 from market_cell.registry import default_registry
 from market_cell.reports import FileSystemReportStore
 
@@ -322,6 +332,92 @@ class ContractTests(unittest.TestCase):
             with self.subTest(field_name=field_name):
                 self.assertIn(field_name, summary)
         self.assertEqual(summary["schema_version"], "cell_runtime_summary.v1")
+
+    def test_runtime_summary_snapshot_contains_contract_required_fields(self):
+        snapshot = RuntimeSummarySnapshot.empty(window=timedelta(days=30))
+
+        _assert_contract_fields(
+            self,
+            "runtime_summary_snapshot.schema.json",
+            snapshot.to_dict(),
+            "runtime_summary_snapshot.v1",
+        )
+
+    def test_runtime_summary_write_contains_contract_required_fields(self):
+        write = RuntimeSummaryWriteRecord.disabled(7)
+
+        _assert_contract_fields(
+            self,
+            "runtime_summary_write.schema.json",
+            write.to_dict(),
+            "runtime_summary_write.v1",
+        )
+
+    def test_performance_baseline_contains_contract_required_fields(self):
+        baseline = json.loads(
+            (ROOT / "benchmarks" / "default_analysis.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        _assert_contract_fields(
+            self,
+            "performance_baseline.schema.json",
+            baseline,
+            "performance_baseline.v1",
+        )
+
+    def test_performance_result_contains_contract_required_fields(self):
+        durations = DurationDistribution(
+            sample_count=5,
+            average_ms=1,
+            min_ms=1,
+            p50_ms=1,
+            p95_ms=1,
+            p99_ms=1,
+            max_ms=1,
+        )
+        result = PerformanceBenchmarkResult(
+            benchmark_id="contract-test",
+            baseline_schema_version="performance_baseline.v1",
+            input_hash="a" * 64,
+            warmup_runs=1,
+            measured_runs=5,
+            expected_node_count=1,
+            thresholds=PerformanceThresholds(
+                total_p95_ms=100,
+                node_p95_ms=10,
+                rationale="contract test",
+            ),
+            reference_measurement=ReferenceMeasurement(
+                environment="contract test",
+                measured_at="2026-07-16T00:00:00+00:00",
+                total_p95_ms=1,
+                slowest_node_p95_ms=0.1,
+            ),
+            total_durations=durations,
+            nodes=[
+                NodePerformance(
+                    node_id="cell:root.decision",
+                    cell_id="root.decision",
+                    durations=durations,
+                )
+            ],
+            slowest_node_id="cell:root.decision",
+            actual_decision={"direction": "neutral"},
+            actual_formula_versions={"root.decision": "v1"},
+            correctness_failures=[],
+            performance_failures=[],
+            environment={"python": "3.11"},
+            created_at="2026-07-16T00:00:00+00:00",
+        )
+
+        _assert_contract_fields(
+            self,
+            "performance_benchmark_result.schema.json",
+            result.to_dict(),
+            "performance_benchmark_result.v1",
+        )
 
     def test_plan_execution_contains_contract_required_fields(self):
         schema = json.loads(

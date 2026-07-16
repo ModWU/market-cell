@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/performance_baseline.schema.json",
+  "title": "MarketCell PerformanceBaseline",
+  "type": "object",
+  "required": [
+    "benchmark_id",
+    "input_file",
+    "input_hash",
+    "warmup_runs",
+    "measured_runs",
+    "expected_node_count",
+    "thresholds",
+    "expected_decision",
+    "expected_formula_versions",
+    "reference_measurement",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "benchmark_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "warmup_runs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "measured_runs": {
+      "type": "integer",
+      "minimum": 5
+    },
+    "expected_node_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "thresholds": {
+      "$ref": "#/$defs/thresholds"
+    },
+    "expected_decision": {
+      "$ref": "#/$defs/expected_decision"
+    },
+    "expected_formula_versions": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "reference_measurement": {
+      "$ref": "#/$defs/reference_measurement"
+    },
+    "schema_version": {
+      "const": "performance_baseline.v1"
+    }
+  },
+  "$defs": {
+    "thresholds": {
+      "type": "object",
+      "required": ["total_p95_ms", "node_p95_ms", "rationale"],
+      "additionalProperties": false,
+      "properties": {
+        "total_p95_ms": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "node_p95_ms": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "expected_decision": {
+      "type": "object",
+      "required": [
+        "cell_id",
+        "direction",
+        "score",
+        "risk_level",
+        "action_posture",
+        "child_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cell_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "enum": ["bullish", "bearish", "neutral", "conflict"]
+        },
+        "score": {
+          "type": "number"
+        },
+        "risk_level": {
+          "type": ["string", "null"]
+        },
+        "action_posture": {
+          "type": ["string", "null"]
+        },
+        "child_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "reference_measurement": {
+      "type": "object",
+      "required": [
+        "environment",
+        "measured_at",
+        "total_p95_ms",
+        "slowest_node_p95_ms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "environment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "measured_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "total_p95_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "slowest_node_p95_ms": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

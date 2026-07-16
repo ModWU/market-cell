@@ -3,8 +3,9 @@ import unittest
 
 from market_cell.execution import (
     CapabilityCatalogError,
-    CellRuntimeSummary,
     PlacementUnavailableError,
+    RuntimeSummaryEntry,
+    RuntimeSummarySnapshot,
     RuntimeAwarePlacementPolicy,
     ServiceCapabilityCatalog,
     build_execution_plan,
@@ -72,26 +73,26 @@ class ExecutionPlacementTests(unittest.TestCase):
         decision = RuntimeAwarePlacementPolicy().select(
             registry.manifests()[0],
             candidates,
-            [
-                _summary(binding, trace_count=20, failed_count=0, p95_duration_ms=20),
-                _summary(replica, trace_count=20, failed_count=0, p95_duration_ms=5),
-            ],
+            _snapshot(
+                _history(binding, trace_count=20, failed_count=0, p95_duration_ms=20),
+                _history(replica, trace_count=20, failed_count=0, p95_duration_ms=5),
+            ),
         )
         self.assertEqual(decision.selected_binding.service_id, "python-backup")
 
     def test_planner_uses_runtime_latency_between_equally_prioritized_services(self):
         registry = default_registry()
         catalog, local_trend, rust_trend = _catalog_with_rust_trend(registry)
-        summaries = [
-            _summary(local_trend, trace_count=20, failed_count=0, p95_duration_ms=30),
-            _summary(rust_trend, trace_count=20, failed_count=0, p95_duration_ms=5),
-        ]
+        snapshot = _snapshot(
+            _history(local_trend, trace_count=20, failed_count=0, p95_duration_ms=30),
+            _history(rust_trend, trace_count=20, failed_count=0, p95_duration_ms=5),
+        )
 
         plan = build_execution_plan(
             registry,
             _request(),
             catalog,
-            runtime_summaries=summaries,
+            runtime_summary_snapshot=snapshot,
         )
 
         trend_node = next(node for node in plan.nodes if node.cell_id == "technical.trend")
@@ -117,16 +118,16 @@ class ExecutionPlacementTests(unittest.TestCase):
             registry,
             rust_priority=10,
         )
-        summaries = [
-            _summary(local_trend, trace_count=20, failed_count=0, p95_duration_ms=30),
-            _summary(rust_trend, trace_count=20, failed_count=10, p95_duration_ms=5),
-        ]
+        snapshot = _snapshot(
+            _history(local_trend, trace_count=20, failed_count=0, p95_duration_ms=30),
+            _history(rust_trend, trace_count=20, failed_count=10, p95_duration_ms=5),
+        )
 
         plan = build_execution_plan(
             registry,
             _request(),
             catalog,
-            runtime_summaries=summaries,
+            runtime_summary_snapshot=snapshot,
         )
 
         decision = next(
@@ -144,6 +145,36 @@ class ExecutionPlacementTests(unittest.TestCase):
 
         with self.assertRaises(PlacementUnavailableError):
             RuntimeAwarePlacementPolicy().select(manifest, [incompatible])
+
+    def test_new_formula_version_does_not_inherit_old_runtime_history(self):
+        registry = default_registry()
+        manifest = registry.manifests()[0]
+        binding = build_local_capability_catalog(registry).bindings[0]
+        old_snapshot = _snapshot(
+            _history(
+                binding,
+                trace_count=20,
+                failed_count=10,
+                p95_duration_ms=100,
+            )
+        )
+        new_manifest = replace(manifest, formula_version="new-formula.v2")
+        new_binding = replace(
+            binding,
+            implementation_id=f"python-local:{binding.cell_id}:new-formula.v2",
+            formula_version="new-formula.v2",
+        )
+
+        decision = RuntimeAwarePlacementPolicy().select(
+            new_manifest,
+            [new_binding],
+            old_snapshot,
+        )
+
+        self.assertEqual(
+            decision.candidate_evaluations[0].history_status,
+            "no_history",
+        )
 
 
 def _catalog_with_rust_trend(registry, rust_priority: int = 100):
@@ -173,30 +204,50 @@ def _catalog_with_rust_trend(registry, rust_priority: int = 100):
     )
 
 
-def _summary(
+def _history(
     binding,
     *,
     trace_count: int,
     failed_count: int,
     p95_duration_ms: float,
-) -> CellRuntimeSummary:
+) -> RuntimeSummaryEntry:
     succeeded_count = trace_count - failed_count
-    return CellRuntimeSummary(
+    return RuntimeSummaryEntry(
         cell_id=binding.cell_id,
         formula_version=binding.formula_version,
         implementation_id=binding.implementation_id,
         service_id=binding.service_id,
         runtime=binding.runtime,
         trace_count=trace_count,
+        run_count=trace_count,
         succeeded_count=succeeded_count,
         failed_count=failed_count,
         skipped_count=0,
+        retried_trace_count=0,
+        failure_rate=failed_count / trace_count,
+        retry_rate=0,
         average_duration_ms=p95_duration_ms,
         max_duration_ms=p95_duration_ms,
         min_duration_ms=p95_duration_ms,
+        p50_duration_ms=p95_duration_ms,
         p95_duration_ms=p95_duration_ms,
+        p99_duration_ms=p95_duration_ms,
         error_count=failed_count,
         retry_count=0,
+        latest_status="failed" if failed_count else "succeeded",
+        latest_finished_at="2026-07-16T00:00:00+00:00",
+    )
+
+
+def _snapshot(*entries: RuntimeSummaryEntry) -> RuntimeSummarySnapshot:
+    return RuntimeSummarySnapshot(
+        snapshot_id="runtime-history-test",
+        store="test-runtime-summary-store",
+        window_started_at="2026-06-16T00:00:00+00:00",
+        window_ended_at="2026-07-16T00:00:00+00:00",
+        generated_at="2026-07-16T00:00:00+00:00",
+        trace_count=sum(entry.trace_count for entry in entries),
+        entries=list(entries),
     )
 
 

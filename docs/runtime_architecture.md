@@ -1,4 +1,4 @@
-# MarketCell 运行时架构 v0.5
+# MarketCell 运行时架构 v0.6
 
 ## 1. 目标
 
@@ -149,18 +149,19 @@ Plan validation  -> contracts/json_schema/execution_plan_validation.schema.json
 Plan execution   -> contracts/json_schema/plan_execution.schema.json
 Cell trace       -> contracts/json_schema/cell_runtime_trace.schema.json
 Cell summary     -> contracts/json_schema/cell_runtime_summary.schema.json
+Runtime snapshot -> contracts/json_schema/runtime_summary_snapshot.schema.json
+Runtime write    -> contracts/json_schema/runtime_summary_write.schema.json
+Perf baseline    -> contracts/json_schema/performance_baseline.schema.json
+Perf result      -> contracts/json_schema/performance_benchmark_result.schema.json
 ```
 
 跨语言模块只能围绕这些契约协作。Python dataclass 和 Rust struct 都是各自语言里的实现，不是跨语言的唯一真相。
 
 ## 7. 当前推进顺序
 
-冷热路径、共享契约、Rust 行情原语、Python 回放、数据源审计、CellGraphDefinition、Organ、ExecutionPlan、Input Resolver、placement、plan-driven coordinator、executor 和运行遥测已经建立参考实现。
+冷热路径、共享契约、Rust 行情原语、Python 回放、数据源审计、CellGraphDefinition、Organ、ExecutionPlan、Input Resolver、placement、plan-driven coordinator、executor、运行遥测、Runtime Summary Store 和固定性能基线已经建立参考实现。
 
-当前运行时地基仍需补齐：
-
-- 跨运行 Runtime Summary Store。
-- 性能基线。
+当前运行时地基仍需补齐远程 Executor 的超时、重试、背压、取消和幂等语义。
 
 具体顺序只以 `roadmap.md` 为准。
 

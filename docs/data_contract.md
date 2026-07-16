@@ -1,4 +1,4 @@
-# MarketCell 数据契约 v0.4
+# MarketCell 数据契约 v0.6
 
 ## 1. 契约目标
 
@@ -216,6 +216,8 @@ metadata.input_resolution_records
 metadata.plan_execution
 metadata.cell_runtime_traces
 metadata.cell_runtime_summaries
+metadata.runtime_summary_snapshot
+metadata.runtime_summary_write
 ```
 
 规则：
@@ -499,6 +501,28 @@ FeatureSnapshot 使用 `feature_snapshot.v1`，并包含独立的 `feature_versi
 
 它不替代 `CellRuntimeTrace`：trace 是逐次证据，summary 是稳定聚合口径。未来多服务集群中，Rust worker、Python worker 或外部服务只要上报同一类 trace，就可以生成一致的 summary。
 
+### 14.1 RuntimeSummarySnapshot
+
+跨运行 placement 不直接拼接多个单次 summary，而是读取明确时间边界的 `runtime_summary_snapshot.v1`：
+
+```text
+snapshot_id
+store
+window_started_at / window_ended_at
+trace_count
+entries[]
+  cell_id / formula_version
+  implementation_id / service_id / runtime
+  trace_count / run_count
+  p50_duration_ms / p95_duration_ms / p99_duration_ms
+  failure_rate / retry_rate
+  latest_status / latest_finished_at
+```
+
+Store 保存逐次 trace，以便按任意窗口重新计算分位数；Snapshot 才是 Planner 和 placement 的只读输入。窗口外历史自动过期，formula_version 或 implementation_id 变化后不会继承旧实现的健康状态。
+
+每次写入使用 `runtime_summary_write.v1` 审计 attempted、stored 和 duplicate trace 数量。成功和失败运行都会尝试写入；历史存储写失败只进入运行审计，不覆盖原始分析结果或 Cell 异常。
+
 ## 15. ServiceCapabilityCatalog
 
 服务能力目录描述当前有哪些 Cell 实现可供 planner 选择：
@@ -684,6 +708,22 @@ execution_order
 completed_node_ids
 failed_node_id
 error
+```
+
+Performance contracts v1 固定：
+
+```text
+performance_baseline.v1
+benchmark_id / input_hash
+warmup_runs / measured_runs / expected_node_count
+expected_decision / expected_formula_versions
+total_p95_ms / node_p95_ms / threshold rationale
+
+performance_benchmark_result.v1
+total duration P50 / P95 / P99
+per-node duration P50 / P95 / P99
+correctness_failures / performance_failures
+environment / passed
 ```
 
 跨语言 schema 保存在：

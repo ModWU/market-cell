@@ -1,5 +1,6 @@
 from copy import deepcopy
 from dataclasses import replace
+from datetime import timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -15,6 +16,9 @@ from market_cell.execution import (
     NodeExecutionCompletion,
     PlanDrivenLocalCoordinator,
     PlanExecutionOutcome,
+    RuntimeSummarySnapshot,
+    RuntimeSummaryStore,
+    RuntimeSummaryWriteRecord,
     build_local_execution_plan,
     summarize_runtime_traces,
     validate_execution_plan,
@@ -52,6 +56,8 @@ class AnalysisEngine:
         input_resolver: InputSnapshotStore | None = None,
         input_source: str = "analysis_request",
         input_data_version: str = "analysis_request.v1",
+        runtime_summary_store: RuntimeSummaryStore | None = None,
+        runtime_summary_window: timedelta = timedelta(days=30),
     ) -> None:
         if not include_execution_plan:
             raise ValueError(
@@ -67,6 +73,10 @@ class AnalysisEngine:
         self.input_resolver = input_resolver
         self.input_source = input_source
         self.input_data_version = input_data_version
+        if runtime_summary_window.total_seconds() <= 0:
+            raise ValueError("runtime_summary_window must be positive")
+        self.runtime_summary_store = runtime_summary_store
+        self.runtime_summary_window = runtime_summary_window
 
     def run(
         self,
@@ -113,9 +123,16 @@ class AnalysisEngine:
 
         execution_plan: CellExecutionPlan | None = None
         execution_outcome: PlanExecutionOutcome | None = None
+        runtime_summary_write: RuntimeSummaryWriteRecord | None = None
         try:
+            runtime_summary_snapshot = self._runtime_summary_snapshot()
+            run = run.with_metadata(runtime_summary_snapshot.to_run_metadata())
             input_reference = input_resolver.register(input_snapshot)
-            execution_plan = self._execution_plan(request, [input_reference])
+            execution_plan = self._execution_plan(
+                request,
+                [input_reference],
+                runtime_summary_snapshot,
+            )
             run = run.with_metadata(execution_plan.to_run_metadata())
             validated_plan = validate_execution_plan(execution_plan)
             execution_outcome = self.coordinator.execute(
@@ -135,6 +152,8 @@ class AnalysisEngine:
                 execution_outcome.input_resolution_records
             )
             run = run.with_metadata(execution_outcome.to_run_metadata())
+            runtime_summary_write = self._persist_runtime_traces(runtime_traces)
+            run = run.with_metadata(runtime_summary_write.to_run_metadata())
             decision = execution_outcome.unwrap()
             completed_run = run.with_metadata(
                 _execution_metadata(runtime_traces, input_resolution_records)
@@ -167,6 +186,9 @@ class AnalysisEngine:
                 if "cell_graph_definition" not in run.metadata:
                     run = run.with_metadata(exc.graph.to_run_metadata())
                 run = run.with_metadata({"cell_graph_validation": exc.to_dict()})
+            if runtime_summary_write is None:
+                runtime_summary_write = self._persist_runtime_traces(runtime_traces)
+                run = run.with_metadata(runtime_summary_write.to_run_metadata())
             failed_run = run.with_metadata(
                 _execution_metadata(runtime_traces, input_resolution_records)
             ).fail(str(exc))
@@ -191,6 +213,7 @@ class AnalysisEngine:
         self,
         request: AnalysisRequest,
         input_references: list[InputReference],
+        runtime_summary_snapshot: RuntimeSummarySnapshot,
     ) -> CellExecutionPlan:
         service_id = (
             self.executor.service_id
@@ -203,7 +226,32 @@ class AnalysisEngine:
             service_id,
             graph_definition=self.graph_definition,
             input_references=input_references,
+            runtime_summary_snapshot=runtime_summary_snapshot,
         )
+
+    def _runtime_summary_snapshot(self) -> RuntimeSummarySnapshot:
+        if self.runtime_summary_store is None:
+            return RuntimeSummarySnapshot.empty(
+                window=self.runtime_summary_window,
+            )
+        return self.runtime_summary_store.snapshot(
+            window=self.runtime_summary_window,
+        )
+
+    def _persist_runtime_traces(
+        self,
+        runtime_traces: list[CellRuntimeTrace],
+    ) -> RuntimeSummaryWriteRecord:
+        if self.runtime_summary_store is None:
+            return RuntimeSummaryWriteRecord.disabled(len(runtime_traces))
+        try:
+            return self.runtime_summary_store.save_traces(runtime_traces)
+        except Exception as exc:
+            return RuntimeSummaryWriteRecord.failed(
+                store=self.runtime_summary_store.name,
+                trace_count=len(runtime_traces),
+                error=exc,
+            )
 
     def _graph_manifests(self) -> list[CellManifest]:
         graph_cell_ids = {node.cell_id for node in self.graph_definition.nodes}

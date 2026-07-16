@@ -1,4 +1,4 @@
-# MarketCell 实施路线图 v0.4
+# MarketCell 实施路线图 v0.6
 
 ## 1. 文档职责
 
@@ -45,6 +45,8 @@
 - InputSnapshot / InputReference / InputResolutionRecord 跨语言契约
 - LocalInputResolver 完整性校验、幂等注册和运行内单次解析缓存
 - FeatureSnapshot 独立 schema、公式版本和 source input hash
+- Runtime Summary Store、显式时间窗口快照和跨运行 placement 历史
+- 固定输入 Performance Baseline、独立 benchmark 入口和 CI 回归阈值
 - Graph Validator：组合依赖、Organ、环、可达性和 Registry 兼容性
 - ExecutionPlan Validator：运行依赖、环、可达性、root、binding 和 input reference 一致性
 - plan / trace / CellResult 一致性校验
@@ -108,7 +110,7 @@
 - target / horizon 与计划不一致的引用在任何 Cell 启动前被拒绝
 - 成功和失败 AnalysisRun 保存输入来源、版本、哈希、大小与解析状态
 
-### P0.5 Runtime Summary Store（下一步）
+### P0.5 Runtime Summary Store（已完成）
 
 目标：让 placement 使用跨运行历史，而不是单次摘要。
 
@@ -118,7 +120,7 @@
 - placement 读取明确窗口快照
 - 历史过期和实现版本切换规则
 
-### P0.6 Performance Baseline
+### P0.6 Performance Baseline（已完成）
 
 目标：CI 同时守住正确性和性能回归。
 
@@ -137,9 +139,9 @@
 - 至少一个多级 aggregator 图可以稳定运行和回放。（已完成）
 - ExecutionPlan 不携带 K 线 payload，Input Resolver 可校验并审计输入。（已完成）
 - 关闭或更换 executor 时，trace 仍能准确表达实际位置。
-- placement 能消费跨运行历史窗口。
+- placement 能消费跨运行历史窗口。（已完成）
 - 失败、超时、重试和降级拥有明确审计结构。
-- 固定样例具备性能基线。
+- 固定样例具备性能基线。（已完成）
 
 ## 5. 后续阶段
 
