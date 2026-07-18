@@ -1,4 +1,4 @@
-# MarketCell 多语言架构文档 v0.6
+# MarketCell 多语言架构文档 v0.8
 
 ## 1. 为什么提前设计多语言边界
 
@@ -54,6 +54,7 @@ contracts/
 │   ├── cell_placement_decision.schema.json
 │   ├── execution_plan_validation.schema.json
 │   ├── plan_execution.schema.json
+│   ├── execution_control_record.schema.json
 │   ├── cell_runtime_trace.schema.json
 │   ├── cell_runtime_summary.schema.json
 │   ├── runtime_summary_snapshot.schema.json
@@ -65,7 +66,8 @@ contracts/
 ├── parquet/
 │   └── candle_schema.md
 └── test_vectors/
-    └── input_identity_v1.json
+    ├── input_identity_v1.json
+    └── execution_identity_v1.json
 ```
 
 所有语言模块都必须围绕 `contracts/` 对齐输入输出。
@@ -80,6 +82,7 @@ contracts/
 - Cell Graph 和 Organ 走 JSON Schema，所有语言共享同一组合关系，但各 runtime 可以选择不同 implementation 和 service binding。
 - 服务能力目录和 Cell 放置决策走 JSON Schema，使 Python planner、Rust worker 和未来控制面共享同一能力描述与选择审计。
 - Plan execution 走 JSON Schema，使本地 coordinator 和未来集群 scheduler 使用同一节点顺序、完成状态和失败身份审计。
+- Execution control 走 JSON Schema；所有 runtime 使用同一幂等键、attempt identity、失败分类、retry 和 fallback 审计。
 - Cell 运行 trace 走 JSON Schema，后续远程 worker 必须按同一格式上报服务、耗时、错误和重试信息。
 - Cell 运行 summary 走 JSON Schema，后续调度器、容量规划和性能回归测试必须基于同一类聚合口径，并保留 implementation 维度避免多实现性能混淆。
 - 报告必须带 `schema_version`，避免历史报告无法解释。

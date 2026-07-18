@@ -54,7 +54,7 @@
       }
     },
     "schema_version": {
-      "const": "cell_execution_plan.v3"
+      "const": "cell_execution_plan.v5"
     },
     "created_at": {
       "type": "string",
@@ -68,6 +68,15 @@
   "$defs": {
     "execution_role": {
       "enum": ["leaf", "aggregator", "root"]
+    },
+    "input_kind": {
+      "enum": [
+        "analysis_request",
+        "candle_batch",
+        "funding_open_interest_snapshot",
+        "feature_snapshot",
+        "order_book_snapshot"
+      ]
     },
     "resource_hints": {
       "type": "object",
@@ -107,8 +116,10 @@
         "formula_version",
         "execution_role",
         "binding_id",
+        "fallback_binding_ids",
         "dependencies",
         "input_reference_ids",
+        "required_input_kinds",
         "input_keys",
         "output_keys",
         "resource_hints",
@@ -135,6 +146,14 @@
           "type": "string",
           "minLength": 1
         },
+        "fallback_binding_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "dependencies": {
           "type": "array",
           "items": {
@@ -148,6 +167,19 @@
           "items": {
             "type": "string",
             "minLength": 1
+          }
+        },
+        "required_input_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "contains": {
+            "const": "analysis_request"
+          },
+          "minContains": 1,
+          "maxContains": 1,
+          "items": {
+            "$ref": "#/$defs/input_kind"
           }
         },
         "input_keys": {

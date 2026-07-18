@@ -1,4 +1,4 @@
-# MarketCell Feature Layer 设计 v0.2
+# MarketCell Feature Layer 设计 v0.3
 
 ## 1. 目标
 
@@ -57,10 +57,16 @@ feature_snapshot.v1
 这些特征被以下 Cell 复用：
 
 - `TrendCell`
+- `SupportResistanceCell`
+- `BreakoutCell`
 - `VolumeCell`
 - `VolatilityCell`
 - `MarketRegimeCell`
 - `ManipulationRiskCell`
+
+`VolumePriceAnomalyCell` 的中位数、MAD、robust z-score 和状态分类当前属于其公式私有特征，不进入共享 `FeatureSnapshot v1`。等第二个 Cell 需要复用这些稳健统计时，再以新 Feature 版本提升到共享层，避免为了单一消费者提前扩张公共 schema。
+
+`FundingOpenInterestCell` 的 8 小时 funding 标准化、base-equivalent OI exposure、cadence coverage 和稳健变化基线同样属于衍生品输入公式私有特征。它们依赖 `funding_open_interest_snapshot.v1`，不能混入只来源于 K 线的 `FeatureSnapshot v1`；未来出现第二个衍生品 Cell 时，应建立独立 DerivativesFeatureSnapshot，而不是扩大 K 线特征契约。
 
 ## 4. 架构边界
 

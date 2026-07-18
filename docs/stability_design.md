@@ -1,4 +1,4 @@
-# MarketCell 稳定性设计 v0.6
+# MarketCell 稳定性设计 v1.0
 
 ## 1. 目标
 
@@ -104,19 +104,33 @@ MarketCell 长期保持方向和风险分离：
 
 ```text
 plan.node.node_id                = trace.node_id
-plan.node.binding_id             = binding.binding_id
+trace binding                    ∈ node.binding_id + node.fallback_binding_ids
 binding.implementation_id        = trace.implementation_id
 binding.service_id               = trace.service_id
 binding.runtime                  = trace.runtime
 plan.node.input_reference_ids    ⊆ plan.input_references.reference_id
+plan.node.required_input_kinds   = referenced input kinds（顺序和基数一致）
 reference.content_hash           = resolved_snapshot.content_hash
 reference.payload_size_bytes     = resolved_snapshot.payload_size_bytes
 ```
 
+上述服务身份等式适用于已经成功派发给 executor 的节点。若在 routing 或 dispatch 边界失败，trace 的实际 implementation、service 和 runtime 必须保持为空，并在 metadata 中保留 planned binding，不能伪造为已经在计划服务执行。
+
 稳定要求：
 
 - LocalCellExecutor 不得执行远程 binding。
+- ExecutorRouter 先匹配精确 service，再匹配 runtime，且不得隐式 fallback。
 - trace 中的服务信息来自实际 executor，不来自计划复制。
+- Router 必须校验 delegate trace 的 run_id、trace_id、plan_id、node 和 binding 身份。
+- FailureControlledExecutor 只能使用 ExecutionPlan v5 已列出的 fallback binding。
+- 同一节点所有 retry / fallback attempt 必须共享 idempotency_key，并使用唯一 attempt_id。
+- Coordinator 必须校验 control record 的 run/plan/node、binding 顺序、attempt identity 和 trace span。
+- 只有 dispatch 和 timeout 默认重试；routing、dispatch、timeout、backpressure 才允许进入 fallback。
+- 普通 execution failure、contract failure 和 canceled 默认立即终止。
+- stateful binding 未声明 `idempotent_execution` 时，dispatch / timeout 后不得 retry 或 fallback。
+- timeout 结果必须被拒收；同步本地实现不得声称已强制终止仍在运行的 Python 代码。
+- backpressure 和预取消必须在 Cell 启动前生效。
+- canceled trace 必须保留审计，但不能进入 placement 健康窗口。
 - ExecutionPlan 是强制边界，不允许无计划的第二执行路径。
 - 失败、超时、重试和降级必须区分。
 - 未来远程执行需要 run_id、plan_id、trace_id 和 parent_span_id 传播。
@@ -128,6 +142,8 @@ reference.payload_size_bytes     = resolved_snapshot.payload_size_bytes
 - 聚合结果必须严格按 node.dependencies 顺序输入。
 - root 结果只能按 root_node_id 读取。
 - ExecutionPlan 不能携带 InputSnapshot payload。
+- 每个节点只能获得 required_input_kinds 声明的输入，且 analysis_request 始终恰好一份。
+- CellInputBundle 的 node、scope、引用身份和快照身份必须在公式启动前一致。
 - 同一 run 内每个 reference_id 最多进行一次实际解析。
 - 同一 run 内已解析 AnalysisRequest 最多物化一次，不能按 Cell 数重复反序列化大输入。
 - 默认内存 InputSnapshotStore 必须是 run-scoped，避免长生命周期 Engine 无界持有历史 payload。
@@ -147,6 +163,7 @@ reference.payload_size_bytes     = resolved_snapshot.payload_size_bytes
 - execution plan 和 placement decisions
 - plan execution order、completed nodes 和 failed node
 - runtime traces 和 summaries
+- execution control records、attempts、retry 和 fallback
 - 成功或失败状态
 
 稳定要求：
@@ -154,7 +171,7 @@ reference.payload_size_bytes     = resolved_snapshot.payload_size_bytes
 - 成功和失败 run 都可持久化。
 - 失败持久化错误不能覆盖原始 Cell 异常。
 - Runtime summary 聚合维度必须包含实现和服务。
-- 回放优先使用快照和版本，不依赖临时日志。
+- 回放优先使用快照和版本，不依赖临时日志；`replay_comparison.v1` 同时递归比较完整决策树、漂移路径和 canonical hash，不能只比较根节点摘要。
 - metadata 已命名领域不能随意换结构。
 
 ## 7. 性能稳定
@@ -175,11 +192,14 @@ reference.payload_size_bytes     = resolved_snapshot.payload_size_bytes
 - `test_contracts.py`：跨语言 JSON 契约。
 - `test_cell_graph.py`：默认图、多级聚合、共享 Organ、重复 Cell 和 Graph 失败审计。
 - `test_executor.py`：binding、执行、trace、结果和失败 run。
+- `test_executor_router.py`：service/runtime 路由优先级、混合 binding、路由/dispatch 失败审计和 delegate trace 漂移。
+- `test_execution_control.py`：幂等 identity、retry 顺序、timeout 拒收、backpressure、cancellation、fallback 和控制记录持久化。
 - `test_coordinator.py`：拓扑顺序、多级聚合、重复 Cell、失败局部状态和节点事件。
 - `test_inputs.py`：确定性输入身份、Resolver 完整性、幂等注册、运行内缓存、失败审计和计划无 payload。
 - `test_execution_plan.py`：计划、trace 和 summary 持久化。
 - `test_execution_placement.py`：多服务候选和运行时感知 placement。
 - `test_replay.py`：输入快照重跑、公式漂移和 Graph 身份 / 版本 / 内容漂移。
+- `test_funding_open_interest.py`：衍生品输入单位、线性合约边界、价格调整后的 OI 暴露、cadence/quality 失败关闭、显式 Graph 和多输入稳定回放。
 - `test_run_store.py`：报告与运行记录。
 - `test_decision_policy.py`：方向和风险分层。
 - `test_registry_validation.py`：输入边界。
@@ -194,6 +214,6 @@ make test
 
 当前仍需补齐：
 
-1. 远程 Executor 的幂等、超时、重试、背压和取消语义。
+1. 生产远程 Executor 的 transport adapter、跨进程幂等结果存储和强制 deadline/cancellation。
 
 顺序以 `roadmap.md` 为准。

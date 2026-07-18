@@ -4,27 +4,30 @@ from pathlib import Path
 
 from market_cell.engine import AnalysisEngine
 from market_cell.execution import CellRuntimeTrace, build_local_execution_plan, summarize_runtime_traces
+from market_cell.graph import default_analysis_graph
 from market_cell.models import AnalysisRequest, Candle
 from market_cell.registry import default_registry
 from market_cell.reports import FileSystemReportStore
 
 
 class CellExecutionPlanTests(unittest.TestCase):
-    def test_local_execution_plan_maps_all_registry_cells_to_single_service(self):
+    def test_local_execution_plan_maps_all_graph_cells_to_single_service(self):
         request = _request()
         registry = default_registry()
 
         plan = build_local_execution_plan(registry, request)
 
-        self.assertEqual(plan.schema_version, "cell_execution_plan.v3")
+        self.assertEqual(plan.schema_version, "cell_execution_plan.v5")
         self.assertEqual(
             plan.metadata["planner"],
-            "cell_graph_service_placement_v0.5",
+            "cell_graph_service_placement_v0.7",
         )
         self.assertEqual(plan.target, "BTC/USD")
         self.assertEqual(plan.horizon, "1h")
-        self.assertEqual(len(plan.nodes), len(registry.all_cells()))
-        self.assertEqual(len(plan.service_bindings), len(registry.all_cells()))
+        graph_cell_count = len({node.cell_id for node in default_analysis_graph().nodes})
+        self.assertEqual(len(plan.nodes), len(default_analysis_graph().nodes))
+        self.assertEqual(len(plan.service_bindings), graph_cell_count)
+        self.assertGreater(len(registry.all_cells()), len(plan.nodes))
         self.assertEqual({binding.service_id for binding in plan.service_bindings}, {"python-local"})
         self.assertEqual({binding.runtime for binding in plan.service_bindings}, {"python_local"})
         self.assertEqual({binding.task_queue for binding in plan.service_bindings}, {"cell.python-local"})
@@ -38,10 +41,38 @@ class CellExecutionPlanTests(unittest.TestCase):
         plan = build_local_execution_plan(default_registry(), _request())
         root = next(node for node in plan.nodes if node.node_id == plan.root_node_id)
         leaves = [node for node in plan.nodes if node.execution_role == "leaf"]
+        breakout = next(
+            node for node in plan.nodes if node.cell_id == "technical.breakout"
+        )
+        manipulation = next(
+            node for node in plan.nodes if node.cell_id == "risk.manipulation"
+        )
 
         self.assertEqual(root.execution_role, "root")
-        self.assertEqual(set(root.dependencies), {node.node_id for node in leaves})
         self.assertTrue(all(not node.dependencies for node in leaves))
+        self.assertEqual(breakout.execution_role, "aggregator")
+        self.assertEqual(
+            breakout.dependencies,
+            ["cell:technical.support_resistance"],
+        )
+        self.assertEqual(manipulation.execution_role, "aggregator")
+        self.assertEqual(
+            manipulation.dependencies,
+            ["cell:risk.volume_price_anomaly"],
+        )
+        self.assertEqual(
+            set(root.dependencies),
+            {
+                node.node_id
+                for node in leaves
+                if node.cell_id
+                not in {
+                    "technical.support_resistance",
+                    "risk.volume_price_anomaly",
+                }
+            }
+            | {breakout.node_id, manipulation.node_id},
+        )
 
     def test_execution_plan_can_be_persisted_in_run_metadata(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -50,7 +81,7 @@ class CellExecutionPlanTests(unittest.TestCase):
             run = store.load_run(report.run_id or "")
 
         plan = run["metadata"]["cell_execution_plan"]
-        self.assertEqual(plan["schema_version"], "cell_execution_plan.v3")
+        self.assertEqual(plan["schema_version"], "cell_execution_plan.v5")
         self.assertEqual(plan["root_node_id"], "cell:root.decision")
 
     def test_cell_runtime_traces_are_persisted_in_run_metadata(self):
@@ -62,7 +93,7 @@ class CellExecutionPlanTests(unittest.TestCase):
         traces = run["metadata"]["cell_runtime_traces"]
         plan = run["metadata"]["cell_execution_plan"]
 
-        self.assertEqual(len(traces), len(default_registry().all_cells()))
+        self.assertEqual(len(traces), len(plan["nodes"]))
         self.assertEqual({trace["trace_id"] for trace in traces}, {traces[0]["trace_id"]})
         self.assertEqual({trace["status"] for trace in traces}, {"succeeded"})
         self.assertEqual({trace["schema_version"] for trace in traces}, {"cell_runtime_trace.v1"})
@@ -111,7 +142,7 @@ class CellExecutionPlanTests(unittest.TestCase):
 
         summaries = run["metadata"]["cell_runtime_summaries"]
 
-        self.assertEqual(len(summaries), len(default_registry().all_cells()))
+        self.assertEqual(len(summaries), len(default_analysis_graph().nodes))
         self.assertEqual({summary["schema_version"] for summary in summaries}, {"cell_runtime_summary.v1"})
         self.assertEqual({summary["service_id"] for summary in summaries}, {"python-local"})
         self.assertTrue(all(summary["implementation_id"].startswith("python-local:") for summary in summaries))

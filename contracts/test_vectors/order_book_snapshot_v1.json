@@ -1,0 +1,55 @@
+{
+  "schema_version": "order_book_snapshot_test_vector.v1",
+  "input_kind": "order_book_snapshot",
+  "target": "BTC/USD",
+  "horizon": "1h",
+  "data_version": "order_book_snapshot.v1",
+  "source": "binance.websocket",
+  "payload": {
+    "target": "BTC/USD",
+    "bids": [
+      {
+        "price": 100.0,
+        "quantity": 1.25,
+        "order_count": 3
+      },
+      {
+        "price": 99.5,
+        "quantity": 2.5,
+        "order_count": 5
+      }
+    ],
+    "asks": [
+      {
+        "price": 100.5,
+        "quantity": 1.1,
+        "order_count": 2
+      },
+      {
+        "price": 101.0,
+        "quantity": 3.0,
+        "order_count": 6
+      }
+    ],
+    "provenance": {
+      "source_provider": "binance.websocket",
+      "venue": "binance",
+      "market_type": "spot",
+      "event_time_ms": 1721234567000,
+      "fetched_at_ms": 1721234567025,
+      "sequence": 42,
+      "source_event_id": "depth-42",
+      "quality_flags": [],
+      "schema_version": "data_provenance.v1",
+      "metadata": {}
+    },
+    "schema_version": "order_book_snapshot.v1",
+    "metadata": {
+      "depth": 2
+    }
+  },
+  "expected_content_hash": "1e9b2da17b10a5bee0895c5383e909b1a1b4e5989b079272824ba9d4ad9a136b",
+  "expected_payload_size_bytes": 557,
+  "expected_snapshot_id": "snapshot:order_book_snapshot:abeaf8d8505b79ad0660db1b",
+  "expected_reference_id": "input:order_book_snapshot:abeaf8d8505b79ad0660db1b"
+}

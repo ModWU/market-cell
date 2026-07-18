@@ -55,10 +55,11 @@ BTC/USD 1h 周期偏多，但操纵风险和波动风险正在上升。
 
 主要证据：
 1. TrendCell 显示短周期趋势上行
-2. VolumeCell 显示异常放量
-3. MarketRegimeCell 识别为 trend_up
-4. ManipulationRiskCell 检测到长影线和量价异常
-5. NewsEventCell 显示机构消息偏正面
+2. SupportResistanceCell 显示价格在重复支撑区获得承接
+3. VolumeCell 显示量能支持方向，VolumePriceAnomalyCell 单独标记异常量价关系
+4. MarketRegimeCell 识别为 trend_up
+5. ManipulationRiskCell 检测到长影线和量价异常
+6. NewsEventCell 显示机构消息偏正面
 
 结论：
 短线可以观察顺势机会，但不适合重仓追涨。
@@ -279,11 +280,15 @@ JSON 文件
 当前已经包含的 Cell：
 
 - TrendCell
+- SupportResistanceCell
+- BreakoutCell
 - VolumeCell
+- VolumePriceAnomalyCell
 - VolatilityCell
 - MarketRegimeCell
 - NewsEventCell
 - ManipulationRiskCell
+- LiquidityCell（显式订单簿图）
 - DecisionCell
 
 当前不做：

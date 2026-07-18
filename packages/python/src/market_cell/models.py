@@ -75,6 +75,9 @@ class CellManifest:
     inputs: list[str]
     outputs: list[str]
     formula_version: str
+    required_input_kinds: list[str] = field(
+        default_factory=lambda: ["analysis_request"]
+    )
     risk_dimensions: list[str] = field(default_factory=list)
     status: str = "experimental"
 

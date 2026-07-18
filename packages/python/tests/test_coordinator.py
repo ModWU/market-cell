@@ -195,7 +195,7 @@ class PlanDrivenLocalCoordinatorTests(unittest.TestCase):
         )
         self.assertEqual(
             {event.payload["execution_role"] for event in completed},
-            {"leaf", "root"},
+            {"leaf", "aggregator", "root"},
         )
 
 

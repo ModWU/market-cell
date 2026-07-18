@@ -22,11 +22,7 @@ pub fn average_absolute_return(prices: &[f64]) -> f64 {
         }
     }
 
-    if count == 0.0 {
-        0.0
-    } else {
-        total / count
-    }
+    if count == 0.0 { 0.0 } else { total / count }
 }
 
 #[cfg(test)]

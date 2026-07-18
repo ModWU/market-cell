@@ -1,4 +1,4 @@
-# MarketCell 数据契约 v0.6
+# MarketCell 数据契约 v1.0
 
 ## 1. 契约目标
 
@@ -163,7 +163,12 @@ avoid_chasing
   "engine_version": "0.1.0",
   "formula_versions": {
     "technical.trend": "trend_close_change_v0.1",
-    "root.decision": "decision_weighted_score_v0.2"
+    "technical.support_resistance": "support_resistance_cluster_rejection_v0.1",
+    "technical.breakout": "breakout_structure_volume_confirmation_v0.1",
+    "technical.volume": "volume_direction_confirmation_v0.2",
+    "risk.volume_price_anomaly": "robust_volume_price_anomaly_v0.2",
+    "risk.manipulation": "shape_anomaly_manipulation_risk_v0.3",
+    "root.decision": "decision_weighted_score_v0.5"
   },
   "created_at": "2026-07-09T00:00:01+00:00",
   "disclaimer": "MarketCell 只提供结构化分析和风险提示，不构成投资建议。"
@@ -174,7 +179,7 @@ avoid_chasing
 
 ## 8. AnalysisRun
 
-一次可复盘的分析运行。
+一次可复盘的分析运行。以下 JSON 为字段结构节选，完整约束以 schema 为准。
 
 ```json
 {
@@ -184,10 +189,17 @@ avoid_chasing
   "engine_version": "0.1.0",
   "input_hash": "...",
   "input_snapshot": {},
+  "input_snapshots": [
+    {
+      "input_kind": "analysis_request",
+      "payload": {},
+      "schema_version": "input_snapshot.v1"
+    }
+  ],
   "formula_versions": {},
   "cell_manifests": [],
   "status": "succeeded",
-  "schema_version": "analysis_run.v1",
+  "schema_version": "analysis_run.v2",
   "started_at": "2026-07-09T00:00:00+00:00",
   "finished_at": "2026-07-09T00:00:01+00:00",
   "report_id": "abc123",
@@ -212,6 +224,7 @@ metadata.cell_graph_validation
 metadata.cell_execution_plan
 metadata.execution_plan_validation
 metadata.input_snapshot_audit
+metadata.input_snapshot_audits
 metadata.input_resolution_records
 metadata.plan_execution
 metadata.cell_runtime_traces
@@ -222,11 +235,17 @@ metadata.runtime_summary_write
 
 规则：
 
-- `AnalysisRun` 必须带 `schema_version = analysis_run.v1`。
+- `AnalysisRun` 必须带 `schema_version = analysis_run.v2`。
+- `input_snapshots[]` 保存本次运行使用的全部完整 InputSnapshot；每种 input kind 在 v1 组合协议中恰好一份。
+- `input_snapshot` 和 `input_hash` 继续指向主 analysis request，作为旧消费者兼容字段。
 - 数据源选择和实际路由计划只进入 `AnalysisRun.metadata`，不进入 `AnalysisReport.decision`。
 - metadata 可以继续扩展，但已经命名的领域必须保持结构稳定。
-- 回放时应该优先读取 `input_snapshot`、`formula_versions` 和 `metadata`，不要依赖临时日志。
+- v2 回放优先重建 `input_snapshots[]`；读取旧 analysis_run.v1 时再回退到 `input_snapshot`，不要依赖临时日志。
 - 回放必须单独比较 Graph identity、version 和内容哈希与结果漂移，不能用“结果碰巧相同”掩盖拓扑升级或未升版本的内容变更。
+
+### 8.1 ReplayComparison
+
+回放输出遵守 `replay_comparison.v1`。除根节点方向、分数和风险姿态外，还必须递归比较完整 `CellResult` 树，包括 children、evidence 和 metadata。数值使用显式 tolerance，结构和文本要求精确一致；最多保存 100 条确定性漂移路径，同时保存原始与回放决策树的 canonical JSON hash。任何嵌套漂移都会令 `result_stable = false`，即使根节点摘要碰巧不变。
 
 ## 9. CellGraphDefinition
 
@@ -235,7 +254,7 @@ metadata.runtime_summary_write
 ```json
 {
   "graph_id": "market.default_analysis",
-  "graph_version": "0.1.0",
+  "graph_version": "0.4.0",
   "name": "Default Market Analysis",
   "root_node_id": "cell:root.decision",
   "nodes": [
@@ -250,7 +269,7 @@ metadata.runtime_summary_write
   "organs": [
     {
       "organ_id": "organ.technical_structure",
-      "organ_version": "0.1.0",
+      "organ_version": "0.3.0",
       "name": "Technical Structure",
       "node_ids": ["cell:technical.trend"],
       "output_node_ids": ["cell:technical.trend"],
@@ -274,7 +293,7 @@ Graph 只描述 node、dependency、root 和 Organ，不保存 formula implement
 {
   "error_type": "cell_graph_validation",
   "graph_id": "market.default_analysis",
-  "graph_version": "0.1.0",
+  "graph_version": "0.4.0",
   "issues": [
     {
       "code": "missing_cell_implementation",
@@ -293,7 +312,7 @@ Graph 只描述 node、dependency、root 和 Organ，不保存 formula implement
 
 ## 11. CellExecutionPlan
 
-一次分析的 Cell 执行计划。
+一次分析的 Cell 执行计划。以下 JSON 为字段结构节选，完整节点和 binding 约束以 schema 为准。
 
 ```json
 {
@@ -319,7 +338,7 @@ Graph 只描述 node、dependency、root 和 Organ，不保存 formula implement
     }
   ],
   "service_bindings": [],
-  "schema_version": "cell_execution_plan.v3",
+  "schema_version": "cell_execution_plan.v5",
   "created_at": "2026-07-10T00:00:00+00:00",
   "metadata": {}
 }
@@ -327,12 +346,15 @@ Graph 只描述 node、dependency、root 和 Organ，不保存 formula implement
 
 `CellExecutionPlan` 关注“本次分析如何执行 Cell DAG”，不是 Cell 输出本身。
 
-v3 执行身份和输入规则：
+v5 执行身份、输入和 fallback 规则：
 
 - `node_id` 在一次计划内唯一。
 - `cell_id` 表示能力，同一个 Cell 可以出现在多个节点。
 - 每个节点通过 `binding_id` 显式引用服务 binding。
+- 每个节点通过 `fallback_binding_ids` 保存 placement 已批准的备用 binding 顺序；Router 不能使用计划外服务。
 - 每个节点通过 `input_reference_ids` 显式引用计划顶层的轻量输入。
+- 每个节点通过 `required_input_kinds` 固化 Manifest 输入声明；声明必须包含 analysis_request 且不得重复。
+- 节点引用的实际 input kinds 必须与 required_input_kinds 一一对应，不能缺失、越权或同类型多份。
 - `input_references` 只保存定位和完整性字段，禁止保存 payload、candles 或 FeatureSnapshot 内容。
 - 每个 InputReference 的 target 和 horizon 必须与计划 scope 一致，否则 planning 阶段拒绝执行。
 - implementation_id、service_id 和 runtime 只在 binding 中维护，节点不复制第二份。
@@ -376,17 +398,81 @@ endpoint = null
 - canonical JSON 使用 UTF-8、键排序、紧凑分隔符，并拒绝 NaN 和 Infinity。
 - snapshot identity 同时包含 input_kind、target、horizon、content_hash、data_version 和 source。
 - created_at 和 metadata 不参与 identity，因此重复注册同一逻辑快照必须幂等。
-- `input_snapshot_audit.v1` 与 InputSnapshot 字段一致，但移除 payload，写入 `AnalysisRun.metadata.input_snapshot_audit`。
+- `input_snapshot_audit.v1` 与 InputSnapshot 字段一致，但移除 payload；主请求写入 `AnalysisRun.metadata.input_snapshot_audit`，全部输入审计写入复数 `input_snapshot_audits`。
 - `input_reference.v1` 从 Snapshot 派生，保存 URI 和完整性字段，不保存 payload。
 - InputReference metadata 默认不继承 Snapshot metadata；adapter 只能显式加入小型定位信息，不能借 metadata 复制行情载荷。
 
-`AnalysisRun.input_snapshot` 仍是完整 AnalysisRequest 回放载荷。它与 metadata 中的 payload-free audit 各有职责，不能用临时 URI 取代回放证据。
+`AnalysisRun.input_snapshots[]` 是多输入完整回放载荷；兼容字段 `input_snapshot` 仍保存 AnalysisRequest payload。它们与 metadata 中的 payload-free audit 各有职责，不能用临时 URI 取代回放证据。
 
 ### 11.2 FeatureSnapshot
 
 FeatureSnapshot 使用 `feature_snapshot.v1`，并包含独立的 `feature_version` 和 `source_input_hash`。它可以注册为 `input_kind = feature_snapshot` 的 InputSnapshot，由多个节点复用；特征 schema 升级不要求修改 CellResult 或 AnalysisReport。
 
-### 11.3 InputResolutionRecord
+### 11.3 OrderBookSnapshot / DataProvenance
+
+盘口不进入 `AnalysisRequest.context`，而是使用 `order_book_snapshot.v1`：
+
+```text
+target
+bids[]: price / quantity / order_count
+asks[]: price / quantity / order_count
+provenance: data_provenance.v1
+schema_version
+metadata
+```
+
+bid 必须按价格降序、ask 必须升序；同侧价格不能重复，价格和数量必须是有限正数，best bid 必须小于 best ask。`DataProvenance` 保存 source_provider、venue、market_type、event_time_ms、fetched_at_ms、sequence、source_event_id 和 quality_flags。
+
+`OrderBookSnapshot.from_input_snapshot` 会复核 payload 与 InputSnapshot envelope 的 target、data_version 和 source。固定跨语言身份向量位于 `contracts/test_vectors/order_book_snapshot_v1.json`。
+
+### 11.4 FundingOpenInterestSnapshot
+
+资金费率、持仓和价格定位数据不进入 `AnalysisRequest.context`，而是使用 `funding_open_interest_snapshot.v1`：
+
+```text
+target
+points[]
+  timestamp_ms
+  funding_rate
+  open_interest_notional
+  mark_price
+funding_interval_hours
+funding_rate_type: settled / predicted
+sample_interval_ms
+notional_currency
+contract_type: linear
+provenance: data_provenance.v1
+schema_version
+metadata
+```
+
+边界规则：
+
+- `funding_rate` 是“每个 funding interval 的小数费率”，不是百分数；当前契约接受 `[-0.05, 0.05]`，用宽边界阻止常见的百分比/小数单位误传。`funding_rate_type` 必须显式为 `settled` 或 `predicted`，一个快照不能混合语义；predicted 表示下一结算期的点时估计，不等于已发生费用。
+- `funding_interval_hours` 显式保存结算周期，Cell 才能把不同 venue 的费率标准化到统一 8 小时口径。
+- `open_interest_notional` 必须是有限正数，`notional_currency` 使用 2–12 位大写字母/数字的 canonical asset code 明确 quote-notional 币种；`contract_type` 在 v1 固定为 `linear`，不接受未说明面值的 contracts 数量或 inverse 合约。
+- 每个点同时保存 mark price，使 OI 变化与价格变化使用同一时间边界，不依赖 AnalysisRequest K 线时间戳猜测对齐。Cell 使用 `open_interest_notional / mark_price` 形成 base-equivalent exposure，再计算持仓变化，防止价格上涨本身机械推高 quote notional 并制造假增仓。
+- points 必须按 `timestamp_ms` 严格升序且唯一，最新点必须等于 provenance event time；provenance market type 必须是 `perpetual_future`。
+- `sample_interval_ms` 是预期采样周期。Cell 对实际相邻间隔计算 cadence coverage，覆盖不足、来源 quality flag 或抓取延迟异常时失败关闭。
+- `FundingOpenInterestSnapshot.from_input_snapshot` 复核 target、data version 和 source；固定身份向量位于 `contracts/test_vectors/funding_open_interest_snapshot_v1.json`。
+
+该契约描述可回放的衍生品定位序列，不把异常资金费率或 OI 直接解释为操纵，也不支持跨 venue 聚合。多 venue 需要未来 slot/cardinality 协议明确语义后再加入。
+
+### 11.5 CellInputBundle
+
+Coordinator 把节点已解析输入组合为 `cell_input_bundle.v1`：
+
+```text
+node_id
+analysis_request
+resolved_inputs[]
+required_input_kinds[]
+schema_version
+```
+
+运行时对象持有完整快照，`to_audit_dict()` 只输出 reference_id、snapshot_id、input_kind、data_version、source 和 content_hash，不复制 payload。Bundle 必须与节点声明顺序完全一致，所有输入 target / horizon 必须等于 analysis request scope。
+
+### 11.6 InputResolutionRecord
 
 每个节点使用输入引用时生成解析审计：
 
@@ -557,15 +643,18 @@ planner 为每个 Cell 选择实现时生成放置决策：
   "selected_binding_id": "binding:rust-hot:rust-hot:technical.trend:trend_close_change_v0.1",
   "selected_implementation_id": "rust-hot:technical.trend:trend_close_change_v0.1",
   "selected_service_id": "rust-hot",
-  "policy": "runtime_aware_priority_v0.1",
+  "fallback_binding_ids": [
+    "binding:python-local:python-local:technical.trend:trend_close_change_v0.1"
+  ],
+  "policy": "runtime_aware_priority_v0.2",
   "candidate_count": 2,
   "reason_codes": ["selected_by_runtime_latency"],
   "candidate_evaluations": [],
-  "schema_version": "cell_placement_decision.v2"
+  "schema_version": "cell_placement_decision.v3"
 }
 ```
 
-放置策略先保证公式兼容；有足够历史样本时避开高失败率实现；其余候选按显式优先级和 P95 延迟确定性排序。决策进入 `CellExecutionPlan.metadata.placement_decisions`，用于解释“为什么本次由这个服务执行”。
+放置策略先保证公式兼容；有足够历史样本时避开高失败率实现；其余候选按显式优先级和 P95 延迟确定性排序。v3 同时保存健康候选的 fallback binding 顺序。决策进入 `CellExecutionPlan.metadata.placement_decisions`，用于解释“为什么本次由这个服务执行，以及失败时允许切换到哪里”。
 
 ## 17. ExecutionPlanValidation
 
@@ -591,7 +680,65 @@ planner 为每个 Cell 选择实现时生成放置决策：
 
 它进入 failed `AnalysisRun.metadata.execution_plan_validation`。不同语言 planner 必须使用相同 issue code，且 planning failure 发生在任何 Cell 执行之前。
 
-## 18. 版本策略
+## 18. ExecutionControlRecord
+
+每个已进入 executor 边界的节点生成一个 `execution_control_record.v1`：
+
+```json
+{
+  "control_id": "control-hash",
+  "idempotency_key": "node-idempotency-hash",
+  "run_id": "run123",
+  "plan_id": "plan123",
+  "node_id": "cell:technical.trend",
+  "primary_binding_id": "binding:rust-hot:trend-v1",
+  "fallback_binding_ids": ["binding:python-local:trend-v1"],
+  "status": "succeeded",
+  "attempts": [
+    {
+      "attempt_id": "attempt-hash",
+      "idempotency_key": "node-idempotency-hash",
+      "attempt_number": 1,
+      "binding_attempt_number": 1,
+      "fallback_index": 0,
+      "binding_id": "binding:rust-hot:trend-v1",
+      "is_retry": false,
+      "status": "succeeded",
+      "failure_kind": null,
+      "retryable": false,
+      "started_at": "2026-07-18T00:00:00+00:00",
+      "finished_at": "2026-07-18T00:00:00.010000+00:00",
+      "duration_ms": 10.0,
+      "trace_span_id": "span123",
+      "actual_implementation_id": "rust-hot:trend-v1",
+      "actual_service_id": "rust-hot",
+      "actual_runtime": "rust_service",
+      "error": null,
+      "metadata": {}
+    }
+  ],
+  "retry_count": 0,
+  "fallback_count": 0,
+  "final_binding_id": "binding:rust-hot:trend-v1",
+  "final_failure_kind": null,
+  "started_at": "2026-07-18T00:00:00+00:00",
+  "finished_at": "2026-07-18T00:00:01+00:00",
+  "schema_version": "execution_control_record.v1",
+  "metadata": {}
+}
+```
+
+规则：
+
+- `idempotency_key` 绑定 run、plan 和 node，所有 retry / fallback attempt 共享该键。
+- `attempt_id` 额外绑定 binding 和全局 attempt number，算法由 `execution_identity_v1.json` 固定。
+- failure kind 只能是 routing、dispatch、execution、timeout、backpressure、canceled 或 contract。
+- 只有明确分类为 retryable 的 attempt 可以消耗 retry budget。
+- fallback 必须来自当前 ExecutionPlan 的 `fallback_binding_ids`。
+- `stateful=true` 的 binding 只有声明 `idempotent_execution` capability，才允许在 dispatch / timeout 后 retry 或 fallback。
+- 本地同步 timeout 表示结果超过 deadline 后被拒收，不表示 Python 代码已经被强制终止。
+
+## 19. 版本策略
 
 当前已经在 `AnalysisReport` 中加入：
 
@@ -608,10 +755,13 @@ schema_version
 engine_version
 input_hash
 input_snapshot
+input_snapshots
 formula_versions
 metadata
 metadata.input_snapshot_audit
+metadata.input_snapshot_audits
 metadata.input_resolution_records
+metadata.execution_control_records
 ```
 
 CellGraphDefinition v1 固定：
@@ -673,17 +823,30 @@ formula_version
 policy
 reason_codes
 candidate_evaluations
+fallback_binding_ids
 ```
 
-ExecutionPlan v3 固定：
+ExecutionPlan v5 固定：
 
 ```text
 binding_id
+fallback_binding_ids
 node_id / cell_id 身份分离
 input_references
 node.input_reference_ids
+node.required_input_kinds
 topological_levels
 execution_plan_validation
+```
+
+ExecutionControlRecord v1 固定：
+
+```text
+idempotency_key / attempt_id
+attempt_number / binding_attempt_number / fallback_index
+failure_kind / retryable / status
+retry_count / fallback_count / final_binding_id
+actual implementation / service / runtime
 ```
 
 Input contracts v1 固定：
@@ -693,6 +856,10 @@ input_snapshot.v1
 input_snapshot_audit.v1
 input_reference.v1
 input_resolution_record.v1
+cell_input_bundle.v1
+data_provenance.v1
+order_book_snapshot.v1
+funding_open_interest_snapshot.v1
 feature_snapshot.v1
 content_hash / data_version / source / payload_size_bytes
 ```

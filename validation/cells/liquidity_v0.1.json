@@ -1,0 +1,417 @@
+{
+  "schema_version": "cell_validation_fixture.v1",
+  "cell_id": "microstructure.liquidity",
+  "formula_version": "order_book_depth_spread_imbalance_v0.1",
+  "cases": [
+    {
+      "case_id": "tight_balanced_book_stays_neutral",
+      "case_type": "boundary",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1000}
+        ]
+      },
+      "order_book": {
+        "target": "TEST/USD",
+        "bids": [
+          {"price": 99.99, "quantity": 1.0, "order_count": 4},
+          {"price": 99.95, "quantity": 1.0, "order_count": 4},
+          {"price": 99.90, "quantity": 1.0, "order_count": 4},
+          {"price": 99.80, "quantity": 1.0, "order_count": 4}
+        ],
+        "asks": [
+          {"price": 100.01, "quantity": 1.0, "order_count": 4},
+          {"price": 100.05, "quantity": 1.0, "order_count": 4},
+          {"price": 100.10, "quantity": 1.0, "order_count": 4},
+          {"price": 100.20, "quantity": 1.0, "order_count": 4}
+        ],
+        "provenance": {
+          "source_provider": "validation.websocket",
+          "venue": "validation",
+          "market_type": "spot",
+          "event_time_ms": 1721234567000,
+          "fetched_at_ms": 1721234567025,
+          "sequence": 100,
+          "source_event_id": "depth-100",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "order_book_snapshot.v1",
+        "metadata": {"depth": 4}
+      },
+      "expected": {
+        "direction": "neutral",
+        "liquidity_state": "balanced"
+      }
+    },
+    {
+      "case_id": "distributed_bid_depth_is_bullish",
+      "case_type": "positive",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1000}
+        ]
+      },
+      "order_book": {
+        "target": "TEST/USD",
+        "bids": [
+          {"price": 99.99, "quantity": 2.0, "order_count": 6},
+          {"price": 99.95, "quantity": 2.0, "order_count": 6},
+          {"price": 99.90, "quantity": 2.0, "order_count": 6},
+          {"price": 99.80, "quantity": 2.0, "order_count": 6}
+        ],
+        "asks": [
+          {"price": 100.01, "quantity": 0.8, "order_count": 3},
+          {"price": 100.05, "quantity": 0.8, "order_count": 3},
+          {"price": 100.10, "quantity": 0.8, "order_count": 3},
+          {"price": 100.20, "quantity": 0.8, "order_count": 3}
+        ],
+        "provenance": {
+          "source_provider": "validation.websocket",
+          "venue": "validation",
+          "market_type": "spot",
+          "event_time_ms": 1721234567000,
+          "fetched_at_ms": 1721234567025,
+          "sequence": 101,
+          "source_event_id": "depth-101",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "order_book_snapshot.v1",
+        "metadata": {"depth": 4}
+      },
+      "expected": {
+        "direction": "bullish",
+        "liquidity_state": "bid_heavy"
+      }
+    },
+    {
+      "case_id": "distributed_ask_depth_is_bearish",
+      "case_type": "positive",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1000}
+        ]
+      },
+      "order_book": {
+        "target": "TEST/USD",
+        "bids": [
+          {"price": 99.99, "quantity": 0.8, "order_count": 3},
+          {"price": 99.95, "quantity": 0.8, "order_count": 3},
+          {"price": 99.90, "quantity": 0.8, "order_count": 3},
+          {"price": 99.80, "quantity": 0.8, "order_count": 3}
+        ],
+        "asks": [
+          {"price": 100.01, "quantity": 2.0, "order_count": 6},
+          {"price": 100.05, "quantity": 2.0, "order_count": 6},
+          {"price": 100.10, "quantity": 2.0, "order_count": 6},
+          {"price": 100.20, "quantity": 2.0, "order_count": 6}
+        ],
+        "provenance": {
+          "source_provider": "validation.websocket",
+          "venue": "validation",
+          "market_type": "spot",
+          "event_time_ms": 1721234567000,
+          "fetched_at_ms": 1721234567025,
+          "sequence": 102,
+          "source_event_id": "depth-102",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "order_book_snapshot.v1",
+        "metadata": {"depth": 4}
+      },
+      "expected": {
+        "direction": "bearish",
+        "liquidity_state": "ask_heavy"
+      }
+    },
+    {
+      "case_id": "wide_spread_blocks_bid_imbalance",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1000}
+        ]
+      },
+      "order_book": {
+        "target": "TEST/USD",
+        "bids": [
+          {"price": 99.80, "quantity": 2.0, "order_count": 6},
+          {"price": 99.70, "quantity": 2.0, "order_count": 6},
+          {"price": 99.60, "quantity": 2.0, "order_count": 6},
+          {"price": 99.50, "quantity": 2.0, "order_count": 6}
+        ],
+        "asks": [
+          {"price": 100.20, "quantity": 0.8, "order_count": 3},
+          {"price": 100.30, "quantity": 0.8, "order_count": 3},
+          {"price": 100.40, "quantity": 0.8, "order_count": 3},
+          {"price": 100.50, "quantity": 0.8, "order_count": 3}
+        ],
+        "provenance": {
+          "source_provider": "validation.websocket",
+          "venue": "validation",
+          "market_type": "spot",
+          "event_time_ms": 1721234567000,
+          "fetched_at_ms": 1721234567025,
+          "sequence": 103,
+          "source_event_id": "depth-103",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "order_book_snapshot.v1",
+        "metadata": {"depth": 4}
+      },
+      "expected": {
+        "direction": "conflict",
+        "liquidity_state": "fragile_wide_spread",
+        "active_guard": "wide_spread"
+      },
+      "false_positive_note": "宽点差下的名义深度失衡可能来自稀薄盘口，不能直接解释为可靠买方优势。"
+    },
+    {
+      "case_id": "dominant_single_bid_wall_is_not_direction",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1000}
+        ]
+      },
+      "order_book": {
+        "target": "TEST/USD",
+        "bids": [
+          {"price": 99.99, "quantity": 8.0, "order_count": 1},
+          {"price": 99.95, "quantity": 0.8, "order_count": 3},
+          {"price": 99.90, "quantity": 0.8, "order_count": 3},
+          {"price": 99.80, "quantity": 0.8, "order_count": 3}
+        ],
+        "asks": [
+          {"price": 100.01, "quantity": 1.0, "order_count": 4},
+          {"price": 100.05, "quantity": 1.0, "order_count": 4},
+          {"price": 100.10, "quantity": 1.0, "order_count": 4},
+          {"price": 100.20, "quantity": 1.0, "order_count": 4}
+        ],
+        "provenance": {
+          "source_provider": "validation.websocket",
+          "venue": "validation",
+          "market_type": "spot",
+          "event_time_ms": 1721234567000,
+          "fetched_at_ms": 1721234567025,
+          "sequence": 104,
+          "source_event_id": "depth-104",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "order_book_snapshot.v1",
+        "metadata": {"depth": 4}
+      },
+      "expected": {
+        "direction": "conflict",
+        "liquidity_state": "concentrated_depth",
+        "active_guard": "concentrated_depth"
+      },
+      "false_positive_note": "单一大额挂单墙可以快速撤销；单快照不能据此推断真实支撑、spoofing 或操纵。"
+    },
+    {
+      "case_id": "insufficient_near_depth_stays_neutral",
+      "case_type": "boundary",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1000}
+        ]
+      },
+      "order_book": {
+        "target": "TEST/USD",
+        "bids": [
+          {"price": 99.99, "quantity": 2.0, "order_count": 5},
+          {"price": 99.90, "quantity": 2.0, "order_count": 5}
+        ],
+        "asks": [
+          {"price": 100.01, "quantity": 0.8, "order_count": 3},
+          {"price": 100.10, "quantity": 0.8, "order_count": 3}
+        ],
+        "provenance": {
+          "source_provider": "validation.websocket",
+          "venue": "validation",
+          "market_type": "spot",
+          "event_time_ms": 1721234567000,
+          "fetched_at_ms": 1721234567025,
+          "sequence": 105,
+          "source_event_id": "depth-105",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "order_book_snapshot.v1",
+        "metadata": {"depth": 2}
+      },
+      "expected": {
+        "direction": "neutral",
+        "liquidity_state": "insufficient_depth",
+        "active_guard": "insufficient_depth"
+      }
+    },
+    {
+      "case_id": "quality_flag_degrades_direction",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1000}
+        ]
+      },
+      "order_book": {
+        "target": "TEST/USD",
+        "bids": [
+          {"price": 99.99, "quantity": 2.0, "order_count": 6},
+          {"price": 99.95, "quantity": 2.0, "order_count": 6},
+          {"price": 99.90, "quantity": 2.0, "order_count": 6},
+          {"price": 99.80, "quantity": 2.0, "order_count": 6}
+        ],
+        "asks": [
+          {"price": 100.01, "quantity": 0.8, "order_count": 3},
+          {"price": 100.05, "quantity": 0.8, "order_count": 3},
+          {"price": 100.10, "quantity": 0.8, "order_count": 3},
+          {"price": 100.20, "quantity": 0.8, "order_count": 3}
+        ],
+        "provenance": {
+          "source_provider": "validation.websocket",
+          "venue": "validation",
+          "market_type": "spot",
+          "event_time_ms": 1721234567000,
+          "fetched_at_ms": 1721234567025,
+          "sequence": 106,
+          "source_event_id": "depth-106",
+          "quality_flags": ["sequence_gap"],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "order_book_snapshot.v1",
+        "metadata": {"depth": 4}
+      },
+      "expected": {
+        "direction": "neutral",
+        "liquidity_state": "degraded_input",
+        "active_guard": "quality_flags"
+      },
+      "false_positive_note": "存在 sequence gap 时盘口可能缺档或混入不同步状态，深度失衡必须降级。"
+    },
+    {
+      "case_id": "far_bid_wall_outside_window_is_ignored",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1000}
+        ]
+      },
+      "order_book": {
+        "target": "TEST/USD",
+        "bids": [
+          {"price": 99.99, "quantity": 1.0, "order_count": 4},
+          {"price": 99.95, "quantity": 1.0, "order_count": 4},
+          {"price": 99.90, "quantity": 1.0, "order_count": 4},
+          {"price": 99.80, "quantity": 1.0, "order_count": 4},
+          {"price": 98.00, "quantity": 50.0, "order_count": 1}
+        ],
+        "asks": [
+          {"price": 100.01, "quantity": 1.0, "order_count": 4},
+          {"price": 100.05, "quantity": 1.0, "order_count": 4},
+          {"price": 100.10, "quantity": 1.0, "order_count": 4},
+          {"price": 100.20, "quantity": 1.0, "order_count": 4}
+        ],
+        "provenance": {
+          "source_provider": "validation.websocket",
+          "venue": "validation",
+          "market_type": "spot",
+          "event_time_ms": 1721234567000,
+          "fetched_at_ms": 1721234567025,
+          "sequence": 107,
+          "source_event_id": "depth-107",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "order_book_snapshot.v1",
+        "metadata": {"depth": 5}
+      },
+      "expected": {
+        "direction": "neutral",
+        "liquidity_state": "balanced",
+        "bid_level_count": 4,
+        "ask_level_count": 4
+      },
+      "false_positive_note": "100bps 窗口之外的远端大墙不代表可立即成交的近端承接，不能让它支配当前盘口方向。"
+    },
+    {
+      "case_id": "delayed_fetch_degrades_direction",
+      "case_type": "boundary",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1000}
+        ]
+      },
+      "order_book": {
+        "target": "TEST/USD",
+        "bids": [
+          {"price": 99.99, "quantity": 2.0, "order_count": 6},
+          {"price": 99.95, "quantity": 2.0, "order_count": 6},
+          {"price": 99.90, "quantity": 2.0, "order_count": 6},
+          {"price": 99.80, "quantity": 2.0, "order_count": 6}
+        ],
+        "asks": [
+          {"price": 100.01, "quantity": 0.8, "order_count": 3},
+          {"price": 100.05, "quantity": 0.8, "order_count": 3},
+          {"price": 100.10, "quantity": 0.8, "order_count": 3},
+          {"price": 100.20, "quantity": 0.8, "order_count": 3}
+        ],
+        "provenance": {
+          "source_provider": "validation.websocket",
+          "venue": "validation",
+          "market_type": "spot",
+          "event_time_ms": 1721234567000,
+          "fetched_at_ms": 1721234568500,
+          "sequence": 108,
+          "source_event_id": "depth-108",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "order_book_snapshot.v1",
+        "metadata": {"depth": 4}
+      },
+      "expected": {
+        "direction": "neutral",
+        "liquidity_state": "degraded_input",
+        "active_guard": "delayed_fetch"
+      }
+    }
+  ],
+  "known_limitations": [
+    "单一订单簿快照只描述一个瞬时状态，不能证明长期流动性或未来价格方向。",
+    "大额挂单可能快速撤销；本公式不会从单快照推断 spoofing、layering 或操纵。",
+    "quote notional 只在同一标的、同一 venue 的双侧近端深度内做相对比较，不用于跨资产绝对流动性排名。",
+    "当前 v1 每次只消费一个 venue 的一份快照，多 venue 聚合需要后续 slot/cardinality 契约。"
+  ]
+}

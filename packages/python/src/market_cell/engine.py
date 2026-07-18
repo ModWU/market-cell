@@ -7,11 +7,15 @@ from uuid import uuid4
 from market_cell import __version__
 from market_cell.events import EventBus
 from market_cell.execution import (
+    CancellationSignal,
     CellExecutionCoordinator,
     CellExecutionPlan,
     CellExecutor,
+    CellPlacementPolicy,
     CellRuntimeTrace,
     ExecutionPlanValidationError,
+    ExecutionControlRecord,
+    FailureControlledExecutor,
     LocalCellExecutor,
     NodeExecutionCompletion,
     PlanDrivenLocalCoordinator,
@@ -19,6 +23,8 @@ from market_cell.execution import (
     RuntimeSummarySnapshot,
     RuntimeSummaryStore,
     RuntimeSummaryWriteRecord,
+    ServiceCapabilityCatalog,
+    build_execution_plan,
     build_local_execution_plan,
     summarize_runtime_traces,
     validate_execution_plan,
@@ -29,6 +35,7 @@ from market_cell.graph import (
     default_analysis_graph,
 )
 from market_cell.inputs import (
+    InputCompositionError,
     InputReference,
     InputResolutionRecord,
     InputSnapshot,
@@ -58,6 +65,8 @@ class AnalysisEngine:
         input_data_version: str = "analysis_request.v1",
         runtime_summary_store: RuntimeSummaryStore | None = None,
         runtime_summary_window: timedelta = timedelta(days=30),
+        capability_catalog: ServiceCapabilityCatalog | None = None,
+        placement_policy: CellPlacementPolicy | None = None,
     ) -> None:
         if not include_execution_plan:
             raise ValueError(
@@ -67,7 +76,12 @@ class AnalysisEngine:
         self.event_bus = event_bus or EventBus()
         self.report_store = report_store
         self.run_metadata = dict(run_metadata or {})
-        self.executor = executor or LocalCellExecutor()
+        base_executor = executor or LocalCellExecutor()
+        self.executor = (
+            base_executor
+            if isinstance(base_executor, FailureControlledExecutor)
+            else FailureControlledExecutor(base_executor)
+        )
         self.coordinator = coordinator or PlanDrivenLocalCoordinator()
         self.graph_definition = graph_definition or default_analysis_graph()
         self.input_resolver = input_resolver
@@ -77,21 +91,29 @@ class AnalysisEngine:
             raise ValueError("runtime_summary_window must be positive")
         self.runtime_summary_store = runtime_summary_store
         self.runtime_summary_window = runtime_summary_window
+        self.capability_catalog = capability_catalog
+        self.placement_policy = placement_policy
 
     def run(
         self,
         request: AnalysisRequest,
         metadata: dict[str, Any] | None = None,
+        *,
+        cancellation_signal: CancellationSignal | None = None,
+        input_snapshots: list[InputSnapshot] | None = None,
     ) -> AnalysisReport:
         validate_request(request)
         trace_id = uuid4().hex
         runtime_traces: list[CellRuntimeTrace] = []
+        execution_control_records: list[ExecutionControlRecord] = []
         input_resolution_records: list[InputResolutionRecord] = []
-        input_snapshot = InputSnapshot.from_analysis_request(
-            request,
+        analysis_inputs = _analysis_input_snapshots(
+            request=request,
+            extra_snapshots=input_snapshots,
             source=self.input_source,
             data_version=self.input_data_version,
         )
+        input_snapshot = analysis_inputs[0]
         input_resolver = (
             self.input_resolver
             if self.input_resolver is not None
@@ -104,9 +126,9 @@ class AnalysisEngine:
                 self.run_metadata,
                 metadata,
                 self.graph_definition.to_run_metadata(),
-                input_snapshot.to_run_metadata(),
+                _input_snapshot_audit_metadata(analysis_inputs),
             ),
-            replay_input=input_snapshot,
+            replay_inputs=analysis_inputs,
         )
         self.event_bus.emit(
             "analysis.started",
@@ -118,6 +140,10 @@ class AnalysisEngine:
                 "graph_version": self.graph_definition.graph_version,
                 "input_snapshot_id": input_snapshot.snapshot_id,
                 "input_hash": input_snapshot.content_hash,
+                "input_snapshot_ids": [
+                    item.snapshot_id for item in analysis_inputs
+                ],
+                "input_kinds": [item.input_kind for item in analysis_inputs],
             },
         )
 
@@ -127,10 +153,12 @@ class AnalysisEngine:
         try:
             runtime_summary_snapshot = self._runtime_summary_snapshot()
             run = run.with_metadata(runtime_summary_snapshot.to_run_metadata())
-            input_reference = input_resolver.register(input_snapshot)
+            input_references = [
+                input_resolver.register(snapshot) for snapshot in analysis_inputs
+            ]
             execution_plan = self._execution_plan(
                 request,
-                [input_reference],
+                input_references,
                 runtime_summary_snapshot,
             )
             run = run.with_metadata(execution_plan.to_run_metadata())
@@ -142,12 +170,16 @@ class AnalysisEngine:
                 input_resolver=input_resolver,
                 run_id=run.run_id,
                 trace_id=trace_id,
+                cancellation_signal=cancellation_signal,
                 on_node_completed=lambda completion: self._emit_node_completion(
                     run.run_id,
                     completion,
                 ),
             )
             runtime_traces.extend(execution_outcome.runtime_traces)
+            execution_control_records.extend(
+                execution_outcome.execution_control_records
+            )
             input_resolution_records.extend(
                 execution_outcome.input_resolution_records
             )
@@ -156,7 +188,11 @@ class AnalysisEngine:
             run = run.with_metadata(runtime_summary_write.to_run_metadata())
             decision = execution_outcome.unwrap()
             completed_run = run.with_metadata(
-                _execution_metadata(runtime_traces, input_resolution_records)
+                _execution_metadata(
+                    runtime_traces,
+                    input_resolution_records,
+                    execution_control_records,
+                )
             ).complete(run.run_id)
             report = AnalysisReport(
                 target=request.target,
@@ -190,7 +226,11 @@ class AnalysisEngine:
                 runtime_summary_write = self._persist_runtime_traces(runtime_traces)
                 run = run.with_metadata(runtime_summary_write.to_run_metadata())
             failed_run = run.with_metadata(
-                _execution_metadata(runtime_traces, input_resolution_records)
+                _execution_metadata(
+                    runtime_traces,
+                    input_resolution_records,
+                    execution_control_records,
+                )
             ).fail(str(exc))
             persistence_error = _save_failed_run(self.report_store, failed_run)
             self.event_bus.emit(
@@ -215,11 +255,17 @@ class AnalysisEngine:
         input_references: list[InputReference],
         runtime_summary_snapshot: RuntimeSummarySnapshot,
     ) -> CellExecutionPlan:
-        service_id = (
-            self.executor.service_id
-            if isinstance(self.executor, LocalCellExecutor)
-            else "python-local"
-        )
+        if self.capability_catalog is not None:
+            return build_execution_plan(
+                self.registry,
+                request,
+                self.capability_catalog,
+                graph_definition=self.graph_definition,
+                input_references=input_references,
+                placement_policy=self.placement_policy,
+                runtime_summary_snapshot=runtime_summary_snapshot,
+            )
+        service_id = getattr(self.executor, "service_id", None) or "python-local"
         return build_local_execution_plan(
             self.registry,
             request,
@@ -276,6 +322,26 @@ class AnalysisEngine:
             "duration_ms": (
                 completion.trace.duration_ms if completion.trace is not None else None
             ),
+            "retry_count": (
+                completion.control_record.retry_count
+                if completion.control_record is not None
+                else 0
+            ),
+            "fallback_count": (
+                completion.control_record.fallback_count
+                if completion.control_record is not None
+                else 0
+            ),
+            "final_binding_id": (
+                completion.control_record.final_binding_id
+                if completion.control_record is not None
+                else completion.binding_id
+            ),
+            "final_failure_kind": (
+                completion.control_record.final_failure_kind
+                if completion.control_record is not None
+                else None
+            ),
         }
         if completion.result is None:
             self.event_bus.emit(
@@ -309,9 +375,65 @@ def _merge_metadata(
     return payload
 
 
+def _analysis_input_snapshots(
+    *,
+    request: AnalysisRequest,
+    extra_snapshots: list[InputSnapshot] | None,
+    source: str,
+    data_version: str,
+) -> list[InputSnapshot]:
+    primary = InputSnapshot.from_analysis_request(
+        request,
+        source=source,
+        data_version=data_version,
+    )
+    extras: list[InputSnapshot] = []
+    for snapshot in extra_snapshots or []:
+        if not isinstance(snapshot, InputSnapshot):
+            raise InputCompositionError(
+                "AnalysisEngine extra inputs must be InputSnapshot instances"
+            )
+        cloned = InputSnapshot.from_dict(snapshot.to_dict())
+        if cloned.input_kind == "analysis_request":
+            raise InputCompositionError(
+                "AnalysisEngine creates the authoritative analysis_request input; "
+                "extra inputs must use another input kind"
+            )
+        if cloned.target != request.target or cloned.horizon != request.horizon:
+            raise InputCompositionError(
+                f"extra input {cloned.snapshot_id} has scope "
+                f"{cloned.target}/{cloned.horizon}, expected "
+                f"{request.target}/{request.horizon}"
+            )
+        extras.append(cloned)
+    input_kinds = [snapshot.input_kind for snapshot in extras]
+    if len(input_kinds) != len(set(input_kinds)):
+        raise InputCompositionError(
+            "AnalysisEngine accepts exactly one extra snapshot per input kind"
+        )
+    return [primary, *sorted(extras, key=lambda item: item.input_kind)]
+
+
+def _input_snapshot_audit_metadata(
+    snapshots: list[InputSnapshot],
+) -> dict[str, Any]:
+    primary = next(
+        snapshot
+        for snapshot in snapshots
+        if snapshot.input_kind == "analysis_request"
+    )
+    return {
+        "input_snapshot_audit": primary.to_audit_dict(),
+        "input_snapshot_audits": [
+            snapshot.to_audit_dict() for snapshot in snapshots
+        ],
+    }
+
+
 def _execution_metadata(
     runtime_traces: list[CellRuntimeTrace],
     input_resolution_records: list[InputResolutionRecord],
+    execution_control_records: list[ExecutionControlRecord],
 ) -> dict[str, Any]:
     return {
         "cell_runtime_traces": [trace.to_dict() for trace in runtime_traces],
@@ -320,6 +442,9 @@ def _execution_metadata(
         ],
         "input_resolution_records": [
             record.to_dict() for record in input_resolution_records
+        ],
+        "execution_control_records": [
+            record.to_dict() for record in execution_control_records
         ],
     }
 

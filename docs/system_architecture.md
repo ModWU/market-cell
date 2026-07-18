@@ -1,4 +1,4 @@
-# MarketCell 系统架构基线 v0.6
+# MarketCell 系统架构基线 v1.0
 
 ## 1. 文档职责
 
@@ -58,10 +58,13 @@ flowchart TD
     Engine --> Coordinator["CellExecutionCoordinator"]
     Coordinator --> Resolver["InputResolver"]
     Resolver --> InputStore
-    Coordinator --> Executor["CellExecutor"]
+    Coordinator --> Control["FailureControlledExecutor"]
+    Control --> Executor["CellExecutor / ExecutorRouter"]
     Executor --> Local["LocalCellExecutor"]
+    Executor -. injected adapter .-> Service["Python / Rust / External Executor"]
     Local --> Cells["Python Cell Implementations"]
     Cells --> Results["CellResult"]
+    Service --> Results
     Results --> Decision["DecisionCell / DecisionPolicy"]
     Decision --> Report["AnalysisReport"]
 
@@ -80,7 +83,7 @@ flowchart TD
     Rust["Rust Market Data / Realtime Core"] -. shared contracts .-> Data
 ```
 
-当前运行仍是同步单进程，但 planner、coordinator、binding、executor 和 trace 已经分层。这个阶段不引入消息队列或服务发现。
+当前运行仍是同步单进程，但 planner、coordinator、binding、failure control、router、executor 和 trace 已经分层。`FailureControlledExecutor` 负责 attempt、deadline、retry、admission、cancellation 和计划内 fallback；这个阶段仍不引入消息队列、服务发现或生产远程协议。
 
 ## 5. 分层和依赖方向
 
@@ -114,6 +117,7 @@ flowchart TD
 - `CellServiceBinding`
 - `CellExecutionPlan`
 - `PlanExecution`
+- `ExecutionControlRecord`
 - `CellRuntimeTrace`
 - `CellRuntimeSummary`
 
@@ -150,31 +154,36 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 
 - `ServiceCapabilityCatalog`：表达一个 Cell 多服务、一个服务多 Cell。
 - `RuntimeAwarePlacementPolicy`：按公式兼容、失败率、优先级和 P95 延迟选择 binding。
-- `CellPlacementDecision`：记录候选和选择原因。
+- `CellPlacementDecision`：记录候选、primary 选择原因和健康 fallback 顺序。
 - `CellExecutor` / `LocalCellExecutor`：把执行从 AnalysisEngine 中拆出。
+- `ExecutorRouter`：精确 `service_id` 优先、`runtime` 兜底地选择 executor，并复核 delegate trace 的运行上下文和实际服务归属。
+- `FailureControlledExecutor`：为每个节点生成稳定幂等键和 attempt identity，执行 deadline、retry、backpressure、cancellation 和计划内 fallback 状态迁移。
 - `CellGraphDefinition`：版本化保存 node、dependency、root 和命名 Organ，不包含服务位置。
 - Graph Validator：检查 root、依赖、环、可达性、Organ 闭包和 Registry 能力兼容性。
-- ExecutionPlan v3：node_id 与 cell_id 分离，节点显式引用 binding_id 和 input_reference_ids。
-- `InputSnapshot`、`InputReference`、`InputResolutionRecord` 和 `FeatureSnapshot` 版本化契约。
+- ExecutionPlan v5：node_id 与 cell_id 分离，节点显式引用 primary/fallback binding_id、required_input_kinds 和 input_reference_ids。
+- `InputSnapshot`、`InputReference`、`InputResolutionRecord`、`CellInputBundle`、`FeatureSnapshot`、`OrderBookSnapshot` 和 `FundingOpenInterestSnapshot` 版本化契约。
 - `LocalInputResolver`：内容寻址、来源/版本身份、payload hash/size 完整性校验和幂等注册。
 - Coordinator 运行内按 reference_id 缓存，同一输入最多实际解析和物化一次，同时保留逐节点解析审计。
+- Planner 只给节点绑定 Manifest 声明的输入类型；Coordinator 在执行前组合并校验类型化 bundle。
 - implementation、service 和 runtime 由 binding 单点定义，node 不保存重复副本。
 - Plan Validator：检查 root、依赖、binding、input reference、环和可达性，并输出稳定拓扑层。
 - Graph 与 Plan Validator 共用确定性拓扑算法。
 - `PlanDrivenLocalCoordinator`：按拓扑层执行，按 node_id 保存结果，并按节点依赖顺序传递 child_results。
 - `plan_execution.v1`：审计执行顺序、完成节点和失败节点。
+- `execution_control_record.v1`：审计每次 attempt、失败分类、retry、fallback 和最终 binding。
 - `RuntimeSummaryStore`：保存跨运行 trace，并生成带明确时间边界的 placement 快照。
 - `performance_baseline.v1`：固定输入、结果身份、总耗时和节点 P95 的 CI 守护。
 - plan、trace、CellResult 一致性校验。
 - 成功和失败 AnalysisRun 的 trace / summary 审计。
+- AnalysisRun v2 保存全部运行输入并支持旧 v1 回放。
 - Registry 的本地 cell_id 唯一解析和重复注册拒绝。
 
 仍未完成：
 
-1. 缺少 Executor Router，当前只有本地 Python executor。
-2. 当前 planner 把 analysis request reference 分配给所有节点；未来 Graph 输入声明稳定后再收窄到节点所需引用。
+1. 生产远程 executor 的传输适配、跨进程幂等结果存储和 transport 级强制 deadline/cancellation。
+2. v1 以 input kind 表达单份输入；多交易所或多窗口的同类型并列输入仍需未来 slot/cardinality 契约。
 
-这些缺口应先于大规模新增业务 Cell 解决。
+这些缺口不阻塞本地 v0.3 Cell 扩展，但必须在生产远程执行或大规模输入分片前解决。
 
 ## 9. 数据和输入边界
 
@@ -184,11 +193,12 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 Input Snapshot   可复盘的逻辑输入
 Input Reference  executor 获取大数据的引用
 Feature Snapshot Cell 消费的稳定特征
+Cell Input Bundle 节点声明范围内的已解析类型化输入
 ```
 
-ExecutionPlan v3 只保存引用、键和版本，不复制大体积行情。Input Resolver 负责把引用解析为本地快照，并校验来源、数据版本、内容哈希和 payload 大小；本地 coordinator 在一次 run 内缓存每个 reference 和已物化 AnalysisRequest。默认内存 store 也是 run-scoped，避免长生命周期 Engine 无界保留历史 payload。
+ExecutionPlan v5 只保存引用、required input kinds、键、primary/fallback binding 和版本，不复制大体积行情。Input Resolver 负责把引用解析为本地快照，并校验来源、数据版本、内容哈希和 payload 大小；本地 coordinator 在一次 run 内缓存每个 reference 和已物化 AnalysisRequest，再组合成 `cell_input_bundle.v1`。默认内存 store 也是 run-scoped，避免长生命周期 Engine 无界保留历史 payload。
 
-`AnalysisRun.input_snapshot` 与 `InputSnapshot` 不是重复职责：前者是当前回放权威载荷，后者定义多服务可寻址和可校验的输入对象。生产级对象存储、Parquet 窗口或 Rust 实时状态只替换 resolver/store adapter，不能改变 ExecutionPlan、Graph 或 CellResult。
+`AnalysisRun.input_snapshots[]` 与 InputReference 不是重复职责：前者保存本次运行的完整回放载荷，后者定义执行时的轻量可寻址对象；兼容字段 `input_snapshot` 仍指向主 AnalysisRequest。生产级对象存储、Parquet 窗口或 Rust 实时状态只替换 resolver/store adapter，不能改变 ExecutionPlan、Graph、CellInputBundle 或 CellResult。
 
 ## 10. Python 与 Rust 边界
 
@@ -204,7 +214,7 @@ Rust 负责：
 
 - WebSocket 和实时数据状态
 - K 线动态聚合
-- 订单簿和高频特征热点
+- 订单簿、衍生品定位序列和高频特征热点
 - CPU 密集、低延迟 worker
 
 语言选择由工作负载决定，不按模块名称机械划分。详细规则见 `runtime_architecture.md`。
@@ -259,8 +269,8 @@ Runtime State   服务健康、容量和短期状态
 - Registry 与 Graph 拓扑解耦，多级 aggregator 和共享 Organ 可稳定执行。（已完成）
 - 本地执行顺序由 ExecutionPlan 驱动，而不是 Registry 固定循环。（已完成）
 - Input Reference / Resolver 边界确定。（已完成）
-- Runtime summary 可以跨运行聚合并进入 placement。
+- Runtime summary 可以跨运行聚合并进入 placement。（已完成）
 - 有最小性能基线和回归阈值。（已完成）
-- 失败运行、重试和降级都有可复盘记录。
+- 失败运行、重试和降级都有可复盘记录。（已完成）
 
 具体实施顺序只维护在 `roadmap.md`。

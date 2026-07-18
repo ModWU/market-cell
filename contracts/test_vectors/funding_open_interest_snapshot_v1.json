@@ -1,0 +1,50 @@
+{
+  "schema_version": "funding_open_interest_snapshot_test_vector.v1",
+  "input_kind": "funding_open_interest_snapshot",
+  "target": "BTC/USD",
+  "horizon": "1h",
+  "data_version": "funding_open_interest_snapshot.v1",
+  "source": "binance.derivatives",
+  "payload": {
+    "target": "BTC/USD",
+    "points": [
+      {
+        "timestamp_ms": 1721230967000,
+        "funding_rate": 0.0001,
+        "open_interest_notional": 1250000000.0,
+        "mark_price": 64000.0
+      },
+      {
+        "timestamp_ms": 1721234567000,
+        "funding_rate": 0.00012,
+        "open_interest_notional": 1265000000.0,
+        "mark_price": 64250.0
+      }
+    ],
+    "funding_interval_hours": 8.0,
+    "funding_rate_type": "predicted",
+    "sample_interval_ms": 3600000,
+    "notional_currency": "USD",
+    "contract_type": "linear",
+    "provenance": {
+      "source_provider": "binance.derivatives",
+      "venue": "binance",
+      "market_type": "perpetual_future",
+      "event_time_ms": 1721234567000,
+      "fetched_at_ms": 1721234567050,
+      "sequence": 84,
+      "source_event_id": "funding-oi-84",
+      "quality_flags": [],
+      "schema_version": "data_provenance.v1",
+      "metadata": {}
+    },
+    "schema_version": "funding_open_interest_snapshot.v1",
+    "metadata": {
+      "contract_symbol": "BTCUSD_PERP"
+    }
+  },
+  "expected_content_hash": "49a05b3dab0e05ae8b620b68f3e1485ffeca86483fc3f82cdf5ecd21fa696b43",
+  "expected_payload_size_bytes": 780,
+  "expected_snapshot_id": "snapshot:funding_open_interest_snapshot:595f8b28283c308b61d44d7b",
+  "expected_reference_id": "input:funding_open_interest_snapshot:595f8b28283c308b61d44d7b"
+}

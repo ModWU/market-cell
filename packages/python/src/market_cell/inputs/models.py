@@ -16,8 +16,15 @@ INPUT_SNAPSHOT_SCHEMA_VERSION = "input_snapshot.v1"
 INPUT_SNAPSHOT_AUDIT_SCHEMA_VERSION = "input_snapshot_audit.v1"
 INPUT_REFERENCE_SCHEMA_VERSION = "input_reference.v1"
 INPUT_RESOLUTION_RECORD_SCHEMA_VERSION = "input_resolution_record.v1"
+CELL_INPUT_BUNDLE_SCHEMA_VERSION = "cell_input_bundle.v1"
 
-InputKind = Literal["analysis_request", "candle_batch", "feature_snapshot"]
+InputKind = Literal[
+    "analysis_request",
+    "candle_batch",
+    "funding_open_interest_snapshot",
+    "feature_snapshot",
+    "order_book_snapshot",
+]
 InputResolutionStatus = Literal["succeeded", "failed"]
 
 
@@ -190,6 +197,23 @@ class InputSnapshot:
             metadata=deepcopy(metadata or {}),
         )
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "InputSnapshot":
+        return cls(
+            snapshot_id=str(data["snapshot_id"]),
+            input_kind=data["input_kind"],
+            target=str(data["target"]),
+            horizon=str(data["horizon"]),
+            content_hash=str(data["content_hash"]),
+            data_version=str(data["data_version"]),
+            source=str(data["source"]),
+            payload=deepcopy(data["payload"]),
+            payload_size_bytes=int(data["payload_size_bytes"]),
+            created_at=str(data["created_at"]),
+            schema_version=str(data.get("schema_version", "")),
+            metadata=deepcopy(data.get("metadata", {})),
+        )
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -239,6 +263,123 @@ class InputSnapshot:
                 f"input snapshot {self.snapshot_id} is {self.input_kind}, not analysis_request"
             )
         return AnalysisRequest.from_dict(self.payload)
+
+
+@dataclass(frozen=True)
+class ResolvedCellInput:
+    reference: InputReference
+    snapshot: InputSnapshot
+
+    def __post_init__(self) -> None:
+        mismatches = [
+            field_name
+            for field_name in (
+                "snapshot_id",
+                "input_kind",
+                "content_hash",
+                "data_version",
+                "source",
+                "target",
+                "horizon",
+                "payload_size_bytes",
+            )
+            if getattr(self.reference, field_name) != getattr(self.snapshot, field_name)
+        ]
+        if mismatches:
+            raise ValueError(
+                "resolved Cell input reference does not match snapshot: "
+                + ", ".join(mismatches)
+            )
+
+
+@dataclass(frozen=True)
+class CellInputBundle:
+    node_id: str
+    analysis_request: AnalysisRequest
+    resolved_inputs: tuple[ResolvedCellInput, ...]
+    required_input_kinds: tuple[InputKind, ...]
+    schema_version: str = CELL_INPUT_BUNDLE_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if not self.node_id.strip():
+            raise ValueError("Cell input bundle node_id must not be empty")
+        if not self.resolved_inputs:
+            raise ValueError("Cell input bundle requires resolved inputs")
+        if len(self.required_input_kinds) != len(set(self.required_input_kinds)):
+            raise ValueError("Cell input bundle required input kinds must be unique")
+        if "analysis_request" not in self.required_input_kinds:
+            raise ValueError("Cell input bundle must require analysis_request")
+
+        reference_ids = [
+            item.reference.reference_id for item in self.resolved_inputs
+        ]
+        if len(reference_ids) != len(set(reference_ids)):
+            raise ValueError("Cell input bundle reference ids must be unique")
+        # v1 uses one snapshot per kind and preserves declaration order so every
+        # runtime composes the same positional envelope.
+        actual_kinds = tuple(
+            item.snapshot.input_kind for item in self.resolved_inputs
+        )
+        if actual_kinds != self.required_input_kinds:
+            raise ValueError(
+                "Cell input bundle kinds do not match node requirements: "
+                f"required={list(self.required_input_kinds)}, "
+                f"actual={list(actual_kinds)}"
+            )
+        request_inputs = self.all("analysis_request")
+        if len(request_inputs) != 1:
+            raise ValueError("Cell input bundle requires exactly one analysis_request")
+        request_snapshot = request_inputs[0]
+        if (
+            request_snapshot.target != self.analysis_request.target
+            or request_snapshot.horizon != self.analysis_request.horizon
+        ):
+            raise ValueError(
+                "Cell input bundle analysis_request scope does not match snapshot"
+            )
+        for item in self.resolved_inputs:
+            if (
+                item.snapshot.target != self.analysis_request.target
+                or item.snapshot.horizon != self.analysis_request.horizon
+            ):
+                raise ValueError(
+                    f"Cell input {item.reference.reference_id} does not match "
+                    "analysis request scope"
+                )
+
+    def all(self, input_kind: InputKind) -> tuple[InputSnapshot, ...]:
+        return tuple(
+            item.snapshot
+            for item in self.resolved_inputs
+            if item.snapshot.input_kind == input_kind
+        )
+
+    def require_one(self, input_kind: InputKind) -> InputSnapshot:
+        matches = self.all(input_kind)
+        if len(matches) != 1:
+            raise ValueError(
+                f"node {self.node_id} requires exactly one {input_kind}, "
+                f"received {len(matches)}"
+            )
+        return matches[0]
+
+    def to_audit_dict(self) -> dict[str, Any]:
+        return {
+            "node_id": self.node_id,
+            "required_input_kinds": list(self.required_input_kinds),
+            "inputs": [
+                {
+                    "reference_id": item.reference.reference_id,
+                    "snapshot_id": item.snapshot.snapshot_id,
+                    "input_kind": item.snapshot.input_kind,
+                    "data_version": item.snapshot.data_version,
+                    "source": item.snapshot.source,
+                    "content_hash": item.snapshot.content_hash,
+                }
+                for item in self.resolved_inputs
+            ],
+            "schema_version": self.schema_version,
+        }
 
 
 @dataclass(frozen=True)

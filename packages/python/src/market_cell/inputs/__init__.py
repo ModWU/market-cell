@@ -1,13 +1,16 @@
 from market_cell.inputs.models import (
+    CELL_INPUT_BUNDLE_SCHEMA_VERSION,
     INPUT_REFERENCE_SCHEMA_VERSION,
     INPUT_RESOLUTION_RECORD_SCHEMA_VERSION,
     INPUT_SNAPSHOT_AUDIT_SCHEMA_VERSION,
     INPUT_SNAPSHOT_SCHEMA_VERSION,
+    CellInputBundle,
     InputKind,
     InputReference,
     InputResolutionRecord,
     InputResolutionStatus,
     InputSnapshot,
+    ResolvedCellInput,
 )
 from market_cell.inputs.resolver import (
     InputCompositionError,
@@ -20,12 +23,14 @@ from market_cell.inputs.resolver import (
 )
 
 __all__ = [
+    "CELL_INPUT_BUNDLE_SCHEMA_VERSION",
     "INPUT_REFERENCE_SCHEMA_VERSION",
     "INPUT_RESOLUTION_RECORD_SCHEMA_VERSION",
     "INPUT_SNAPSHOT_AUDIT_SCHEMA_VERSION",
     "INPUT_SNAPSHOT_SCHEMA_VERSION",
-    "InputIntegrityError",
+    "CellInputBundle",
     "InputCompositionError",
+    "InputIntegrityError",
     "InputKind",
     "InputReference",
     "InputReferenceNotFoundError",
@@ -36,4 +41,5 @@ __all__ = [
     "InputSnapshot",
     "InputSnapshotStore",
     "LocalInputResolver",
+    "ResolvedCellInput",
 ]

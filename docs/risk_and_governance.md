@@ -1,4 +1,4 @@
-# MarketCell 风险治理文档 v0.1
+# MarketCell 风险治理文档 v0.2
 
 ## 1. 文档目的
 
@@ -49,8 +49,10 @@ MarketCell 输出的是结构化分析，不是投资建议。
 正确表达：
 
 ```text
-ManipulationRiskCell 检测到异常放量、长影线和剧烈振幅，因此操纵风险升高。
+VolumePriceAnomalyCell 检测到量价关系显著偏离稳健历史基线；ManipulationRiskCell 再结合长影线和剧烈振幅，因此市场完整性风险升高，但这不证明存在操纵意图。
 ```
+
+FundingOpenInterestCell 的资金费率拥挤、异常增仓或去杠杆只进入 `volatility_risk`。这些数据可以说明杠杆结构脆弱，但不能单独说明 spoofing、wash trading、账户协同或违法操纵，因此其 `manipulation_risk` 固定为 0。
 
 错误表达：
 

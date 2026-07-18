@@ -2,13 +2,18 @@ from collections import Counter
 from collections.abc import Sequence
 
 from market_cell.cells import (
+    BreakoutCell,
     DecisionCell,
+    FundingOpenInterestCell,
+    LiquidityCell,
     ManipulationRiskCell,
     MarketRegimeCell,
     NewsEventCell,
+    SupportResistanceCell,
     TrendCell,
     VolatilityCell,
     VolumeCell,
+    VolumePriceAnomalyCell,
 )
 from market_cell.cells.base import MarketCell
 from market_cell.models import CellManifest
@@ -55,11 +60,16 @@ def default_registry(decision_policy: DecisionPolicy | None = None) -> CellRegis
     return CellRegistry(
         [
             TrendCell(),
+            SupportResistanceCell(),
+            BreakoutCell(),
             VolumeCell(),
+            VolumePriceAnomalyCell(),
             VolatilityCell(),
             MarketRegimeCell(),
             NewsEventCell(),
+            FundingOpenInterestCell(),
             ManipulationRiskCell(),
+            LiquidityCell(),
             DecisionCell(policy=decision_policy),
         ],
     )

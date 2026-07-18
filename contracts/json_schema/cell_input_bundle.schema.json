@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/cell_input_bundle.schema.json",
+  "title": "MarketCell CellInputBundle Audit",
+  "type": "object",
+  "required": [
+    "node_id",
+    "required_input_kinds",
+    "inputs",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "node_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "required_input_kinds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "contains": {
+        "const": "analysis_request"
+      },
+      "minContains": 1,
+      "maxContains": 1,
+      "items": {
+        "$ref": "#/$defs/input_kind"
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "contains": {
+        "type": "object",
+        "required": ["input_kind"],
+        "properties": {
+          "input_kind": {
+            "const": "analysis_request"
+          }
+        }
+      },
+      "minContains": 1,
+      "maxContains": 1,
+      "items": {
+        "$ref": "#/$defs/resolved_input"
+      }
+    },
+    "schema_version": {
+      "const": "cell_input_bundle.v1"
+    }
+  },
+  "$defs": {
+    "input_kind": {
+      "enum": [
+        "analysis_request",
+        "candle_batch",
+        "funding_open_interest_snapshot",
+        "feature_snapshot",
+        "order_book_snapshot"
+      ]
+    },
+    "resolved_input": {
+      "type": "object",
+      "required": [
+        "reference_id",
+        "snapshot_id",
+        "input_kind",
+        "data_version",
+        "source",
+        "content_hash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reference_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input_kind": {
+          "$ref": "#/$defs/input_kind"
+        },
+        "data_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    }
+  }
+}

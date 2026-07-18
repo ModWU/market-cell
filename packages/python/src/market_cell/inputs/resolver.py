@@ -115,11 +115,14 @@ def _validate_snapshot(snapshot: InputSnapshot) -> None:
     if snapshot.input_kind not in (
         "analysis_request",
         "candle_batch",
+        "funding_open_interest_snapshot",
         "feature_snapshot",
+        "order_book_snapshot",
     ):
         mismatches.append("input_kind")
     for field_name in ("target", "horizon", "data_version", "source"):
-        if not getattr(snapshot, field_name):
+        value = getattr(snapshot, field_name)
+        if not isinstance(value, str) or not value.strip():
             mismatches.append(field_name)
     if snapshot.snapshot_id != snapshot.expected_snapshot_id():
         mismatches.append("snapshot_id")
@@ -127,11 +130,12 @@ def _validate_snapshot(snapshot: InputSnapshot) -> None:
         mismatches.append("content_hash")
     if snapshot.payload_size_bytes != actual_size:
         mismatches.append("payload_size_bytes")
-    if snapshot.input_kind == "analysis_request":
+    if snapshot.input_kind == "analysis_request" or "target" in snapshot.payload:
         payload_target = snapshot.payload.get("target")
-        payload_horizon = snapshot.payload.get("horizon", "1h")
         if not isinstance(payload_target, str) or snapshot.target != payload_target:
             mismatches.append("target")
+    if snapshot.input_kind == "analysis_request" or "horizon" in snapshot.payload:
+        payload_horizon = snapshot.payload.get("horizon", "1h")
         if not isinstance(payload_horizon, str) or snapshot.horizon != payload_horizon:
             mismatches.append("horizon")
     if mismatches:

@@ -1,0 +1,16 @@
+{
+  "schema_version": "execution_identity_test_vector.v1",
+  "input": {
+    "run_id": "run-example-001",
+    "plan_id": "plan-example-001",
+    "node_id": "cell:technical.trend",
+    "binding_id": "binding:rust-hot:trend-v1"
+  },
+  "expected": {
+    "idempotency_key": "13681cba44d2b77b17b2cd8328241cdb9675937f71c8ad98a72f060a4fa849a5",
+    "attempt_ids": [
+      "866a6f0f0c4c56d4ba1735ecd1aebbb44f2165735b041cdee55fc10d2c915947",
+      "edcb2b2717b684ad831947f288fddb7166738be0424cc04c6bebca550b041379"
+    ]
+  }
+}

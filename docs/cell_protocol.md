@@ -1,4 +1,4 @@
-# MarketCell Cell 协议 v0.3
+# MarketCell Cell 协议 v0.5
 
 ## 1. Cell 是什么
 
@@ -15,11 +15,19 @@ Cell 是 MarketCell 的最小分析单元。
 
 ## 2. 标准接口
 
-所有 Cell 必须实现：
+所有 Cell 保留请求式公式接口：
 
 ```text
 analyze(request, child_results) -> CellResult
 ```
+
+计划执行统一通过类型化入口：
+
+```text
+analyze_inputs(input_bundle, child_results) -> CellResult
+```
+
+基类默认从 `input_bundle.analysis_request` 转发到 `analyze`，所以只消费 K 线和事件的现有 Cell 无需重复实现。需要订单簿等额外数据的 Cell 必须重写 `analyze_inputs`，并通过声明的 input kind 读取快照；它不能自行访问交易所、文件或数据库。
 
 叶子 Cell 可以忽略 `child_results`。
 
@@ -35,6 +43,7 @@ name
 category
 description
 inputs
+required_input_kinds
 outputs
 formula_version
 risk_dimensions
@@ -48,8 +57,27 @@ cell_id: technical.market_regime
 name: MarketRegimeCell
 category: technical
 formula_version: trend_efficiency_regime_v0.1
+required_input_kinds: [analysis_request]
 status: experimental
 ```
+
+`analysis_request` 对所有 Cell 都是必需类型。v1 每种 required input kind 恰好绑定一个快照。例如 LiquidityCell 应声明：
+
+```text
+required_input_kinds:
+  - analysis_request
+  - order_book_snapshot
+```
+
+FundingOpenInterestCell 则声明：
+
+```text
+required_input_kinds:
+  - analysis_request
+  - funding_open_interest_snapshot
+```
+
+新增 input kind 不是只改一个字符串：必须同步领域对象、InputKind、Resolver 白名单、全部引用该枚举的 JSON Schema、跨语言身份向量、篡改测试和回放测试。
 
 ## 4. CellResult 要求
 
@@ -91,6 +119,7 @@ Cell ID 使用点分层：
 ```text
 technical.trend
 technical.volume
+risk.volume_price_anomaly
 risk.manipulation
 external.news
 root.decision
@@ -133,6 +162,7 @@ deprecated
 - 在 `registry.py` 注册
 - 需要进入默认分析时，在 `graph/defaults.py` 添加节点和依赖
 - 在 `cell_dictionary.md` 记录
+- 声明 `required_input_kinds`；新增类型时同步领域模型、JSON Schema 和契约向量
 - 添加测试
 - 添加公式版本
 - 输出 evidence
@@ -145,12 +175,12 @@ Cell 不能：
 - 直接修改全局权重
 - 直接决定自己部署在哪个服务
 - 隐式读取外部文件
-- 绕过 AnalysisRequest
+- 绕过 CellInputBundle / AnalysisRequest 的统一 scope
 - 输出无法解释的黑盒结论
 
 Cell 可以：
 
-- 使用 request 中的数据
+- 使用 bundle 中已声明、已校验的数据
 - 调用子节点结果
 - 输出风险
 - 输出不确定性
@@ -179,6 +209,8 @@ CellExecutionPlan     描述本次分析如何执行 Cell DAG
 CellExecutionCoordinator 维护 DAG 顺序和 node_id 结果
 CellExecutor          执行已经确定的节点
 ```
+
+`CellExecutionPlan v5` 会把 Manifest 的 `required_input_kinds` 固化到节点，并只绑定对应的 `input_reference_ids`。Coordinator 解析引用后创建 `cell_input_bundle.v1`；Executor 会校验 bundle、节点和当前 implementation 的输入声明一致。计划外输入不能传给 Cell，缺失输入也不能等到公式内部才发现。
 
 当前本地测试时，所有 Cell 可以绑定到：
 

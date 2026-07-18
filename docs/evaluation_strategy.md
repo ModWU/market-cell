@@ -91,7 +91,7 @@ stateDiagram-v2
 
 ### 4.2 风险类指标
 
-适用于 VolatilityCell、ManipulationRiskCell、LiquidityCell。
+适用于 VolatilityCell、VolumePriceAnomalyCell、ManipulationRiskCell、LiquidityCell。
 
 - risk_precision
 - false_positive_rate
@@ -152,7 +152,7 @@ AnalysisRun
 - 是否出现流动性突然变差
 - 是否出现成交量和价格结构异常延续
 
-ManipulationRiskCell 评估目标是识别异常风险，不是证明违法行为。
+VolumePriceAnomalyCell 应分别评估稳健基线下的异常检出、持续高量 regime 误报和单点历史极值鲁棒性。ManipulationRiskCell 评估目标是聚合异常风险，不是证明违法行为。
 
 ## 7. AI 解释层评估
 

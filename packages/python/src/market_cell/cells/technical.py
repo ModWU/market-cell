@@ -72,11 +72,10 @@ class VolumeCell(MarketCell):
     cell_id = "technical.volume"
     name = "VolumeCell"
     category = "technical"
-    description = "比较最新成交量和历史均量，判断量能是否支持价格方向。"
-    formula_version = "volume_ratio_v0.1"
+    description = "比较最新成交量和历史均量，只判断量能是否支持价格方向。"
+    formula_version = "volume_direction_confirmation_v0.2"
     inputs = ["candles.close", "candles.volume"]
-    outputs = ["direction", "strength", "urgency", "manipulation_risk"]
-    risk_dimensions = ["manipulation_risk"]
+    outputs = ["direction", "strength", "urgency", "volume_ratio"]
 
     def analyze(self, request: AnalysisRequest, child_results: list[CellResult] | None = None) -> CellResult:
         candles = request.candles
@@ -112,8 +111,6 @@ class VolumeCell(MarketCell):
 
         strength = clamp((ratio - 1) * 45)
         confidence = _confidence_from_candle_count(len(candles))
-        manipulation_risk = clamp((ratio - 2.2) * 35) if ratio > 2.2 else 0
-
         return CellResult(
             cell_id=self.cell_id,
             name=self.name,
@@ -124,7 +121,7 @@ class VolumeCell(MarketCell):
             strength=strength,
             confidence=confidence,
             volatility_risk=0,
-            manipulation_risk=manipulation_risk,
+            manipulation_risk=0,
             urgency=clamp((ratio - 1) * 35),
             score=score(direction, strength, confidence),
             explanation=f"最新成交量是前序均量的 {ratio:.2f} 倍，量能方向为 {direction}。",
@@ -134,7 +131,12 @@ class VolumeCell(MarketCell):
                     summary=f"latest_volume={latest.volume:.2f}, average_volume={avg_volume:.2f}, ratio={ratio:.2f}",
                 )
             ],
-            metadata={"volume_ratio": round(ratio, 4), "feature_version": FEATURE_VERSION},
+            metadata={
+                "formula_version": self.formula_version,
+                "volume_ratio": round(ratio, 4),
+                "feature_version": FEATURE_VERSION,
+                "anomaly_risk_delegated_to": "risk.volume_price_anomaly",
+            },
         )
 
 

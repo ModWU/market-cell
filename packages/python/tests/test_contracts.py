@@ -7,6 +7,7 @@ import tempfile
 from typing import get_args
 
 from market_cell.engine import AnalysisEngine
+from market_cell.data import FundingOpenInterestSnapshot, OrderBookSnapshot
 from market_cell.execution import (
     ExecutionPlanValidationError,
     PlanValidationCode,
@@ -23,7 +24,13 @@ from market_cell.graph import (
     validate_cell_graph_definition,
 )
 from market_cell.features import build_feature_snapshot
-from market_cell.inputs import InputResolutionRecord, InputSnapshot
+from market_cell.inputs import (
+    CellInputBundle,
+    InputKind,
+    InputResolutionRecord,
+    InputSnapshot,
+    ResolvedCellInput,
+)
 from market_cell.models import AnalysisRequest, Candle
 from market_cell.performance import (
     DurationDistribution,
@@ -33,6 +40,7 @@ from market_cell.performance import (
     ReferenceMeasurement,
 )
 from market_cell.registry import default_registry
+from market_cell.replay import ReplayRunner
 from market_cell.reports import FileSystemReportStore
 
 
@@ -59,6 +67,46 @@ class ContractTests(unittest.TestCase):
                 with self.subTest(path=path.name, reference=reference):
                     target_name = reference.rsplit("/", 1)[-1]
                     self.assertTrue((schema_dir / target_name).is_file())
+
+    def test_input_kind_enums_match_runtime_contract(self):
+        schema_dir = ROOT / "contracts" / "json_schema"
+        runtime_kinds = set(get_args(InputKind))
+        schema_paths = {
+            "input_snapshot.schema.json": ("properties", "input_kind", "enum"),
+            "input_snapshot_audit.schema.json": (
+                "properties",
+                "input_kind",
+                "enum",
+            ),
+            "input_reference.schema.json": (
+                "properties",
+                "input_kind",
+                "enum",
+            ),
+            "input_resolution_record.schema.json": (
+                "properties",
+                "input_kind",
+                "enum",
+            ),
+            "cell_input_bundle.schema.json": (
+                "$defs",
+                "input_kind",
+                "enum",
+            ),
+            "cell_execution_plan.schema.json": (
+                "$defs",
+                "input_kind",
+                "enum",
+            ),
+        }
+
+        for name, path in schema_paths.items():
+            schema = json.loads((schema_dir / name).read_text(encoding="utf-8"))
+            value = schema
+            for key in path:
+                value = value[key]
+            with self.subTest(schema=name):
+                self.assertEqual(set(value), runtime_kinds)
 
     def test_input_identity_matches_shared_contract_vector(self):
         vector = json.loads(
@@ -87,6 +135,90 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(
             snapshot.to_reference().reference_id,
             vector["expected_reference_id"],
+        )
+
+    def test_order_book_identity_matches_shared_contract_vector(self):
+        vector = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "test_vectors"
+                / "order_book_snapshot_v1.json"
+            ).read_text(encoding="utf-8")
+        )
+        order_book = OrderBookSnapshot.from_dict(vector["payload"])
+
+        snapshot = order_book.to_input_snapshot(horizon=vector["horizon"])
+
+        self.assertEqual(snapshot.input_kind, vector["input_kind"])
+        self.assertEqual(snapshot.target, vector["target"])
+        self.assertEqual(snapshot.data_version, vector["data_version"])
+        self.assertEqual(snapshot.source, vector["source"])
+        self.assertEqual(snapshot.content_hash, vector["expected_content_hash"])
+        self.assertEqual(
+            snapshot.payload_size_bytes,
+            vector["expected_payload_size_bytes"],
+        )
+        self.assertEqual(snapshot.snapshot_id, vector["expected_snapshot_id"])
+        self.assertEqual(
+            snapshot.to_reference().reference_id,
+            vector["expected_reference_id"],
+        )
+
+    def test_funding_open_interest_identity_matches_shared_contract_vector(self):
+        vector = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "test_vectors"
+                / "funding_open_interest_snapshot_v1.json"
+            ).read_text(encoding="utf-8")
+        )
+        derivatives = FundingOpenInterestSnapshot.from_dict(vector["payload"])
+
+        snapshot = derivatives.to_input_snapshot(horizon=vector["horizon"])
+
+        self.assertEqual(snapshot.input_kind, vector["input_kind"])
+        self.assertEqual(snapshot.target, vector["target"])
+        self.assertEqual(snapshot.data_version, vector["data_version"])
+        self.assertEqual(snapshot.source, vector["source"])
+        self.assertEqual(snapshot.content_hash, vector["expected_content_hash"])
+        self.assertEqual(
+            snapshot.payload_size_bytes,
+            vector["expected_payload_size_bytes"],
+        )
+        self.assertEqual(snapshot.snapshot_id, vector["expected_snapshot_id"])
+        self.assertEqual(
+            snapshot.to_reference().reference_id,
+            vector["expected_reference_id"],
+        )
+        _assert_contract_fields(
+            self,
+            "funding_open_interest_snapshot.schema.json",
+            derivatives.to_dict(),
+            "funding_open_interest_snapshot.v1",
+        )
+
+    def test_cell_input_bundle_audit_contains_contract_required_fields(self):
+        request = _request()
+        snapshot = InputSnapshot.from_analysis_request(request)
+        bundle = CellInputBundle(
+            node_id="cell:technical.trend",
+            analysis_request=request,
+            resolved_inputs=(
+                ResolvedCellInput(
+                    reference=snapshot.to_reference(),
+                    snapshot=snapshot,
+                ),
+            ),
+            required_input_kinds=("analysis_request",),
+        )
+
+        _assert_contract_fields(
+            self,
+            "cell_input_bundle.schema.json",
+            bundle.to_audit_dict(),
+            "cell_input_bundle.v1",
         )
 
     def test_market_data_contracts_exist_for_realtime_and_batch_paths(self):
@@ -139,7 +271,8 @@ class ContractTests(unittest.TestCase):
         for field_name in schema["required"]:
             with self.subTest(field_name=field_name):
                 self.assertIn(field_name, run)
-        self.assertEqual(run["schema_version"], "analysis_run.v1")
+        self.assertEqual(run["schema_version"], "analysis_run.v2")
+        self.assertEqual(len(run["input_snapshots"]), 1)
 
     def test_cell_execution_plan_contains_contract_required_fields(self):
         schema = json.loads(
@@ -159,8 +292,14 @@ class ContractTests(unittest.TestCase):
         for field_name in schema["required"]:
             with self.subTest(field_name=field_name):
                 self.assertIn(field_name, plan)
-        self.assertEqual(plan["schema_version"], "cell_execution_plan.v3")
+        self.assertEqual(plan["schema_version"], "cell_execution_plan.v5")
         self.assertTrue(all(node["binding_id"] for node in plan["nodes"]))
+        self.assertTrue(
+            all("fallback_binding_ids" in node for node in plan["nodes"])
+        )
+        self.assertTrue(
+            all(node["required_input_kinds"] for node in plan["nodes"])
+        )
         self.assertTrue(plan["service_bindings"])
 
     def test_input_snapshot_contains_contract_required_fields(self):
@@ -489,8 +628,33 @@ class ContractTests(unittest.TestCase):
         for field_name in schema["required"]:
             with self.subTest(field_name=field_name):
                 self.assertIn(field_name, decision)
-        self.assertEqual(decision["schema_version"], "cell_placement_decision.v2")
+        self.assertEqual(decision["schema_version"], "cell_placement_decision.v3")
         self.assertTrue(decision["selected_binding_id"])
+
+    def test_execution_control_record_contains_contract_required_fields(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = FileSystemReportStore(Path(temp_dir))
+            report = AnalysisEngine(report_store=store).run(_request())
+            run = store.load_run(report.run_id or "")
+            record = run["metadata"]["execution_control_records"][0]
+
+        _assert_contract_fields(
+            self,
+            "execution_control_record.schema.json",
+            record,
+            "execution_control_record.v1",
+        )
+        schema = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "json_schema"
+                / "execution_control_record.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        for field_name in schema["$defs"]["attempt"]["required"]:
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, record["attempts"][0])
 
     def test_execution_plan_validation_contains_contract_required_fields(self):
         schema = json.loads(
@@ -519,6 +683,19 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(validation["schema_version"], "execution_plan_validation.v1")
         schema_codes = set(schema["$defs"]["issue"]["properties"]["code"]["enum"])
         self.assertEqual(schema_codes, set(get_args(PlanValidationCode)))
+
+    def test_replay_comparison_contains_contract_required_fields(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = FileSystemReportStore(Path(temp_dir))
+            report = AnalysisEngine(report_store=store).run(_request())
+            comparison = ReplayRunner(store).replay(report.report_id or "")
+
+        _assert_contract_fields(
+            self,
+            "replay_comparison.schema.json",
+            comparison.to_dict(),
+            "replay_comparison.v1",
+        )
 
 
 def _request() -> AnalysisRequest:

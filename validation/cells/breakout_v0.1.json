@@ -1,0 +1,123 @@
+{
+  "schema_version": "cell_validation_fixture.v1",
+  "cell_id": "technical.breakout",
+  "formula_version": "breakout_structure_volume_confirmation_v0.1",
+  "dependency_cell_id": "technical.support_resistance",
+  "dependency_formula_version": "support_resistance_cluster_rejection_v0.1",
+  "cases": [
+    {
+      "case_id": "fresh_upside_breakout_with_volume",
+      "case_type": "positive",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 102.0, "high": 105.0, "low": 100.0, "close": 103.0, "volume": 1000},
+          {"timestamp": "t2", "open": 103.0, "high": 104.8, "low": 100.2, "close": 102.0, "volume": 980},
+          {"timestamp": "t3", "open": 102.0, "high": 105.1, "low": 99.9, "close": 104.0, "volume": 1020},
+          {"timestamp": "t4", "open": 104.0, "high": 105.0, "low": 100.1, "close": 102.0, "volume": 1010},
+          {"timestamp": "t5", "open": 102.0, "high": 104.9, "low": 100.0, "close": 103.0, "volume": 990},
+          {"timestamp": "t6", "open": 103.0, "high": 105.2, "low": 100.2, "close": 102.5, "volume": 1000},
+          {"timestamp": "t7", "open": 104.5, "high": 108.0, "low": 104.2, "close": 107.5, "volume": 1800}
+        ]
+      },
+      "expected": {
+        "support_state": "resistance_broken_unconfirmed",
+        "direction": "bullish",
+        "breakout_state": "upside_breakout_confirmed"
+      }
+    },
+    {
+      "case_id": "fresh_downside_breakout_with_volume",
+      "case_type": "positive",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 102.0, "high": 105.0, "low": 100.0, "close": 103.0, "volume": 1000},
+          {"timestamp": "t2", "open": 103.0, "high": 104.8, "low": 100.2, "close": 102.0, "volume": 980},
+          {"timestamp": "t3", "open": 102.0, "high": 105.1, "low": 99.9, "close": 104.0, "volume": 1020},
+          {"timestamp": "t4", "open": 104.0, "high": 105.0, "low": 100.1, "close": 102.0, "volume": 1010},
+          {"timestamp": "t5", "open": 102.0, "high": 104.9, "low": 100.0, "close": 103.0, "volume": 990},
+          {"timestamp": "t6", "open": 103.0, "high": 105.2, "low": 100.2, "close": 102.5, "volume": 1000},
+          {"timestamp": "t7", "open": 101.0, "high": 101.2, "low": 96.8, "close": 97.2, "volume": 1800}
+        ]
+      },
+      "expected": {
+        "support_state": "support_broken_unconfirmed",
+        "direction": "bearish",
+        "breakout_state": "downside_breakout_confirmed"
+      }
+    },
+    {
+      "case_id": "upside_break_without_volume_is_not_confirmed",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 102.0, "high": 105.0, "low": 100.0, "close": 103.0, "volume": 1000},
+          {"timestamp": "t2", "open": 103.0, "high": 104.8, "low": 100.2, "close": 102.0, "volume": 980},
+          {"timestamp": "t3", "open": 102.0, "high": 105.1, "low": 99.9, "close": 104.0, "volume": 1020},
+          {"timestamp": "t4", "open": 104.0, "high": 105.0, "low": 100.1, "close": 102.0, "volume": 1010},
+          {"timestamp": "t5", "open": 102.0, "high": 104.9, "low": 100.0, "close": 103.0, "volume": 990},
+          {"timestamp": "t6", "open": 103.0, "high": 105.2, "low": 100.2, "close": 102.5, "volume": 1000},
+          {"timestamp": "t7", "open": 104.5, "high": 108.0, "low": 104.2, "close": 107.5, "volume": 850}
+        ]
+      },
+      "expected": {
+        "support_state": "resistance_broken_unconfirmed",
+        "direction": "conflict",
+        "breakout_state": "breakout_unconfirmed_volume"
+      },
+      "false_positive_note": "价格越过压力但没有放量时，可能只是流动性稀薄造成的短暂穿越，不能直接确认为有效突破。"
+    },
+    {
+      "case_id": "continued_move_after_prior_break_is_not_fresh",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 102.0, "high": 105.0, "low": 100.0, "close": 103.0, "volume": 1000},
+          {"timestamp": "t2", "open": 103.0, "high": 104.8, "low": 100.2, "close": 102.0, "volume": 980},
+          {"timestamp": "t3", "open": 102.0, "high": 105.1, "low": 99.9, "close": 104.0, "volume": 1020},
+          {"timestamp": "t4", "open": 104.0, "high": 105.0, "low": 100.1, "close": 102.0, "volume": 1010},
+          {"timestamp": "t5", "open": 102.0, "high": 104.9, "low": 100.0, "close": 103.0, "volume": 990},
+          {"timestamp": "t6", "open": 106.5, "high": 108.0, "low": 106.0, "close": 107.2, "volume": 1000},
+          {"timestamp": "t7", "open": 107.2, "high": 110.0, "low": 107.0, "close": 109.5, "volume": 1800}
+        ]
+      },
+      "expected": {
+        "support_state": "resistance_broken_unconfirmed",
+        "direction": "conflict",
+        "breakout_state": "breakout_not_fresh"
+      },
+      "false_positive_note": "若前一根 K 线已经收在突破阈值之外，当前上涨属于延续而不是新突破，不能重复发出突破信号。"
+    },
+    {
+      "case_id": "insufficient_structure_stays_neutral",
+      "case_type": "boundary",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 102.0, "low": 99.0, "close": 101.0, "volume": 1000},
+          {"timestamp": "t2", "open": 101.0, "high": 103.0, "low": 100.0, "close": 102.0, "volume": 1020},
+          {"timestamp": "t3", "open": 102.0, "high": 104.0, "low": 101.0, "close": 103.0, "volume": 1040},
+          {"timestamp": "t4", "open": 103.0, "high": 105.0, "low": 102.0, "close": 104.0, "volume": 1060}
+        ]
+      },
+      "expected": {
+        "support_state": "insufficient_history",
+        "direction": "neutral",
+        "breakout_state": "insufficient_structure"
+      }
+    }
+  ],
+  "known_limitations": [
+    "放量和强收盘只能提高突破可信度，不能保证后续不会回落或形成假突破。",
+    "当前只确认首次越界，不评估突破后的回踩质量和多周期一致性。",
+    "成交量基线最多使用最近 20 根历史 K 线，极端低流动性市场仍可能产生失真。"
+  ]
+}

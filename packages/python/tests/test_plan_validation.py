@@ -26,7 +26,15 @@ class ExecutionPlanValidationTests(unittest.TestCase):
         expected_leaves = sorted(
             node.node_id for node in plan.nodes if node.execution_role == "leaf"
         )
-        self.assertEqual(validated.topological_levels, [expected_leaves, [plan.root_node_id]])
+        expected_aggregators = sorted(
+            node.node_id
+            for node in plan.nodes
+            if node.execution_role == "aggregator"
+        )
+        self.assertEqual(
+            validated.topological_levels,
+            [expected_leaves, expected_aggregators, [plan.root_node_id]],
+        )
         self.assertEqual(plan.metadata["topological_levels"], validated.topological_levels)
 
     def test_same_cell_can_appear_in_multiple_nodes(self):
@@ -198,6 +206,61 @@ class ExecutionPlanValidationTests(unittest.TestCase):
 
         self.assertIn("binding_formula_mismatch", _issue_codes(error))
 
+    def test_validator_rejects_missing_fallback_binding(self):
+        plan = build_local_execution_plan(default_registry(), _request())
+        node = plan.nodes[0]
+        invalid_node = replace(
+            node,
+            fallback_binding_ids=["binding:missing:fallback"],
+        )
+        invalid = replace(plan, nodes=_replace_node(plan, invalid_node))
+
+        error = _validation_error(invalid)
+
+        self.assertIn("missing_fallback_binding", _issue_codes(error))
+
+    def test_validator_rejects_primary_binding_repeated_as_fallback(self):
+        plan = build_local_execution_plan(default_registry(), _request())
+        node = plan.nodes[0]
+        invalid_node = replace(
+            node,
+            fallback_binding_ids=[node.binding_id],
+        )
+        invalid = replace(plan, nodes=_replace_node(plan, invalid_node))
+
+        error = _validation_error(invalid)
+
+        self.assertIn("primary_binding_in_fallback", _issue_codes(error))
+
+    def test_validator_rejects_duplicate_fallback_binding(self):
+        plan = build_local_execution_plan(default_registry(), _request())
+        node = plan.nodes[0]
+        invalid_node = replace(
+            node,
+            fallback_binding_ids=[
+                "binding:missing:fallback",
+                "binding:missing:fallback",
+            ],
+        )
+        invalid = replace(plan, nodes=_replace_node(plan, invalid_node))
+
+        error = _validation_error(invalid)
+
+        self.assertIn("duplicate_fallback_binding", _issue_codes(error))
+
+    def test_validator_rejects_incompatible_fallback_binding(self):
+        plan = build_local_execution_plan(default_registry(), _request())
+        first, second = plan.nodes[0], plan.nodes[1]
+        invalid_node = replace(
+            first,
+            fallback_binding_ids=[second.binding_id],
+        )
+        invalid = replace(plan, nodes=_replace_node(plan, invalid_node))
+
+        error = _validation_error(invalid)
+
+        self.assertIn("fallback_binding_cell_mismatch", _issue_codes(error))
+
     def test_engine_persists_invalid_plan_before_any_cell_executes(self):
         registry = default_registry()
         valid_plan = build_local_execution_plan(registry, _request())
@@ -225,7 +288,7 @@ class ExecutionPlanValidationTests(unittest.TestCase):
         self.assertEqual(run["status"], "failed")
         self.assertEqual(
             run["metadata"]["cell_execution_plan"]["schema_version"],
-            "cell_execution_plan.v3",
+            "cell_execution_plan.v5",
         )
         self.assertEqual(run["metadata"]["cell_runtime_traces"], [])
         validation = run["metadata"]["execution_plan_validation"]

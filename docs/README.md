@@ -28,18 +28,19 @@
 |---|---|---|
 | 文档治理 | `documentation_architecture.md` | baseline v0.2 |
 | 产品定位 | `product_design.md` | baseline v0.2 |
-| 系统基线 | `system_architecture.md` | baseline v0.6 |
-| 实施顺序 | `roadmap.md` | baseline v0.6 |
-| 后端模块 | `backend_design.md` | baseline |
-| 服务化演进 | `backend_architecture.md` | baseline |
-| Cell 协议 | `cell_protocol.md` | baseline |
-| Cell 执行织网 | `cell_execution_fabric.md` | baseline |
-| 数据契约 | `data_contract.md`, `../contracts/` | baseline |
+| 系统基线 | `system_architecture.md` | baseline v1.0 |
+| 实施顺序 | `roadmap.md` | baseline v1.0 |
+| 后端模块 | `backend_design.md` | baseline v0.9 |
+| 服务化演进 | `backend_architecture.md` | baseline v1.0 |
+| Cell 协议 | `cell_protocol.md` | baseline v0.5 |
+| Cell 公式与验证 | `cell_validation.md` | baseline |
+| Cell 执行织网 | `cell_execution_fabric.md` | baseline v1.0 |
+| 数据契约 | `data_contract.md`, `../contracts/` | baseline v1.0 |
 | Python / Rust 运行时 | `runtime_architecture.md` | baseline |
 | 多语言仓库 | `polyglot_architecture.md` | baseline |
-| 稳定性 | `stability_design.md` | baseline |
+| 稳定性 | `stability_design.md` | baseline v1.0 |
 | 评估方法 | `evaluation_strategy.md` | baseline |
-| 风险治理 | `risk_and_governance.md` | baseline |
+| 风险治理 | `risk_and_governance.md` | baseline v0.2 |
 
 路线和版本只维护在 `roadmap.md`，其他文档不得复制独立版本计划。
 
@@ -55,6 +56,7 @@
 
 - `external_architecture_research.md`：成熟系统研究输入。
 - `cell_dictionary.md`：Cell 能力字典。
+- `cell_validation.md`：已实现 Cell 的公式、固定验证数据和误判记录。
 - `glossary.md`：统一术语。
 - `design_review.md`：历史设计快照，不作为当前实施顺序。
 
@@ -64,6 +66,8 @@
 - `adr/0002-input-reference-resolver.md`：InputSnapshot、InputReference、Resolver 和执行计划的数据边界。
 - `adr/0003-runtime-summary-store.md`：跨运行 trace 存储、时间窗口快照和 placement 历史边界。
 - `adr/0004-performance-baseline.md`：固定输入、宽松 CI 阈值、失败分类和热点迁移证据。
+- `adr/0005-execution-failure-control.md`：attempt identity、幂等、deadline、retry、backpressure、cancellation 和显式 fallback。
+- `adr/0006-typed-cell-input-composition.md`：Cell 输入类型声明、ExecutionPlan v5 精确引用绑定、CellInputBundle 和多输入回放。
 
 ## 未来专项
 

@@ -1,0 +1,290 @@
+{
+  "schema_version": "cell_validation_fixture.v1",
+  "cell_id": "risk.volume_price_anomaly",
+  "formula_version": "robust_volume_price_anomaly_v0.2",
+  "cases": [
+    {
+      "case_id": "stable_volume_and_price_are_normal",
+      "case_type": "boundary",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 100.4, "low": 99.7, "close": 100.0, "volume": 1000},
+          {"timestamp": "t2", "open": 100.0, "high": 100.5, "low": 99.9, "close": 100.2, "volume": 1020},
+          {"timestamp": "t3", "open": 100.2, "high": 100.4, "low": 99.8, "close": 100.1, "volume": 980},
+          {"timestamp": "t4", "open": 100.1, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 1010},
+          {"timestamp": "t5", "open": 100.3, "high": 100.5, "low": 100.0, "close": 100.2, "volume": 990},
+          {"timestamp": "t6", "open": 100.2, "high": 100.7, "low": 100.1, "close": 100.4, "volume": 1005},
+          {"timestamp": "t7", "open": 100.4, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 995},
+          {"timestamp": "t8", "open": 100.3, "high": 100.8, "low": 100.2, "close": 100.5, "volume": 1000},
+          {"timestamp": "t9", "open": 100.5, "high": 101.0, "low": 100.3, "close": 100.7, "volume": 1100}
+        ]
+      },
+      "expected": {
+        "direction": "neutral",
+        "anomaly_state": "normal",
+        "volume_anomalous": false,
+        "price_anomalous": false
+      }
+    },
+    {
+      "case_id": "volume_absorption_after_spike",
+      "case_type": "positive",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 100.4, "low": 99.7, "close": 100.0, "volume": 1000},
+          {"timestamp": "t2", "open": 100.0, "high": 100.5, "low": 99.9, "close": 100.2, "volume": 1020},
+          {"timestamp": "t3", "open": 100.2, "high": 100.4, "low": 99.8, "close": 100.1, "volume": 980},
+          {"timestamp": "t4", "open": 100.1, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 1010},
+          {"timestamp": "t5", "open": 100.3, "high": 100.5, "low": 100.0, "close": 100.2, "volume": 990},
+          {"timestamp": "t6", "open": 100.2, "high": 100.7, "low": 100.1, "close": 100.4, "volume": 1005},
+          {"timestamp": "t7", "open": 100.4, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 995},
+          {"timestamp": "t8", "open": 100.3, "high": 100.8, "low": 100.2, "close": 100.5, "volume": 1000},
+          {"timestamp": "t9", "open": 100.35, "high": 100.6, "low": 100.3, "close": 100.5, "volume": 3200}
+        ]
+      },
+      "expected": {
+        "direction": "conflict",
+        "anomaly_state": "volume_absorption",
+        "volume_anomalous": true,
+        "price_anomalous": false,
+        "minimum_manipulation_risk": 35
+      }
+    },
+    {
+      "case_id": "high_volume_without_extreme_price_move_diverges",
+      "case_type": "positive",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 100.4, "low": 99.7, "close": 100.0, "volume": 1000},
+          {"timestamp": "t2", "open": 100.0, "high": 100.5, "low": 99.9, "close": 100.2, "volume": 1020},
+          {"timestamp": "t3", "open": 100.2, "high": 100.4, "low": 99.8, "close": 100.1, "volume": 980},
+          {"timestamp": "t4", "open": 100.1, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 1010},
+          {"timestamp": "t5", "open": 100.3, "high": 100.5, "low": 100.0, "close": 100.2, "volume": 990},
+          {"timestamp": "t6", "open": 100.2, "high": 100.7, "low": 100.1, "close": 100.4, "volume": 1005},
+          {"timestamp": "t7", "open": 100.4, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 995},
+          {"timestamp": "t8", "open": 100.3, "high": 100.8, "low": 100.2, "close": 100.5, "volume": 1000},
+          {"timestamp": "t9", "open": 100.5, "high": 101.5, "low": 100.3, "close": 101.3, "volume": 3200}
+        ]
+      },
+      "expected": {
+        "direction": "conflict",
+        "anomaly_state": "volume_price_divergence",
+        "volume_anomalous": true,
+        "price_anomalous": false,
+        "minimum_manipulation_risk": 35
+      }
+    },
+    {
+      "case_id": "synchronized_expansion_up",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 100.4, "low": 99.7, "close": 100.0, "volume": 1000},
+          {"timestamp": "t2", "open": 100.0, "high": 100.5, "low": 99.9, "close": 100.2, "volume": 1020},
+          {"timestamp": "t3", "open": 100.2, "high": 100.4, "low": 99.8, "close": 100.1, "volume": 980},
+          {"timestamp": "t4", "open": 100.1, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 1010},
+          {"timestamp": "t5", "open": 100.3, "high": 100.5, "low": 100.0, "close": 100.2, "volume": 990},
+          {"timestamp": "t6", "open": 100.2, "high": 100.7, "low": 100.1, "close": 100.4, "volume": 1005},
+          {"timestamp": "t7", "open": 100.4, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 995},
+          {"timestamp": "t8", "open": 100.3, "high": 100.8, "low": 100.2, "close": 100.5, "volume": 1000},
+          {"timestamp": "t9", "open": 100.5, "high": 105.8, "low": 100.3, "close": 105.5, "volume": 3200}
+        ]
+      },
+      "expected": {
+        "direction": "conflict",
+        "anomaly_state": "synchronized_expansion_up",
+        "volume_anomalous": true,
+        "price_anomalous": true,
+        "minimum_volatility_risk": 55
+      },
+      "false_positive_note": "新闻或真实突破也会形成同步放量上涨；本 Cell 只标记异常强度，不能把它直接判为拉盘或操纵。"
+    },
+    {
+      "case_id": "synchronized_expansion_down",
+      "case_type": "positive",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 100.4, "low": 99.7, "close": 100.0, "volume": 1000},
+          {"timestamp": "t2", "open": 100.0, "high": 100.5, "low": 99.9, "close": 100.2, "volume": 1020},
+          {"timestamp": "t3", "open": 100.2, "high": 100.4, "low": 99.8, "close": 100.1, "volume": 980},
+          {"timestamp": "t4", "open": 100.1, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 1010},
+          {"timestamp": "t5", "open": 100.3, "high": 100.5, "low": 100.0, "close": 100.2, "volume": 990},
+          {"timestamp": "t6", "open": 100.2, "high": 100.7, "low": 100.1, "close": 100.4, "volume": 1005},
+          {"timestamp": "t7", "open": 100.4, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 995},
+          {"timestamp": "t8", "open": 100.3, "high": 100.8, "low": 100.2, "close": 100.5, "volume": 1000},
+          {"timestamp": "t9", "open": 100.5, "high": 100.7, "low": 95.0, "close": 95.5, "volume": 3200}
+        ]
+      },
+      "expected": {
+        "direction": "conflict",
+        "anomaly_state": "synchronized_expansion_down",
+        "volume_anomalous": true,
+        "price_anomalous": true,
+        "minimum_volatility_risk": 55
+      }
+    },
+    {
+      "case_id": "price_dislocation_without_volume_confirmation",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 100.4, "low": 99.7, "close": 100.0, "volume": 1000},
+          {"timestamp": "t2", "open": 100.0, "high": 100.5, "low": 99.9, "close": 100.2, "volume": 1020},
+          {"timestamp": "t3", "open": 100.2, "high": 100.4, "low": 99.8, "close": 100.1, "volume": 980},
+          {"timestamp": "t4", "open": 100.1, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 1010},
+          {"timestamp": "t5", "open": 100.3, "high": 100.5, "low": 100.0, "close": 100.2, "volume": 990},
+          {"timestamp": "t6", "open": 100.2, "high": 100.7, "low": 100.1, "close": 100.4, "volume": 1005},
+          {"timestamp": "t7", "open": 100.4, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 995},
+          {"timestamp": "t8", "open": 100.3, "high": 100.8, "low": 100.2, "close": 100.5, "volume": 1000},
+          {"timestamp": "t9", "open": 100.5, "high": 105.8, "low": 100.3, "close": 105.5, "volume": 1050}
+        ]
+      },
+      "expected": {
+        "direction": "conflict",
+        "anomaly_state": "price_dislocation_up",
+        "volume_anomalous": false,
+        "price_anomalous": true,
+        "minimum_volatility_risk": 55
+      },
+      "false_positive_note": "低成交量价格跳变可能来自稀薄流动性、错误成交或数据问题，不能直接解释为有效上涨趋势。"
+    },
+    {
+      "case_id": "single_historical_volume_outlier_does_not_hide_spike",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 100.4, "low": 99.7, "close": 100.0, "volume": 1000},
+          {"timestamp": "t2", "open": 100.0, "high": 100.5, "low": 99.9, "close": 100.2, "volume": 1020},
+          {"timestamp": "t3", "open": 100.2, "high": 100.4, "low": 99.8, "close": 100.1, "volume": 980},
+          {"timestamp": "t4", "open": 100.1, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 10000},
+          {"timestamp": "t5", "open": 100.3, "high": 100.5, "low": 100.0, "close": 100.2, "volume": 990},
+          {"timestamp": "t6", "open": 100.2, "high": 100.7, "low": 100.1, "close": 100.4, "volume": 1005},
+          {"timestamp": "t7", "open": 100.4, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 995},
+          {"timestamp": "t8", "open": 100.3, "high": 100.8, "low": 100.2, "close": 100.5, "volume": 1000},
+          {"timestamp": "t9", "open": 100.35, "high": 100.6, "low": 100.3, "close": 100.5, "volume": 3200}
+        ]
+      },
+      "expected": {
+        "direction": "conflict",
+        "anomaly_state": "volume_absorption",
+        "volume_anomalous": true,
+        "price_anomalous": false
+      },
+      "false_positive_note": "单个历史极端量不应把均值永久抬高并掩盖当前异常；中位数和 MAD 应保持基线稳健。"
+    },
+    {
+      "case_id": "persistently_high_volume_regime_is_not_a_spike",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 100.4, "low": 99.7, "close": 100.0, "volume": 3000},
+          {"timestamp": "t2", "open": 100.0, "high": 100.5, "low": 99.9, "close": 100.2, "volume": 3050},
+          {"timestamp": "t3", "open": 100.2, "high": 100.4, "low": 99.8, "close": 100.1, "volume": 2950},
+          {"timestamp": "t4", "open": 100.1, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 3100},
+          {"timestamp": "t5", "open": 100.3, "high": 100.5, "low": 100.0, "close": 100.2, "volume": 2900},
+          {"timestamp": "t6", "open": 100.2, "high": 100.7, "low": 100.1, "close": 100.4, "volume": 3020},
+          {"timestamp": "t7", "open": 100.4, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 2980},
+          {"timestamp": "t8", "open": 100.3, "high": 100.8, "low": 100.2, "close": 100.5, "volume": 3000},
+          {"timestamp": "t9", "open": 100.35, "high": 100.6, "low": 100.3, "close": 100.5, "volume": 3200}
+        ]
+      },
+      "expected": {
+        "direction": "neutral",
+        "anomaly_state": "normal",
+        "volume_anomalous": false,
+        "price_anomalous": false
+      },
+      "false_positive_note": "绝对成交量高不等于异常；持续高量市场必须相对自身近期基线判断。"
+    },
+    {
+      "case_id": "insufficient_history_stays_neutral",
+      "case_type": "boundary",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 100.4, "low": 99.7, "close": 100.0, "volume": 1000},
+          {"timestamp": "t2", "open": 100.0, "high": 100.5, "low": 99.9, "close": 100.2, "volume": 1020},
+          {"timestamp": "t3", "open": 100.2, "high": 100.4, "low": 99.8, "close": 100.1, "volume": 980},
+          {"timestamp": "t4", "open": 100.1, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 1010},
+          {"timestamp": "t5", "open": 100.2, "high": 100.7, "low": 100.1, "close": 100.4, "volume": 3200}
+        ]
+      },
+      "expected": {
+        "direction": "neutral",
+        "anomaly_state": "insufficient_history"
+      }
+    },
+    {
+      "case_id": "sparse_positive_volume_baseline_fails_closed",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 100.4, "low": 99.7, "close": 100.0, "volume": 0},
+          {"timestamp": "t2", "open": 100.0, "high": 100.5, "low": 99.9, "close": 100.2, "volume": 1020},
+          {"timestamp": "t3", "open": 100.2, "high": 100.4, "low": 99.8, "close": 100.1, "volume": 0},
+          {"timestamp": "t4", "open": 100.1, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 1010},
+          {"timestamp": "t5", "open": 100.3, "high": 100.5, "low": 100.0, "close": 100.2, "volume": 0},
+          {"timestamp": "t6", "open": 100.2, "high": 100.7, "low": 100.1, "close": 100.4, "volume": 1005},
+          {"timestamp": "t7", "open": 100.4, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 995},
+          {"timestamp": "t8", "open": 100.3, "high": 100.8, "low": 100.2, "close": 100.5, "volume": 1000},
+          {"timestamp": "t9", "open": 100.35, "high": 100.6, "low": 100.3, "close": 100.5, "volume": 3200}
+        ]
+      },
+      "expected": {
+        "direction": "neutral",
+        "anomaly_state": "degraded_volume_baseline",
+        "maximum_confidence": 25
+      },
+      "false_positive_note": "历史中大量零成交量通常意味着缺失、停牌或极低活跃度；即使中位数仍为正，也不能把最新量比当成可靠异常。"
+    },
+    {
+      "case_id": "zero_volume_baseline_fails_closed",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {"timestamp": "t1", "open": 100.0, "high": 100.4, "low": 99.7, "close": 100.0, "volume": 0},
+          {"timestamp": "t2", "open": 100.0, "high": 100.5, "low": 99.9, "close": 100.2, "volume": 0},
+          {"timestamp": "t3", "open": 100.2, "high": 100.4, "low": 99.8, "close": 100.1, "volume": 0},
+          {"timestamp": "t4", "open": 100.1, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 0},
+          {"timestamp": "t5", "open": 100.3, "high": 100.5, "low": 100.0, "close": 100.2, "volume": 0},
+          {"timestamp": "t6", "open": 100.2, "high": 100.7, "low": 100.1, "close": 100.4, "volume": 0},
+          {"timestamp": "t7", "open": 100.4, "high": 100.6, "low": 100.0, "close": 100.3, "volume": 0},
+          {"timestamp": "t8", "open": 100.3, "high": 100.8, "low": 100.2, "close": 100.5, "volume": 0},
+          {"timestamp": "t9", "open": 100.5, "high": 105.8, "low": 100.3, "close": 105.5, "volume": 1000}
+        ]
+      },
+      "expected": {
+        "direction": "neutral",
+        "anomaly_state": "invalid_volume_baseline"
+      },
+      "false_positive_note": "零成交量基线无法做可靠归一化，必须失败关闭，不能因除零或无穷比率制造极端风险。"
+    }
+  ],
+  "known_limitations": [
+    "异常量价关系可能来自新闻、真实突破、交易时段切换或市场制度变化，不能单独证明操纵。",
+    "当前只比较最新一根 K 线与最多 48 根历史 K 线，不判断异常是否持续，也不使用逐笔成交方向。",
+    "不同 venue 的成交量口径可能不一致；跨 venue 比较必须先完成数据标准化。",
+    "拆股、复权、合约换月和错误成交可能形成价格脱离，生产数据层仍需独立质量标记。"
+  ]
+}

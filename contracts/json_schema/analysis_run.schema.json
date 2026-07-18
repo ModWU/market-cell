@@ -10,6 +10,7 @@
     "engine_version",
     "input_hash",
     "input_snapshot",
+    "input_snapshots",
     "formula_versions",
     "cell_manifests",
     "status",
@@ -46,6 +47,24 @@
       "type": "object",
       "additionalProperties": true
     },
+    "input_snapshots": {
+      "type": "array",
+      "minItems": 1,
+      "contains": {
+        "type": "object",
+        "required": ["input_kind"],
+        "properties": {
+          "input_kind": {
+            "const": "analysis_request"
+          }
+        }
+      },
+      "minContains": 1,
+      "maxContains": 1,
+      "items": {
+        "$ref": "https://marketcell.local/schemas/input_snapshot.schema.json"
+      }
+    },
     "formula_versions": {
       "type": "object",
       "additionalProperties": {
@@ -67,7 +86,7 @@
       "minLength": 1
     },
     "schema_version": {
-      "const": "analysis_run.v1"
+      "const": "analysis_run.v2"
     },
     "finished_at": {
       "type": ["string", "null"]
@@ -97,7 +116,7 @@
               "minLength": 1
             },
             "schema_version": {
-              "enum": ["cell_execution_plan.v1", "cell_execution_plan.v2", "cell_execution_plan.v3"]
+              "enum": ["cell_execution_plan.v1", "cell_execution_plan.v2", "cell_execution_plan.v3", "cell_execution_plan.v4", "cell_execution_plan.v5"]
             },
             "nodes": {
               "type": "array"
@@ -137,8 +156,21 @@
         "plan_execution": {
           "$ref": "https://marketcell.local/schemas/plan_execution.schema.json"
         },
+        "execution_control_records": {
+          "type": "array",
+          "items": {
+            "$ref": "https://marketcell.local/schemas/execution_control_record.schema.json"
+          }
+        },
         "input_snapshot_audit": {
           "$ref": "https://marketcell.local/schemas/input_snapshot_audit.schema.json"
+        },
+        "input_snapshot_audits": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "https://marketcell.local/schemas/input_snapshot_audit.schema.json"
+          }
         },
         "input_resolution_records": {
           "type": "array",

@@ -3,7 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Protocol
 
+from market_cell.execution.control import validate_execution_control_record
 from market_cell.execution.executor import (
+    CancellationSignal,
     CellExecutionContext,
     CellExecutor,
     validate_cell_result,
@@ -11,17 +13,21 @@ from market_cell.execution.executor import (
 )
 from market_cell.execution.models import (
     CellRuntimeTrace,
+    ExecutionControlRecord,
     ExecutionRole,
 )
 from market_cell.execution.plan_validation import ValidatedExecutionPlan
 from market_cell.inputs import (
+    CellInputBundle,
     InputCompositionError,
+    InputKind,
     InputReference,
     InputResolutionError,
     InputResolutionRecord,
     InputResolutionStatus,
     InputResolver,
     InputSnapshot,
+    ResolvedCellInput,
 )
 from market_cell.models import AnalysisRequest, CellResult
 from market_cell.registry import CellRegistry
@@ -39,6 +45,7 @@ class NodeExecutionCompletion:
     input_reference_ids: list[str]
     result: CellResult | None
     trace: CellRuntimeTrace | None
+    control_record: ExecutionControlRecord | None = None
     error: Exception | None = field(default=None, repr=False, compare=False)
 
 
@@ -52,6 +59,7 @@ class PlanExecutionOutcome:
     root_node_id: str
     results_by_node_id: dict[str, CellResult]
     runtime_traces: list[CellRuntimeTrace]
+    execution_control_records: list[ExecutionControlRecord]
     input_resolution_records: list[InputResolutionRecord]
     execution_order: list[str]
     root_result: CellResult | None = None
@@ -118,6 +126,7 @@ class CellExecutionCoordinator(Protocol):
         run_id: str,
         trace_id: str,
         on_node_completed: NodeCompletionHandler | None = None,
+        cancellation_signal: CancellationSignal | None = None,
     ) -> PlanExecutionOutcome:
         ...
 
@@ -137,6 +146,7 @@ class PlanDrivenLocalCoordinator:
         run_id: str,
         trace_id: str,
         on_node_completed: NodeCompletionHandler | None = None,
+        cancellation_signal: CancellationSignal | None = None,
     ) -> PlanExecutionOutcome:
         plan = validated_plan.plan
         nodes_by_id = {node.node_id: node for node in plan.nodes}
@@ -148,6 +158,7 @@ class PlanDrivenLocalCoordinator:
         }
         results_by_node_id: dict[str, CellResult] = {}
         runtime_traces: list[CellRuntimeTrace] = []
+        execution_control_records: list[ExecutionControlRecord] = []
         input_resolution_records: list[InputResolutionRecord] = []
         resolved_inputs: dict[str, InputSnapshot] = {}
         materialized_requests: dict[str, AnalysisRequest] = {}
@@ -159,38 +170,57 @@ class PlanDrivenLocalCoordinator:
                 binding = bindings_by_id[node.binding_id]
                 execution_order.append(node_id)
                 trace: CellRuntimeTrace | None = None
+                control_record: ExecutionControlRecord | None = None
                 try:
                     cell = registry.resolve(node.cell_id)
-                    request = _resolve_analysis_request(
+                    input_bundle = _compose_cell_inputs(
                         node_id=node.node_id,
                         reference_ids=node.input_reference_ids,
+                        required_input_kinds=node.required_input_kinds,
                         references_by_id=references_by_id,
                         input_resolver=input_resolver,
                         resolved_inputs=resolved_inputs,
                         materialized_requests=materialized_requests,
                         resolution_records=input_resolution_records,
                     )
+                    request = input_bundle.analysis_request
                     child_results = (
                         [results_by_node_id[dependency_id] for dependency_id in node.dependencies]
                         if node.dependencies
                         else None
                     )
+                    execution_context = CellExecutionContext(
+                        run_id=run_id,
+                        trace_id=trace_id,
+                        plan_id=plan.plan_id,
+                        node=node,
+                        binding=binding,
+                        input_bundle=input_bundle,
+                        fallback_bindings=tuple(
+                            bindings_by_id[binding_id]
+                            for binding_id in node.fallback_binding_ids
+                        ),
+                        cancellation_signal=cancellation_signal,
+                    )
                     cell_outcome = executor.execute(
                         cell=cell,
                         request=request,
                         child_results=child_results,
-                        context=CellExecutionContext(
-                            run_id=run_id,
-                            trace_id=trace_id,
-                            plan_id=plan.plan_id,
-                            node=node,
-                            binding=binding,
-                        ),
+                        context=execution_context,
                     )
                     trace = cell_outcome.trace
-                    runtime_traces.append(trace)
+                    runtime_traces.extend(cell_outcome.runtime_traces)
+                    control_record = cell_outcome.control_record
+                    if control_record is not None:
+                        execution_control_records.append(control_record)
+                        validate_execution_control_record(
+                            control_record,
+                            execution_context,
+                            cell_outcome.runtime_traces,
+                        )
+                    for attempt_trace in cell_outcome.runtime_traces:
+                        validate_execution_trace(attempt_trace, plan)
                     result = cell_outcome.unwrap()
-                    validate_execution_trace(trace, plan)
                     validate_cell_result(cell, request, result)
                 except Exception as exc:
                     completion = NodeExecutionCompletion(
@@ -201,6 +231,7 @@ class PlanDrivenLocalCoordinator:
                         input_reference_ids=list(node.input_reference_ids),
                         result=None,
                         trace=trace,
+                        control_record=control_record,
                         error=exc,
                     )
                     if on_node_completed is not None:
@@ -211,6 +242,7 @@ class PlanDrivenLocalCoordinator:
                         root_node_id=plan.root_node_id,
                         results_by_node_id=results_by_node_id,
                         runtime_traces=runtime_traces,
+                        execution_control_records=execution_control_records,
                         input_resolution_records=input_resolution_records,
                         execution_order=execution_order,
                         failed_node_id=node.node_id,
@@ -228,6 +260,7 @@ class PlanDrivenLocalCoordinator:
                             input_reference_ids=list(node.input_reference_ids),
                             result=result,
                             trace=trace,
+                            control_record=control_record,
                         )
                     )
 
@@ -242,6 +275,7 @@ class PlanDrivenLocalCoordinator:
                 root_node_id=plan.root_node_id,
                 results_by_node_id=results_by_node_id,
                 runtime_traces=runtime_traces,
+                execution_control_records=execution_control_records,
                 input_resolution_records=input_resolution_records,
                 execution_order=execution_order,
                 failed_node_id=plan.root_node_id,
@@ -253,22 +287,24 @@ class PlanDrivenLocalCoordinator:
             root_node_id=plan.root_node_id,
             results_by_node_id=results_by_node_id,
             runtime_traces=runtime_traces,
+            execution_control_records=execution_control_records,
             input_resolution_records=input_resolution_records,
             execution_order=execution_order,
             root_result=root_result,
         )
 
 
-def _resolve_analysis_request(
+def _compose_cell_inputs(
     *,
     node_id: str,
     reference_ids: list[str],
+    required_input_kinds: list[InputKind],
     references_by_id: dict[str, InputReference],
     input_resolver: InputResolver,
     resolved_inputs: dict[str, InputSnapshot],
     materialized_requests: dict[str, AnalysisRequest],
     resolution_records: list[InputResolutionRecord],
-) -> AnalysisRequest:
+) -> CellInputBundle:
     snapshots_by_reference_id: dict[str, InputSnapshot] = {}
     for reference_id in reference_ids:
         reference = references_by_id[reference_id]
@@ -335,7 +371,24 @@ def _resolve_analysis_request(
                 f"node {node_id} could not materialize analysis_request "
                 f"{request_reference_id}"
             ) from exc
-    return materialized_requests[request_reference_id]
+    request = materialized_requests[request_reference_id]
+    try:
+        return CellInputBundle(
+            node_id=node_id,
+            analysis_request=request,
+            resolved_inputs=tuple(
+                ResolvedCellInput(
+                    reference=references_by_id[reference_id],
+                    snapshot=snapshots_by_reference_id[reference_id],
+                )
+                for reference_id in reference_ids
+            ),
+            required_input_kinds=tuple(required_input_kinds),
+        )
+    except ValueError as exc:
+        raise InputCompositionError(
+            f"node {node_id} could not compose its typed input bundle: {exc}"
+        ) from exc
 
 
 def _resolution_record(

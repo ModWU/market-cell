@@ -9,11 +9,15 @@ from market_cell.scoring import clamp, direction_from_score, weighted_average
 
 DEFAULT_DECISION_WEIGHTS = {
     "technical.trend": 1.2,
+    "technical.support_resistance": 1.0,
+    "technical.breakout": 1.0,
     "technical.volume": 0.9,
     "technical.volatility": 0.8,
     "technical.market_regime": 1.0,
     "external.news": 0.8,
     "risk.manipulation": 1.1,
+    "microstructure.liquidity": 0.9,
+    "crypto.funding_open_interest": 0.9,
 }
 
 RISK_LEVEL_RANK: dict[RiskLevel, int] = {
@@ -67,7 +71,7 @@ class DecisionAssessment:
 class DecisionPolicy:
     """Strategy object for root decision scoring and risk posture."""
 
-    formula_version: str = "decision_weighted_score_v0.2"
+    formula_version: str = "decision_weighted_score_v0.5"
     weights: Mapping[str, float] = field(default_factory=lambda: dict(DEFAULT_DECISION_WEIGHTS))
     volatility_thresholds: RiskThresholds = RiskThresholds(medium=35, high=55, extreme=75)
     manipulation_thresholds: RiskThresholds = RiskThresholds(medium=25, high=35, extreme=65)

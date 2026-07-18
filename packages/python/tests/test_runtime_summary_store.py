@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from dataclasses import replace
 from pathlib import Path
 import tempfile
 import unittest
@@ -14,6 +15,7 @@ from market_cell.execution import (
 from market_cell.execution.models import CellRuntimeTrace
 from market_cell.models import AnalysisRequest, Candle
 from market_cell.registry import default_registry
+from market_cell.graph import default_analysis_graph
 from market_cell.reports import FileSystemReportStore
 
 
@@ -92,6 +94,25 @@ class RuntimeSummaryStoreTests(unittest.TestCase):
         self.assertEqual(snapshot.trace_count, 2)
         self.assertEqual(snapshot.entries[0].failure_rate, 0.5)
 
+    def test_canceled_attempt_is_stored_but_excluded_from_placement_snapshot(self):
+        store = InMemoryRuntimeSummaryStore()
+        canceled = replace(
+            _trace("run-canceled", "span-canceled", 12, "failed", hour=9),
+            metadata={
+                "execution_control": {
+                    "failure_kind": "canceled",
+                    "placement_eligible": False,
+                }
+            },
+        )
+
+        write = store.save_traces([canceled])
+        snapshot = store.snapshot(window=timedelta(days=1), as_of=AS_OF)
+
+        self.assertEqual(write.stored_trace_count, 1)
+        self.assertEqual(snapshot.trace_count, 0)
+        self.assertEqual(snapshot.entries, [])
+
     def test_engine_uses_previous_runs_and_audits_store_writes(self):
         runtime_store = InMemoryRuntimeSummaryStore()
         engine = AnalysisEngine(runtime_summary_store=runtime_store)
@@ -108,7 +129,7 @@ class RuntimeSummaryStoreTests(unittest.TestCase):
         plan_snapshot = run["metadata"]["cell_execution_plan"]["metadata"][
             "runtime_summary_snapshot"
         ]
-        expected_trace_count = len(default_registry().all_cells())
+        expected_trace_count = len(default_analysis_graph().nodes)
         self.assertEqual(snapshot["trace_count"], expected_trace_count)
         self.assertEqual(plan_snapshot["snapshot_id"], snapshot["snapshot_id"])
         self.assertEqual(write["status"], "succeeded")

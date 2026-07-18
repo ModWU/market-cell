@@ -43,6 +43,8 @@ total P95 < 5ms
 slowest node P95 < 0.1ms
 ```
 
+默认图加入 SupportResistanceCell 后，2026-07-18 的 v2 固定基线总 P95 约为 5.1ms；继续加入 BreakoutCell 二级节点后的 v3 基线约为 5.7ms。ExecutionPlan v5 和类型化 CellInputBundle 闭环后的 v4 重复 warm-process 测量约为 6.0–6.3ms。加入稳健 VolumePriceAnomalyCell 以及二级 ManipulationRisk 聚合后的 v5 约为 6.7ms；增加正成交量覆盖防护后的 v6 保持同一性能量级。DecisionPolicy v0.5 为可选 FundingOpenInterestCell 固化审计权重后的 v7 重复测量约为 6.7–7.6ms，最新参考为 6.74ms，最慢节点约 0.05ms。CI 阈值不变，仍只守护数量级回归。
+
 共享 CI 首版阈值设为：
 
 ```text

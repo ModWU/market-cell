@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/order_book_snapshot.schema.json",
+  "title": "MarketCell OrderBookSnapshot",
+  "type": "object",
+  "required": [
+    "target",
+    "bids",
+    "asks",
+    "provenance",
+    "schema_version",
+    "metadata"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "target": {"type": "string", "minLength": 1},
+    "bids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/level"}
+    },
+    "asks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/level"}
+    },
+    "provenance": {
+      "$ref": "https://marketcell.local/schemas/data_provenance.schema.json"
+    },
+    "schema_version": {"const": "order_book_snapshot.v1"},
+    "metadata": {"type": "object", "additionalProperties": true}
+  },
+  "$defs": {
+    "level": {
+      "type": "object",
+      "required": ["price", "quantity", "order_count"],
+      "additionalProperties": false,
+      "properties": {
+        "price": {"type": "number", "exclusiveMinimum": 0},
+        "quantity": {"type": "number", "exclusiveMinimum": 0},
+        "order_count": {"type": ["integer", "null"], "minimum": 1}
+      }
+    }
+  }
+}

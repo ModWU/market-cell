@@ -8,7 +8,7 @@ class DecisionCell(MarketCell):
     name = "DecisionCell"
     category = "decision"
     description = "聚合所有子 Cell 的方向、置信度和风险，形成根节点分析结论。"
-    formula_version = "decision_weighted_score_v0.2"
+    formula_version = "decision_weighted_score_v0.5"
     inputs = ["child_results.score", "child_results.risk"]
     outputs = ["direction", "strength", "confidence", "volatility_risk", "manipulation_risk", "summary"]
     risk_dimensions = ["volatility_risk", "manipulation_risk"]

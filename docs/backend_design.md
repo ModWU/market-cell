@@ -1,4 +1,4 @@
-# MarketCell 后端设计文档 v0.6
+# MarketCell 后端设计文档 v0.9
 
 ## 1. 后端目标
 
@@ -152,11 +152,7 @@ PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --store
 
 ## 6. 后端扩展顺序
 
-扩展顺序只以 `roadmap.md` 为准。当前后端优先完成：
-
-1. Executor Router、超时、重试和背压语义。
-
-这些边界稳定后再进入更多 Cell、多周期、API 和远程执行。
+扩展顺序只以 `roadmap.md` 为准。当前 Foundation Hardening 与 v0.3 首批 Cell 能力基线已完成，下一步进入 v0.4 MultiHorizonRequest 边界。生产远程 transport、跨进程幂等结果存储和强制 cancellation 保留到服务化阶段。
 
 ## 7. 错误处理原则
 

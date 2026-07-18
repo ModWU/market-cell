@@ -1,6 +1,6 @@
 import unittest
 
-from market_cell.cells.risk import ManipulationRiskCell
+from market_cell.cells import ManipulationRiskCell, VolumePriceAnomalyCell
 from market_cell.models import AnalysisRequest, Candle
 
 
@@ -17,7 +17,8 @@ class CellTests(unittest.TestCase):
             ],
         )
 
-        result = ManipulationRiskCell().analyze(request)
+        anomaly = VolumePriceAnomalyCell().analyze(request)
+        result = ManipulationRiskCell().analyze(request, [anomaly])
 
         self.assertGreater(result.manipulation_risk, 35)
         self.assertEqual(result.direction, "conflict")

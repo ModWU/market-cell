@@ -1,4 +1,4 @@
-# MarketCell 后端架构文档 v0.6
+# MarketCell 后端架构文档 v1.0
 
 ## 1. 架构阶段
 
@@ -7,7 +7,7 @@ MarketCell 后端分三阶段演进。
 ### 阶段一：本地分析内核
 
 ```text
-CLI + AnalysisEngine + InputSnapshot/Resolver + Graph + Planner + Validators + Coordinator + LocalCellExecutor + AnalysisRun + FileSystemReportStore
+CLI + AnalysisEngine + InputSnapshot/Resolver + Graph + Planner + Validators + Coordinator + FailureControlledExecutor + LocalCellExecutor / ExecutorRouter + AnalysisRun + FileSystemReportStore
 ```
 
 目标是把 Cell 协议和分析闭环做稳定。
@@ -85,8 +85,11 @@ flowchart TD
 - `CellGraphValidation` / `ExecutionPlanValidation`
 - `PlanDrivenLocalCoordinator`
 - `InputSnapshot` / `InputReference` / `InputResolutionRecord`
+- `CellInputBundle` / `OrderBookSnapshot` / `FundingOpenInterestSnapshot` / `DataProvenance`
 - `LocalInputResolver` / `InputSnapshotStore`
 - `CellExecutor` / `LocalCellExecutor`
+- `ExecutorRouter` 和混合 capability catalog 计划入口
+- `FailureControlledExecutor`、ExecutionPlan v5 fallback 和 `execution_control_record.v1`
 - `PlanExecution` audit
 - `CellRuntimeTrace` / `CellRuntimeSummary`
 - `RuntimeSummaryStore` / `RuntimeSummarySnapshot`
@@ -95,7 +98,7 @@ flowchart TD
 - CLI `replay`
 - `ReplayRunner`
 
-当前不立即实现复杂消息队列。Graph、plan-driven DAG、Input Resolver、跨运行 Runtime Summary Store 和固定性能基线已经完成；下一步补齐远程 Executor Router 与失败控制语义。
+当前不立即实现复杂消息队列。Graph、plan-driven DAG、类型化多输入组合、Input Resolver、跨运行 Runtime Summary Store、固定性能基线、Executor Router 和失败控制状态机已经完成。生产远程阶段仍需 transport adapter、跨进程幂等结果存储和强制 deadline/cancellation。
 
 ## 3. 后端分层
 
@@ -152,6 +155,7 @@ AnalysisRun {
   execution_plan
   input_resolution_records
   plan_execution
+  execution_control_records
   runtime_traces
   runtime_summaries
   runtime_summary_snapshot
@@ -177,6 +181,7 @@ CellExecutionPlan {
   horizon
   root_node_id
   nodes
+  node.binding_id / node.fallback_binding_ids
   input_references
   service_bindings
   schema_version
@@ -276,13 +281,14 @@ flowchart LR
 - input source / data_version / resolution status / cache_hit
 - implementation_id / service_id / runtime
 - duration_ms / status / error / retry_count
+- idempotency_key / attempt_id / failure_kind / fallback_count
+- timeout budget / cancellation / admission result
 - report_id
 
 后续服务化再增加：
 
-- task_id / attempt_id
+- task_id
 - queue_wait_ms
-- timeout / cancellation / retry cause
 - service health / concurrency / capacity
 - OpenTelemetry 跨进程上下文
 

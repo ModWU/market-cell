@@ -322,6 +322,7 @@ def build_runtime_summary_snapshot(
         trace
         for trace in traces
         if window_started_at <= _trace_finished_at(trace) <= window_ended_at
+        and _placement_eligible(trace)
     ]
     grouped: dict[
         tuple[str, str, str | None, str | None, CellRuntime | None],
@@ -423,6 +424,13 @@ def _trace_finished_at(trace: CellRuntimeTrace) -> datetime:
         raise RuntimeSummaryStoreError(
             f"trace {trace.run_id}/{trace.span_id} has invalid finished_at"
         ) from exc
+
+
+def _placement_eligible(trace: CellRuntimeTrace) -> bool:
+    execution_control = trace.metadata.get("execution_control")
+    if not isinstance(execution_control, dict):
+        return True
+    return execution_control.get("placement_eligible") is not False
 
 
 def _parse_timestamp(value: str) -> datetime:

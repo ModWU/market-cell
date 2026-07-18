@@ -9,7 +9,7 @@ from market_cell.execution.runtime_store import RuntimeSummarySnapshot
 from market_cell.models import CellManifest
 
 
-CELL_PLACEMENT_DECISION_SCHEMA_VERSION = "cell_placement_decision.v2"
+CELL_PLACEMENT_DECISION_SCHEMA_VERSION = "cell_placement_decision.v3"
 
 PlacementHistoryStatus = Literal[
     "no_history",
@@ -52,10 +52,32 @@ class CellPlacementDecision:
     cell_id: str
     formula_version: str
     selected_binding: CellServiceBinding
+    fallback_bindings: list[CellServiceBinding]
     policy: str
     reason_codes: list[str]
     candidate_evaluations: list[PlacementCandidateEvaluation]
     schema_version: str = CELL_PLACEMENT_DECISION_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        bindings = [self.selected_binding, *self.fallback_bindings]
+        binding_ids = [binding.binding_id for binding in bindings]
+        if len(binding_ids) != len(set(binding_ids)):
+            raise ValueError("placement decision bindings must be unique")
+        if any(
+            binding.cell_id != self.cell_id
+            or binding.formula_version != self.formula_version
+            for binding in bindings
+        ):
+            raise ValueError("placement decision binding is incompatible with the Cell")
+        if not self.candidate_evaluations:
+            raise ValueError("placement decision requires candidate evaluations")
+        evaluation_binding_ids = [
+            evaluation.binding_id for evaluation in self.candidate_evaluations
+        ]
+        if len(evaluation_binding_ids) != len(set(evaluation_binding_ids)):
+            raise ValueError("placement candidate evaluations must be unique")
+        if any(binding_id not in evaluation_binding_ids for binding_id in binding_ids):
+            raise ValueError("placement binding is missing from candidate evaluations")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -64,6 +86,9 @@ class CellPlacementDecision:
             "selected_binding_id": self.selected_binding.binding_id,
             "selected_implementation_id": self.selected_binding.implementation_id,
             "selected_service_id": self.selected_binding.service_id,
+            "fallback_binding_ids": [
+                binding.binding_id for binding in self.fallback_bindings
+            ],
             "policy": self.policy,
             "candidate_count": len(self.candidate_evaluations),
             "reason_codes": list(self.reason_codes),
@@ -104,7 +129,7 @@ class RuntimeAwarePlacementPolicy:
 
     @property
     def name(self) -> str:
-        return "runtime_aware_priority_v0.1"
+        return "runtime_aware_priority_v0.2"
 
     def select(
         self,
@@ -133,24 +158,25 @@ class RuntimeAwarePlacementPolicy:
             if evaluation.history_status != "unhealthy"
         ]
         selection_pool = non_unhealthy or evaluations
-        selected_evaluation = min(selection_pool, key=_selection_rank)
-        binding_by_key = {
-            (binding.implementation_id, binding.service_id): binding
-            for binding in candidates
-        }
-        selected_binding = binding_by_key[
-            (selected_evaluation.implementation_id, selected_evaluation.service_id)
+        ranked_selection_pool = sorted(selection_pool, key=_selection_rank)
+        selected_evaluation = ranked_selection_pool[0]
+        binding_by_id = {binding.binding_id: binding for binding in candidates}
+        selected_binding = binding_by_id[selected_evaluation.binding_id]
+        fallback_bindings = [
+            binding_by_id[evaluation.binding_id]
+            for evaluation in ranked_selection_pool[1:]
         ]
 
         return CellPlacementDecision(
             cell_id=manifest.cell_id,
             formula_version=manifest.formula_version,
             selected_binding=selected_binding,
+            fallback_bindings=fallback_bindings,
             policy=self.name,
             reason_codes=_reason_codes(selected_evaluation, evaluations),
             candidate_evaluations=sorted(
                 evaluations,
-                key=lambda item: (item.priority, item.implementation_id, item.service_id),
+                key=_selection_rank,
             ),
         )
 
@@ -252,6 +278,15 @@ def _reason_codes(
         reasons.append("unhealthy_candidates_avoided")
     if all(evaluation.history_status == "unhealthy" for evaluation in evaluations):
         reasons.append("all_candidates_unhealthy")
+    if any(
+        evaluation.binding_id != selected.binding_id
+        and (
+            evaluation.history_status != "unhealthy"
+            or all(item.history_status == "unhealthy" for item in evaluations)
+        )
+        for evaluation in evaluations
+    ):
+        reasons.append("fallback_candidates_available")
     if selected.priority == min(evaluation.priority for evaluation in evaluations):
         reasons.append("selected_by_priority")
     if selected.history_status == "healthy":

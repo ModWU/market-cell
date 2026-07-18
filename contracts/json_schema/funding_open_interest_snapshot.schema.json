@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/funding_open_interest_snapshot.schema.json",
+  "title": "MarketCell FundingOpenInterestSnapshot",
+  "type": "object",
+  "required": [
+    "target",
+    "points",
+    "funding_interval_hours",
+    "funding_rate_type",
+    "sample_interval_ms",
+    "notional_currency",
+    "contract_type",
+    "provenance",
+    "schema_version",
+    "metadata"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "target": {"type": "string", "minLength": 1},
+    "points": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/point"}
+    },
+    "funding_interval_hours": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 24
+    },
+    "funding_rate_type": {"enum": ["settled", "predicted"]},
+    "sample_interval_ms": {"type": "integer", "minimum": 1},
+    "notional_currency": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]{2,12}$"
+    },
+    "contract_type": {"const": "linear"},
+    "provenance": {
+      "allOf": [
+        {"$ref": "https://marketcell.local/schemas/data_provenance.schema.json"},
+        {
+          "type": "object",
+          "properties": {
+            "market_type": {"const": "perpetual_future"}
+          }
+        }
+      ]
+    },
+    "schema_version": {"const": "funding_open_interest_snapshot.v1"},
+    "metadata": {"type": "object", "additionalProperties": true}
+  },
+  "$defs": {
+    "point": {
+      "type": "object",
+      "required": [
+        "timestamp_ms",
+        "funding_rate",
+        "open_interest_notional",
+        "mark_price"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "timestamp_ms": {"type": "integer", "minimum": 0},
+        "funding_rate": {
+          "type": "number",
+          "minimum": -0.05,
+          "maximum": 0.05
+        },
+        "open_interest_notional": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "mark_price": {"type": "number", "exclusiveMinimum": 0}
+      }
+    }
+  }
+}

@@ -107,9 +107,17 @@ class ExecutionPlacementTests(unittest.TestCase):
             if item["cell_id"] == "technical.trend"
         )
         self.assertEqual(trend_binding.implementation_id, rust_trend.implementation_id)
+        self.assertEqual(
+            trend_node.fallback_binding_ids,
+            [local_trend.binding_id],
+        )
         self.assertEqual(decision["selected_service_id"], "rust-hot")
+        self.assertEqual(
+            decision["fallback_binding_ids"],
+            [local_trend.binding_id],
+        )
         self.assertIn("selected_by_runtime_latency", decision["reason_codes"])
-        self.assertEqual(decision["schema_version"], "cell_placement_decision.v2")
+        self.assertEqual(decision["schema_version"], "cell_placement_decision.v3")
         self.assertEqual(decision["selected_binding_id"], rust_trend.binding_id)
 
     def test_planner_avoids_unhealthy_service_even_when_it_has_higher_priority(self):
@@ -136,6 +144,7 @@ class ExecutionPlacementTests(unittest.TestCase):
             if item["cell_id"] == "technical.trend"
         )
         self.assertEqual(decision["selected_service_id"], "python-local")
+        self.assertEqual(decision["fallback_binding_ids"], [])
         self.assertIn("unhealthy_candidates_avoided", decision["reason_codes"])
 
     def test_policy_rejects_incompatible_formula_versions(self):
@@ -145,6 +154,18 @@ class ExecutionPlacementTests(unittest.TestCase):
 
         with self.assertRaises(PlacementUnavailableError):
             RuntimeAwarePlacementPolicy().select(manifest, [incompatible])
+
+    def test_planner_rejects_policy_binding_outside_capability_catalog(self):
+        registry = default_registry()
+        catalog = build_local_capability_catalog(registry)
+
+        with self.assertRaises(PlacementUnavailableError):
+            build_execution_plan(
+                registry,
+                _request(),
+                catalog,
+                placement_policy=_OutOfCatalogFallbackPolicy(),
+            )
 
     def test_new_formula_version_does_not_inherit_old_runtime_history(self):
         registry = default_registry()
@@ -260,6 +281,37 @@ def _request() -> AnalysisRequest:
             Candle("t2", 101, 104, 100, 103, 1200),
         ],
     )
+
+
+class _OutOfCatalogFallbackPolicy:
+    @property
+    def name(self) -> str:
+        return "out_of_catalog_fallback_policy"
+
+    def select(self, manifest, candidates, runtime_summary_snapshot=None):
+        decision = RuntimeAwarePlacementPolicy().select(
+            manifest,
+            candidates,
+            runtime_summary_snapshot,
+        )
+        rogue = replace(
+            decision.selected_binding,
+            service_id="rogue-service",
+        )
+        rogue_evaluation = replace(
+            decision.candidate_evaluations[0],
+            binding_id=rogue.binding_id,
+            implementation_id=rogue.implementation_id,
+            service_id=rogue.service_id,
+        )
+        return replace(
+            decision,
+            fallback_bindings=[rogue],
+            candidate_evaluations=[
+                *decision.candidate_evaluations,
+                rogue_evaluation,
+            ],
+        )
 
 
 if __name__ == "__main__":

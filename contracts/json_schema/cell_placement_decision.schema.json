@@ -9,6 +9,7 @@
     "selected_binding_id",
     "selected_implementation_id",
     "selected_service_id",
+    "fallback_binding_ids",
     "policy",
     "candidate_count",
     "reason_codes",
@@ -37,6 +38,14 @@
       "type": "string",
       "minLength": 1
     },
+    "fallback_binding_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "policy": {
       "type": "string",
       "minLength": 1
@@ -61,7 +70,7 @@
       }
     },
     "schema_version": {
-      "const": "cell_placement_decision.v2"
+      "const": "cell_placement_decision.v3"
     }
   },
   "$defs": {

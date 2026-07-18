@@ -9,7 +9,7 @@ from market_cell.execution.models import (
     CellServiceBinding,
 )
 from market_cell.graph.topology import dependency_closure, stable_topological_levels
-from market_cell.inputs import InputReference
+from market_cell.inputs import InputKind, InputReference
 
 
 EXECUTION_PLAN_VALIDATION_SCHEMA_VERSION = "execution_plan_validation.v1"
@@ -30,10 +30,18 @@ PlanValidationCode = Literal[
     "missing_binding",
     "binding_cell_mismatch",
     "binding_formula_mismatch",
+    "duplicate_fallback_binding",
+    "primary_binding_in_fallback",
+    "missing_fallback_binding",
+    "fallback_binding_cell_mismatch",
+    "fallback_binding_formula_mismatch",
     "unused_binding",
     "missing_node_input_reference",
     "duplicate_node_input_reference",
     "missing_input_reference",
+    "duplicate_required_input_kind",
+    "missing_required_input_kind",
+    "unexpected_input_kind",
     "unused_input_reference",
     "cycle_detected",
     "unreachable_node",
@@ -272,6 +280,7 @@ def _validate_nodes(
                         reference_id=reference_id,
                     )
                 )
+        _validate_node_input_kinds(node, reference_by_id, issues)
         for dependency_id in node.dependencies:
             if dependency_id == node.node_id:
                 issues.append(
@@ -292,21 +301,193 @@ def _validate_nodes(
                     )
                 )
 
-        binding = binding_by_id.get(node.binding_id)
-        if binding is None:
+        if len(node.fallback_binding_ids) != len(set(node.fallback_binding_ids)):
             issues.append(
                 PlanValidationIssue(
-                    code="missing_binding",
-                    message=f"node {node.node_id} references missing binding {node.binding_id}",
+                    code="duplicate_fallback_binding",
+                    message=f"node {node.node_id} repeats a fallback binding",
+                    node_id=node.node_id,
+                )
+            )
+        if node.binding_id in node.fallback_binding_ids:
+            issues.append(
+                PlanValidationIssue(
+                    code="primary_binding_in_fallback",
+                    message=(
+                        f"node {node.node_id} repeats primary binding "
+                        f"{node.binding_id} as fallback"
+                    ),
                     node_id=node.node_id,
                     binding_id=node.binding_id,
                 )
             )
+        _validate_node_binding(
+            node=node,
+            binding_id=node.binding_id,
+            binding_by_id=binding_by_id,
+            issues=issues,
+            fallback=False,
+        )
+        for fallback_binding_id in node.fallback_binding_ids:
+            _validate_node_binding(
+                node=node,
+                binding_id=fallback_binding_id,
+                binding_by_id=binding_by_id,
+                issues=issues,
+                fallback=True,
+            )
+
+
+def _validate_node_input_kinds(
+    node: CellExecutionNode,
+    reference_by_id: dict[str, InputReference],
+    issues: list[PlanValidationIssue],
+) -> None:
+    required_kinds = list(node.required_input_kinds)
+    if len(required_kinds) != len(set(required_kinds)):
+        issues.append(
+            PlanValidationIssue(
+                code="duplicate_required_input_kind",
+                message=f"node {node.node_id} repeats a required input kind",
+                node_id=node.node_id,
+            )
+        )
+
+    referenced_kinds: list[InputKind] = [
+        reference_by_id[reference_id].input_kind
+        for reference_id in node.input_reference_ids
+        if reference_id in reference_by_id
+    ]
+    required_kind_set = set(required_kinds)
+    referenced_kind_set = set(referenced_kinds)
+    if "analysis_request" not in required_kind_set:
+        issues.append(
+            PlanValidationIssue(
+                code="missing_required_input_kind",
+                message=(
+                    f"node {node.node_id} must declare analysis_request as a "
+                    "required input kind"
+                ),
+                node_id=node.node_id,
+            )
+        )
+    for input_kind in sorted(required_kind_set - referenced_kind_set):
+        issues.append(
+            PlanValidationIssue(
+                code="missing_required_input_kind",
+                message=(
+                    f"node {node.node_id} is missing required input kind {input_kind}"
+                ),
+                node_id=node.node_id,
+            )
+        )
+    for input_kind in sorted(referenced_kind_set - required_kind_set):
+        reference = next(
+            reference_by_id[reference_id]
+            for reference_id in node.input_reference_ids
+            if reference_id in reference_by_id
+            and reference_by_id[reference_id].input_kind == input_kind
+        )
+        issues.append(
+            PlanValidationIssue(
+                code="unexpected_input_kind",
+                message=(
+                    f"node {node.node_id} references undeclared input kind {input_kind}"
+                ),
+                node_id=node.node_id,
+                reference_id=reference.reference_id,
+            )
+        )
+
+    for input_kind in sorted(referenced_kind_set):
+        matching_references = [
+            reference_by_id[reference_id]
+            for reference_id in node.input_reference_ids
+            if reference_id in reference_by_id
+            and reference_by_id[reference_id].input_kind == input_kind
+        ]
+        if len(matching_references) <= 1:
             continue
-        if node.cell_id != binding.cell_id:
-            issues.append(_binding_issue("binding_cell_mismatch", node, binding))
-        if node.formula_version != binding.formula_version:
-            issues.append(_binding_issue("binding_formula_mismatch", node, binding))
+        issues.append(
+            PlanValidationIssue(
+                code="unexpected_input_kind",
+                message=(
+                    f"node {node.node_id} references input kind {input_kind} more than once"
+                ),
+                node_id=node.node_id,
+                reference_id=matching_references[1].reference_id,
+            )
+        )
+
+    if (
+        len(required_kinds) == len(set(required_kinds))
+        and len(referenced_kinds) == len(set(referenced_kinds))
+        and required_kind_set == referenced_kind_set
+        and required_kinds != referenced_kinds
+    ):
+        mismatch_index = next(
+            index
+            for index, (required, actual) in enumerate(
+                zip(required_kinds, referenced_kinds, strict=True)
+            )
+            if required != actual
+        )
+        reference_id = node.input_reference_ids[mismatch_index]
+        issues.append(
+            PlanValidationIssue(
+                code="unexpected_input_kind",
+                message=(
+                    f"node {node.node_id} input kind order does not match its "
+                    "required input declaration"
+                ),
+                node_id=node.node_id,
+                reference_id=reference_id,
+            )
+        )
+
+
+def _validate_node_binding(
+    *,
+    node: CellExecutionNode,
+    binding_id: str,
+    binding_by_id: dict[str, CellServiceBinding],
+    issues: list[PlanValidationIssue],
+    fallback: bool,
+) -> None:
+    binding = binding_by_id.get(binding_id)
+    if binding is None:
+        issues.append(
+            PlanValidationIssue(
+                code="missing_fallback_binding" if fallback else "missing_binding",
+                message=(
+                    f"node {node.node_id} references missing "
+                    f"{'fallback ' if fallback else ''}binding {binding_id}"
+                ),
+                node_id=node.node_id,
+                binding_id=binding_id,
+            )
+        )
+        return
+    if node.cell_id != binding.cell_id:
+        issues.append(
+            _binding_issue(
+                "fallback_binding_cell_mismatch" if fallback else "binding_cell_mismatch",
+                node,
+                binding,
+            )
+        )
+    if node.formula_version != binding.formula_version:
+        issues.append(
+            _binding_issue(
+                (
+                    "fallback_binding_formula_mismatch"
+                    if fallback
+                    else "binding_formula_mismatch"
+                ),
+                node,
+                binding,
+            )
+        )
 
 
 def _binding_issue(
@@ -326,7 +507,11 @@ def _validate_binding_usage(
     plan: CellExecutionPlan,
     issues: list[PlanValidationIssue],
 ) -> None:
-    used_binding_ids = {node.binding_id for node in plan.nodes}
+    used_binding_ids = {
+        binding_id
+        for node in plan.nodes
+        for binding_id in [node.binding_id, *node.fallback_binding_ids]
+    }
     for binding in plan.service_bindings:
         if binding.binding_id not in used_binding_ids:
             issues.append(

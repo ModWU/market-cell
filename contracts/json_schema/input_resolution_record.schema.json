@@ -25,7 +25,7 @@
     "node_id": {"type": "string", "minLength": 1},
     "reference_id": {"type": "string", "minLength": 1},
     "input_kind": {
-      "enum": ["analysis_request", "candle_batch", "feature_snapshot"]
+      "enum": ["analysis_request", "candle_batch", "funding_open_interest_snapshot", "feature_snapshot", "order_book_snapshot"]
     },
     "resolver": {"type": "string", "minLength": 1},
     "status": {"enum": ["succeeded", "failed"]},

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import timedelta
+from typing import get_args
 from uuid import uuid4
 
 from market_cell.execution.catalog import (
@@ -11,10 +12,13 @@ from market_cell.execution.catalog import (
 from market_cell.execution.models import (
     CellExecutionNode,
     CellExecutionPlan,
+    CellServiceBinding,
+    ResourceHints,
 )
 from market_cell.execution.placement import (
     CellPlacementDecision,
     CellPlacementPolicy,
+    PlacementUnavailableError,
     RuntimeAwarePlacementPolicy,
 )
 from market_cell.execution.plan_validation import validate_execution_plan
@@ -25,7 +29,12 @@ from market_cell.graph import (
     default_analysis_graph,
     validate_cell_graph_definition,
 )
-from market_cell.inputs import InputReference, InputSnapshot
+from market_cell.inputs import (
+    InputCompositionError,
+    InputKind,
+    InputReference,
+    InputSnapshot,
+)
 from market_cell.models import AnalysisRequest, CellManifest
 from market_cell.registry import CellRegistry
 
@@ -72,7 +81,17 @@ class CellExecutionPlanner:
                 graph_node,
                 manifest_by_cell[graph_node.cell_id],
                 decision_by_cell[graph_node.cell_id].selected_binding.binding_id,
-                references,
+                [
+                    binding.binding_id
+                    for binding in decision_by_cell[
+                        graph_node.cell_id
+                    ].fallback_bindings
+                ],
+                decision_by_cell[graph_node.cell_id].selected_binding.resource_hints,
+                _references_for_manifest(
+                    manifest_by_cell[graph_node.cell_id],
+                    references,
+                ),
             )
             for graph_node in graph.nodes
         ]
@@ -84,12 +103,9 @@ class CellExecutionPlanner:
             root_node_id=graph.root_node_id,
             nodes=nodes,
             input_references=references,
-            service_bindings=[
-                decision_by_cell[manifest.cell_id].selected_binding
-                for manifest in manifests
-            ],
+            service_bindings=_plan_bindings(decisions),
             metadata={
-                "planner": "cell_graph_service_placement_v0.5",
+                "planner": "cell_graph_service_placement_v0.7",
                 "catalog_id": self.catalog.catalog_id,
                 "catalog_schema_version": self.catalog.schema_version,
                 "graph_id": graph.graph_id,
@@ -122,11 +138,32 @@ class CellExecutionPlanner:
         )
 
     def _place(self, manifest: CellManifest) -> CellPlacementDecision:
-        return self.placement_policy.select(
+        candidates = self.catalog.candidates_for(manifest)
+        decision = self.placement_policy.select(
             manifest,
-            self.catalog.candidates_for(manifest),
+            candidates,
             self.runtime_summary_snapshot,
         )
+        candidate_by_id = {binding.binding_id: binding for binding in candidates}
+        decision_bindings = [
+            decision.selected_binding,
+            *decision.fallback_bindings,
+        ]
+        decision_binding_ids = [binding.binding_id for binding in decision_bindings]
+        if (
+            decision.cell_id != manifest.cell_id
+            or decision.formula_version != manifest.formula_version
+            or len(decision_binding_ids) != len(set(decision_binding_ids))
+            or any(
+                candidate_by_id.get(binding.binding_id) != binding
+                for binding in decision_bindings
+            )
+        ):
+            raise PlacementUnavailableError(
+                f"placement policy {self.placement_policy.name} returned an invalid "
+                f"binding decision for {manifest.cell_id}@{manifest.formula_version}"
+            )
+        return decision
 
 
 def build_execution_plan(
@@ -170,6 +207,8 @@ def _node_for_graph_node(
     graph_node: CellGraphNode,
     manifest: CellManifest,
     binding_id: str,
+    fallback_binding_ids: list[str],
+    resource_hints: ResourceHints,
     input_references: list[InputReference],
 ) -> CellExecutionNode:
     return CellExecutionNode(
@@ -178,11 +217,81 @@ def _node_for_graph_node(
         formula_version=manifest.formula_version,
         execution_role=graph_node.execution_role,
         binding_id=binding_id,
+        fallback_binding_ids=list(fallback_binding_ids),
         dependencies=list(graph_node.dependencies),
         input_reference_ids=[
             reference.reference_id for reference in input_references
         ],
+        required_input_kinds=list(manifest.required_input_kinds),
         input_keys=list(manifest.inputs),
         output_keys=list(manifest.outputs),
+        resource_hints=resource_hints,
         metadata=dict(graph_node.metadata),
     )
+
+
+def _references_for_manifest(
+    manifest: CellManifest,
+    references: list[InputReference],
+) -> list[InputReference]:
+    required_kinds = list(manifest.required_input_kinds)
+    if len(required_kinds) != len(set(required_kinds)):
+        raise InputCompositionError(
+            f"Cell {manifest.cell_id} repeats a required input kind"
+        )
+    if "analysis_request" not in required_kinds:
+        raise InputCompositionError(
+            f"Cell {manifest.cell_id} must require analysis_request"
+        )
+    supported_kinds = set(get_args(InputKind))
+    unsupported = sorted(set(required_kinds) - supported_kinds)
+    if unsupported:
+        raise InputCompositionError(
+            f"Cell {manifest.cell_id} requires unsupported input kinds: "
+            + ", ".join(unsupported)
+        )
+    references_by_kind = {
+        input_kind: [
+            reference
+            for reference in references
+            if reference.input_kind == input_kind
+        ]
+        for input_kind in required_kinds
+    }
+    missing = sorted(
+        input_kind
+        for input_kind, matches in references_by_kind.items()
+        if not matches
+    )
+    if missing:
+        raise InputCompositionError(
+            f"Cell {manifest.cell_id} is missing required input kinds: "
+            + ", ".join(missing)
+        )
+    # Repeated kinds need named slots/cardinality semantics; silently choosing
+    # one would make cross-language plans ambiguous.
+    duplicate_kinds = sorted(
+        input_kind
+        for input_kind, matches in references_by_kind.items()
+        if len(matches) > 1
+    )
+    if duplicate_kinds:
+        raise InputCompositionError(
+            f"Cell {manifest.cell_id} received multiple snapshots for input kinds: "
+            + ", ".join(duplicate_kinds)
+        )
+    return [references_by_kind[input_kind][0] for input_kind in required_kinds]
+
+
+def _plan_bindings(
+    decisions: list[CellPlacementDecision],
+) -> list[CellServiceBinding]:
+    bindings: list[CellServiceBinding] = []
+    seen_binding_ids: set[str] = set()
+    for decision in decisions:
+        for binding in [decision.selected_binding, *decision.fallback_bindings]:
+            if binding.binding_id in seen_binding_ids:
+                continue
+            bindings.append(binding)
+            seen_binding_ids.add(binding.binding_id)
+    return bindings

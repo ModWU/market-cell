@@ -7,12 +7,11 @@ from uuid import uuid4
 
 from market_cell import __version__
 from market_cell.events import utc_now_iso
-from market_cell.hashing import stable_json_hash
 from market_cell.inputs.models import InputSnapshot
 from market_cell.models import AnalysisRequest, CellManifest
 
 
-RUN_SCHEMA_VERSION = "analysis_run.v1"
+RUN_SCHEMA_VERSION = "analysis_run.v2"
 
 
 def request_to_snapshot(request: AnalysisRequest) -> dict[str, Any]:
@@ -35,6 +34,7 @@ class AnalysisRun:
     engine_version: str
     input_hash: str
     input_snapshot: dict[str, Any]
+    input_snapshots: list[dict[str, Any]]
     formula_versions: dict[str, str]
     cell_manifests: list[dict[str, Any]]
     status: str
@@ -53,20 +53,39 @@ class AnalysisRun:
         metadata: dict[str, Any] | None = None,
         *,
         replay_input: InputSnapshot | None = None,
+        replay_inputs: list[InputSnapshot] | None = None,
     ) -> "AnalysisRun":
-        if replay_input is not None:
-            if replay_input.input_kind != "analysis_request":
-                raise ValueError("AnalysisRun replay input must be an analysis_request")
-            if (
-                replay_input.target != request.target
-                or replay_input.horizon != request.horizon
-            ):
-                raise ValueError("AnalysisRun replay input does not match the request scope")
-            snapshot = deepcopy(replay_input.payload)
-            input_hash = replay_input.content_hash
-        else:
-            snapshot = request_to_snapshot(request)
-            input_hash = stable_json_hash(snapshot)
+        if replay_input is not None and replay_inputs is not None:
+            raise ValueError("provide replay_input or replay_inputs, not both")
+        inputs = list(replay_inputs) if replay_inputs is not None else [
+            replay_input or InputSnapshot.from_analysis_request(request)
+        ]
+        if not inputs:
+            raise ValueError("AnalysisRun requires at least one input snapshot")
+        if len({item.snapshot_id for item in inputs}) != len(inputs):
+            raise ValueError("AnalysisRun input snapshot ids must be unique")
+        input_kinds = [item.input_kind for item in inputs]
+        if len(input_kinds) != len(set(input_kinds)):
+            raise ValueError("AnalysisRun input kinds must be unique")
+        request_inputs = [
+            item for item in inputs if item.input_kind == "analysis_request"
+        ]
+        if len(request_inputs) != 1:
+            raise ValueError(
+                "AnalysisRun requires exactly one analysis_request input snapshot"
+            )
+        primary_input = request_inputs[0]
+        for item in inputs:
+            if item.target != request.target or item.horizon != request.horizon:
+                raise ValueError(
+                    "AnalysisRun input snapshot does not match the request scope"
+                )
+        if primary_input.payload != request_to_snapshot(request):
+            raise ValueError(
+                "AnalysisRun analysis_request snapshot does not match the request payload"
+            )
+        snapshot = deepcopy(primary_input.payload)
+        input_hash = primary_input.content_hash
         return cls(
             run_id=uuid4().hex,
             target=request.target,
@@ -74,6 +93,7 @@ class AnalysisRun:
             engine_version=__version__,
             input_hash=input_hash,
             input_snapshot=snapshot,
+            input_snapshots=[deepcopy(item.to_dict()) for item in inputs],
             formula_versions=formula_versions(manifests),
             cell_manifests=manifests_to_dicts(manifests),
             status="running",

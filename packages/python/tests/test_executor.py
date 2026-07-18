@@ -15,8 +15,10 @@ from market_cell.execution import (
     build_local_execution_plan,
     validate_execution_trace,
 )
+from market_cell.inputs import CellInputBundle, InputSnapshot, ResolvedCellInput
 from market_cell.models import AnalysisRequest, Candle
 from market_cell.registry import default_registry
+from market_cell.graph import default_analysis_graph
 from market_cell.reports import FileSystemReportStore
 
 
@@ -110,6 +112,26 @@ class LocalCellExecutorTests(unittest.TestCase):
         self.assertEqual(outcome.trace.status, "failed")
         self.assertIn("cell_id", outcome.trace.error or "")
 
+    def test_local_executor_rejects_input_bundle_reference_drift(self):
+        registry = default_registry()
+        request = _request()
+        plan = build_local_execution_plan(registry, request)
+        cell = registry.resolve("technical.trend")
+        context = _context(plan, cell.cell_id)
+        drifted_node = replace(
+            context.node,
+            input_reference_ids=["input:analysis_request:drifted"],
+        )
+
+        outcome = LocalCellExecutor().execute(
+            cell=cell,
+            request=request,
+            context=replace(context, node=drifted_node),
+        )
+
+        self.assertIsInstance(outcome.error, CellExecutionBindingError)
+        self.assertIn("input_bundle_reference_ids", outcome.trace.error or "")
+
     def test_trace_validator_rejects_executor_service_drift(self):
         registry = default_registry()
         request = _request()
@@ -131,7 +153,7 @@ class LocalCellExecutorTests(unittest.TestCase):
         report = AnalysisEngine(executor=executor).run(_request())
 
         self.assertEqual(report.decision.cell_id, "root.decision")
-        self.assertEqual(len(executor.contexts), len(default_registry().all_cells()))
+        self.assertEqual(len(executor.contexts), len(default_analysis_graph().nodes))
         self.assertTrue(all(context.plan_id for context in executor.contexts))
 
     def test_analysis_engine_aligns_plan_with_custom_local_service_id(self):
@@ -193,12 +215,27 @@ class _RecordingExecutor:
 
 def _context(plan, cell_id: str) -> CellExecutionContext:
     node = next(node for node in plan.nodes if node.cell_id == cell_id)
+    request = _request()
+    snapshot = InputSnapshot.from_analysis_request(request)
+    reference = next(
+        reference
+        for reference in plan.input_references
+        if reference.input_kind == "analysis_request"
+    )
     return CellExecutionContext(
         run_id="run",
         trace_id="trace",
         plan_id=plan.plan_id,
         node=node,
         binding=next(binding for binding in plan.service_bindings if binding.binding_id == node.binding_id),
+        input_bundle=CellInputBundle(
+            node_id=node.node_id,
+            analysis_request=request,
+            resolved_inputs=(
+                ResolvedCellInput(reference=reference, snapshot=snapshot),
+            ),
+            required_input_kinds=tuple(node.required_input_kinds),
+        ),
     )
 
 

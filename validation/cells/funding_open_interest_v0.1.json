@@ -1,0 +1,1750 @@
+{
+  "schema_version": "cell_validation_fixture.v1",
+  "cell_id": "crypto.funding_open_interest",
+  "formula_version": "robust_funding_open_interest_positioning_v0.1",
+  "cases": [
+    {
+      "case_id": "stable_positioning_is_normal",
+      "case_type": "boundary",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1007,
+            "mark_price": 100.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "neutral",
+        "positioning_state": "normal",
+        "open_interest_anomalous": false,
+        "funding_crowded": false
+      }
+    },
+    {
+      "case_id": "leveraged_long_buildup_is_bullish",
+      "case_type": "positive",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1052,
+            "mark_price": 101.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "bullish",
+        "positioning_state": "leveraged_long_buildup",
+        "open_interest_anomalous": true,
+        "minimum_volatility_risk": 70
+      }
+    },
+    {
+      "case_id": "leveraged_short_buildup_is_bearish",
+      "case_type": "positive",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0,
+            "open_interest_notional": 1026,
+            "mark_price": 99
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "bearish",
+        "positioning_state": "leveraged_short_buildup",
+        "open_interest_anomalous": true,
+        "minimum_volatility_risk": 70
+      }
+    },
+    {
+      "case_id": "long_liquidation_is_bearish",
+      "case_type": "positive",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 956,
+            "mark_price": 99
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "bearish",
+        "positioning_state": "long_liquidation",
+        "open_interest_anomalous": true,
+        "minimum_volatility_risk": 80
+      }
+    },
+    {
+      "case_id": "short_covering_is_bullish",
+      "case_type": "positive",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": -0.0001,
+            "open_interest_notional": 981,
+            "mark_price": 101.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "bullish",
+        "positioning_state": "short_covering",
+        "open_interest_anomalous": true,
+        "minimum_volatility_risk": 80
+      }
+    },
+    {
+      "case_id": "crowded_long_buildup_blocks_direction",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0.0007,
+            "open_interest_notional": 1052,
+            "mark_price": 101.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "conflict",
+        "positioning_state": "crowded_long_buildup",
+        "funding_crowded": true,
+        "minimum_volatility_risk": 80
+      },
+      "false_positive_note": "上涨、增仓和高正资金费率可能代表多头过度拥挤，不能把杠杆堆积直接当成低风险看多确认。"
+    },
+    {
+      "case_id": "crowded_short_buildup_blocks_direction",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": -0.0007,
+            "open_interest_notional": 1026,
+            "mark_price": 99
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "conflict",
+        "positioning_state": "crowded_short_buildup",
+        "funding_crowded": true,
+        "minimum_volatility_risk": 80
+      },
+      "false_positive_note": "下跌、增仓和高负资金费率可能代表空头过度拥挤，继续下跌与轧空风险并存。"
+    },
+    {
+      "case_id": "oi_surge_without_price_confirmation_is_conflict",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1042,
+            "mark_price": 100.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "conflict",
+        "positioning_state": "open_interest_surge_without_price_confirmation",
+        "open_interest_anomalous": true
+      },
+      "false_positive_note": "持仓突增但价格不确认时，新增仓位方向未知，不能仅凭 OI 增加推断多头或空头占优。"
+    },
+    {
+      "case_id": "price_only_notional_growth_is_not_position_growth",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1036,
+            "mark_price": 103.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "neutral",
+        "positioning_state": "normal",
+        "open_interest_anomalous": false
+      },
+      "false_positive_note": "quote-notional OI 会随价格机械上涨；公式必须先除以同步 mark price，再判断真实持仓暴露是否增加。"
+    },
+    {
+      "case_id": "persistent_high_funding_remains_crowded",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0007,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.0007,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.0007,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0007,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.0007,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0007,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.0007,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0007,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0.0007,
+            "open_interest_notional": 1007,
+            "mark_price": 100.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "conflict",
+        "positioning_state": "positive_funding_crowding",
+        "funding_crowded": true
+      },
+      "false_positive_note": "持续高资金费率即使相对自身历史不异常，仍然表示持仓成本和拥挤风险，不能降级成 normal。"
+    },
+    {
+      "case_id": "funding_shift_without_oi_confirmation_is_conflict",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0.0004,
+            "open_interest_notional": 1007,
+            "mark_price": 100.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "conflict",
+        "positioning_state": "funding_shift_up",
+        "funding_anomalous": true
+      },
+      "false_positive_note": "资金费率相对基线跳升但 OI 和价格未同步时，只能标记定位变化，不能生成趋势方向。"
+    },
+    {
+      "case_id": "negative_funding_moving_toward_zero_is_shift_up",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": -0.0005,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": -0.0005,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": -0.0005,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": -0.0005,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": -0.0005,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": -0.0005,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": -0.0005,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": -0.0005,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": -0.0002,
+            "open_interest_notional": 1007,
+            "mark_price": 100.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "conflict",
+        "positioning_state": "funding_shift_up",
+        "funding_anomalous": true
+      },
+      "false_positive_note": "shift 方向必须由最新费率相对历史基线的变化决定；负费率向零靠近是上移，不能仅按最新值仍为负而命名为 down。"
+    },
+    {
+      "case_id": "single_historical_oi_outlier_does_not_hide_latest_surge",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1200,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1202,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1204,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1206,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1208,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1210,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1265,
+            "mark_price": 101.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "bullish",
+        "positioning_state": "leveraged_long_buildup",
+        "open_interest_anomalous": true
+      },
+      "false_positive_note": "单个历史持仓跳变不应污染稳健中位数与 MAD 基线，掩盖最新一轮异常增仓。"
+    },
+    {
+      "case_id": "insufficient_history_stays_neutral",
+      "case_type": "boundary",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 10800000,
+          "fetched_at_ms": 10800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "neutral",
+        "positioning_state": "insufficient_history",
+        "active_guard": "insufficient_history",
+        "maximum_confidence": 30
+      }
+    },
+    {
+      "case_id": "quality_flag_fails_closed",
+      "case_type": "known_false_positive_guard",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1052,
+            "mark_price": 101.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28800100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [
+            "sequence_gap"
+          ],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "neutral",
+        "positioning_state": "degraded_input",
+        "active_guard": "quality_flags",
+        "maximum_confidence": 20
+      },
+      "false_positive_note": "来源明确报告 sequence gap 时，不能继续用不完整序列输出高置信方向。"
+    },
+    {
+      "case_id": "irregular_cadence_fails_closed",
+      "case_type": "boundary",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 32400000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 36000000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1052,
+            "mark_price": 101.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 36000000,
+          "fetched_at_ms": 36000100,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "neutral",
+        "positioning_state": "degraded_input",
+        "active_guard": "irregular_cadence",
+        "maximum_confidence": 20
+      }
+    },
+    {
+      "case_id": "delayed_fetch_fails_closed",
+      "case_type": "boundary",
+      "request": {
+        "target": "TEST/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "t1",
+            "open": 100,
+            "high": 101,
+            "low": 99,
+            "close": 100,
+            "volume": 1000
+          }
+        ]
+      },
+      "snapshot": {
+        "target": "TEST/USD",
+        "points": [
+          {
+            "timestamp_ms": 0,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1000,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 3600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1002,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 7200000,
+            "funding_rate": 0.00009,
+            "open_interest_notional": 1001,
+            "mark_price": 100
+          },
+          {
+            "timestamp_ms": 10800000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1003,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 14400000,
+            "funding_rate": 0.00012,
+            "open_interest_notional": 1004,
+            "mark_price": 100.1
+          },
+          {
+            "timestamp_ms": 18000000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1002,
+            "mark_price": 100.3
+          },
+          {
+            "timestamp_ms": 21600000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1004,
+            "mark_price": 100.2
+          },
+          {
+            "timestamp_ms": 25200000,
+            "funding_rate": 0.0001,
+            "open_interest_notional": 1005,
+            "mark_price": 100.4
+          },
+          {
+            "timestamp_ms": 28800000,
+            "funding_rate": 0.00011,
+            "open_interest_notional": 1052,
+            "mark_price": 101.5
+          }
+        ],
+        "funding_interval_hours": 8,
+        "funding_rate_type": "predicted",
+        "sample_interval_ms": 3600000,
+        "notional_currency": "USD",
+        "contract_type": "linear",
+        "provenance": {
+          "source_provider": "validation.derivatives",
+          "venue": "validation",
+          "market_type": "perpetual_future",
+          "event_time_ms": 28800000,
+          "fetched_at_ms": 28860001,
+          "sequence": 200,
+          "source_event_id": "funding-oi-200",
+          "quality_flags": [],
+          "schema_version": "data_provenance.v1",
+          "metadata": {}
+        },
+        "schema_version": "funding_open_interest_snapshot.v1",
+        "metadata": {
+          "contract_symbol": "TESTUSD_PERP"
+        }
+      },
+      "expected": {
+        "direction": "neutral",
+        "positioning_state": "degraded_input",
+        "active_guard": "delayed_fetch",
+        "maximum_confidence": 20
+      }
+    }
+  ]
+}

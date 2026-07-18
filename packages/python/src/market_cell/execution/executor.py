@@ -11,9 +11,11 @@ from market_cell.execution.catalog import build_local_service_binding
 from market_cell.execution.models import (
     CellExecutionNode,
     CellExecutionPlan,
+    ExecutionControlRecord,
     CellRuntimeTrace,
     CellServiceBinding,
 )
+from market_cell.inputs import CellInputBundle
 from market_cell.models import AnalysisRequest, CellResult
 
 
@@ -33,6 +35,11 @@ class ExecutionTraceMismatchError(CellExecutionError):
     pass
 
 
+class CancellationSignal(Protocol):
+    def is_cancellation_requested(self) -> bool:
+        ...
+
+
 @dataclass(frozen=True)
 class CellExecutionContext:
     run_id: str
@@ -40,6 +47,17 @@ class CellExecutionContext:
     plan_id: str | None = None
     node: CellExecutionNode | None = None
     binding: CellServiceBinding | None = None
+    input_bundle: CellInputBundle | None = None
+    fallback_bindings: tuple[CellServiceBinding, ...] = ()
+    idempotency_key: str | None = None
+    attempt_id: str | None = None
+    attempt_number: int = 0
+    timeout_ms: int | None = None
+    cancellation_signal: CancellationSignal | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+    )
 
 
 @dataclass(frozen=True)
@@ -47,6 +65,8 @@ class CellExecutionOutcome:
     trace: CellRuntimeTrace
     result: CellResult | None = None
     error: Exception | None = field(default=None, repr=False, compare=False)
+    prior_traces: tuple[CellRuntimeTrace, ...] = ()
+    control_record: ExecutionControlRecord | None = None
 
     def __post_init__(self) -> None:
         succeeded = self.result is not None and self.error is None
@@ -58,6 +78,13 @@ class CellExecutionOutcome:
             raise ValueError(
                 f"execution outcome status {self.trace.status} does not match {expected_status}"
             )
+        span_ids = [trace.span_id for trace in [*self.prior_traces, self.trace]]
+        if len(span_ids) != len(set(span_ids)):
+            raise ValueError("execution outcome trace span_id values must be unique")
+
+    @property
+    def runtime_traces(self) -> list[CellRuntimeTrace]:
+        return [*self.prior_traces, self.trace]
 
     def unwrap(self) -> CellResult:
         if self.error is not None:
@@ -111,10 +138,16 @@ class LocalCellExecutor:
             _validate_local_execution_context(
                 manifest_cell_id=manifest.cell_id,
                 formula_version=manifest.formula_version,
+                required_input_kinds=manifest.required_input_kinds,
                 actual_binding=actual_binding,
+                request=request,
                 context=context,
             )
-            result = cell.analyze(request, child_results)
+            result = (
+                cell.analyze_inputs(context.input_bundle, child_results)
+                if context.input_bundle is not None
+                else cell.analyze(request, child_results)
+            )
             validate_cell_result(cell, request, result)
         except Exception as exc:
             trace = _runtime_trace(
@@ -158,14 +191,16 @@ def validate_execution_trace(
         (item for item in execution_plan.nodes if item.node_id == trace.node_id),
         None,
     )
-    binding = next(
-        (
-            item
-            for item in execution_plan.service_bindings
-            if node is not None and item.binding_id == node.binding_id
-        ),
-        None,
+    allowed_binding_ids = (
+        {node.binding_id, *node.fallback_binding_ids}
+        if node is not None
+        else set()
     )
+    allowed_bindings = [
+        item
+        for item in execution_plan.service_bindings
+        if item.binding_id in allowed_binding_ids
+    ]
     mismatches: list[str] = []
     if trace.plan_id != execution_plan.plan_id:
         mismatches.append("plan_id")
@@ -176,18 +211,114 @@ def validate_execution_trace(
             mismatches.append("cell_id")
         if trace.formula_version != node.formula_version:
             mismatches.append("formula_version")
-    if binding is None:
-        mismatches.append("service_binding")
+    actual_identity = (
+        trace.implementation_id,
+        trace.service_id,
+        trace.runtime,
+    )
+    if actual_identity == (None, None, None):
+        planned_binding_id = trace.metadata.get("planned_binding_id")
+        planned_binding = next(
+            (
+                item
+                for item in allowed_bindings
+                if item.binding_id == planned_binding_id
+            ),
+            None,
+        )
+        if trace.status != "failed" or planned_binding is None:
+            mismatches.append("service_binding")
+        else:
+            planned_metadata = {
+                "planned_implementation_id": planned_binding.implementation_id,
+                "planned_service_id": planned_binding.service_id,
+                "planned_runtime": planned_binding.runtime,
+            }
+            if any(
+                trace.metadata.get(key) != value
+                for key, value in planned_metadata.items()
+            ):
+                mismatches.append("planned_service_binding")
+            if (
+                node is not None
+                and planned_binding.binding_id != node.binding_id
+                and _trace_fallback_index(trace) is None
+            ):
+                mismatches.append("fallback_control")
     else:
-        if trace.implementation_id != binding.implementation_id:
-            mismatches.append("implementation_id")
-        if trace.service_id != binding.service_id:
-            mismatches.append("service_id")
-        if trace.runtime != binding.runtime:
-            mismatches.append("runtime")
+        matching_binding = next(
+            (
+                item
+                for item in allowed_bindings
+                if actual_identity
+                == (item.implementation_id, item.service_id, item.runtime)
+            ),
+            None,
+        )
+        if matching_binding is None:
+            mismatches.append("service_binding")
+        elif node is not None and matching_binding.binding_id != node.binding_id:
+            if _trace_fallback_index(trace) is None:
+                mismatches.append("fallback_control")
     if mismatches:
         raise ExecutionTraceMismatchError(
             f"trace {trace.span_id} does not match plan {execution_plan.plan_id}: "
+            f"{', '.join(sorted(set(mismatches)))}"
+        )
+
+
+def _trace_fallback_index(trace: CellRuntimeTrace) -> int | None:
+    execution_control = trace.metadata.get("execution_control")
+    if not isinstance(execution_control, dict):
+        return None
+    fallback_index = execution_control.get("fallback_index")
+    if not isinstance(fallback_index, int) or fallback_index < 1:
+        return None
+    return fallback_index
+
+
+def validate_execution_trace_context(
+    trace: CellRuntimeTrace,
+    context: CellExecutionContext,
+) -> None:
+    mismatches: list[str] = []
+    if trace.run_id != context.run_id:
+        mismatches.append("run_id")
+    if trace.trace_id != context.trace_id:
+        mismatches.append("trace_id")
+    if trace.plan_id != context.plan_id:
+        mismatches.append("plan_id")
+
+    if context.node is None:
+        mismatches.append("node")
+    else:
+        if trace.node_id != context.node.node_id:
+            mismatches.append("node_id")
+        if trace.cell_id != context.node.cell_id:
+            mismatches.append("cell_id")
+        if trace.formula_version != context.node.formula_version:
+            mismatches.append("formula_version")
+
+    if context.binding is None:
+        mismatches.append("binding")
+    else:
+        if context.node is not None:
+            if context.node.binding_id != context.binding.binding_id:
+                mismatches.append("node_binding_id")
+            if context.node.cell_id != context.binding.cell_id:
+                mismatches.append("binding_cell_id")
+            if context.node.formula_version != context.binding.formula_version:
+                mismatches.append("binding_formula_version")
+        if trace.implementation_id != context.binding.implementation_id:
+            mismatches.append("implementation_id")
+        if trace.service_id != context.binding.service_id:
+            mismatches.append("service_id")
+        if trace.runtime != context.binding.runtime:
+            mismatches.append("runtime")
+
+    if mismatches:
+        raise ExecutionTraceMismatchError(
+            f"trace {trace.span_id} does not match execution context: "
             f"{', '.join(sorted(set(mismatches)))}"
         )
 
@@ -196,7 +327,9 @@ def _validate_local_execution_context(
     *,
     manifest_cell_id: str,
     formula_version: str,
+    required_input_kinds: list[str],
     actual_binding: CellServiceBinding,
+    request: AnalysisRequest,
     context: CellExecutionContext,
 ) -> None:
     if context.node is None and context.binding is None:
@@ -214,6 +347,22 @@ def _validate_local_execution_context(
         mismatches.append("formula_version")
     if context.node.binding_id != context.binding.binding_id:
         mismatches.append("node_binding_id")
+    if context.node.required_input_kinds != required_input_kinds:
+        mismatches.append("required_input_kinds")
+    if context.input_bundle is None:
+        mismatches.append("input_bundle")
+    else:
+        if context.input_bundle.node_id != context.node.node_id:
+            mismatches.append("input_bundle_node_id")
+        if list(context.input_bundle.required_input_kinds) != required_input_kinds:
+            mismatches.append("input_bundle_required_input_kinds")
+        if [
+            item.reference.reference_id
+            for item in context.input_bundle.resolved_inputs
+        ] != context.node.input_reference_ids:
+            mismatches.append("input_bundle_reference_ids")
+        if context.input_bundle.analysis_request != request:
+            mismatches.append("input_bundle_analysis_request")
     if context.binding.binding_id != actual_binding.binding_id:
         mismatches.append("binding_id")
     if context.binding.implementation_id != actual_binding.implementation_id:
@@ -299,6 +448,7 @@ def _trace_metadata(
             if context.node is not None
             else []
         ),
+        **cell_input_trace_metadata(context),
     }
     if planned_binding is not None:
         metadata.update(
@@ -310,6 +460,21 @@ def _trace_metadata(
             }
         )
     return metadata
+
+
+def cell_input_trace_metadata(
+    context: CellExecutionContext,
+) -> dict[str, Any]:
+    bundle = context.input_bundle
+    if bundle is None:
+        return {}
+    return {
+        "input_bundle_schema_version": bundle.schema_version,
+        "input_kinds": list(bundle.required_input_kinds),
+        "input_snapshot_ids": [
+            item.snapshot.snapshot_id for item in bundle.resolved_inputs
+        ],
+    }
 
 
 def _duration_ms(started: float) -> float:

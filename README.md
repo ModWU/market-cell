@@ -21,12 +21,18 @@ v0.1 提供一个最小闭环：
 ```text
 输入市场样例数据
 → 建立 InputSnapshot 和轻量 InputReference
-→ 校验 CellGraphDefinition 并生成 ExecutionPlan v3
+→ 按 Cell 声明绑定类型化输入并生成 ExecutionPlan v5
 → 按计划执行 Cell DAG
 → 聚合成根节点判断
 → 输出结构化 JSON 分析报告
 → 保存可复盘运行记录、计划执行顺序、trace 和性能摘要
 ```
+
+v0.3 能力扩展已经形成首批完整基线：`SupportResistanceCell` 与 `BreakoutCell` 组成结构确认链；`VolumePriceAnomalyCell` 使用中位数、MAD 和正成交量覆盖率构建稳健量价基线，再由 `ManipulationRiskCell` 聚合长影线和大振幅；`LiquidityCell` 分析近端盘口；`FundingOpenInterestCell` 使用同步资金费率、持仓名义价值和标记价格序列识别杠杆建仓、去杠杆与拥挤风险。所有新增公式都带版本化验证数据和误判防护。
+
+`LiquidityCell` 是 Registry 中的可发现能力，但不会改变无订单簿的默认分析。需要盘口分析时，调用方显式选择 `liquidity_analysis_graph()`，并通过 `AnalysisEngine.run(..., input_snapshots=[order_book_snapshot])` 提供 `order_book_snapshot.v1`；缺失输入会在 planning 阶段失败。
+
+`FundingOpenInterestCell` 同样不污染默认图。需要衍生品定位分析时，调用方显式选择 `derivatives_analysis_graph()`，并提供 `funding_open_interest_snapshot.v1`。快照把资金费率统一为“每个 funding interval 的小数费率”，并显式区分 settled / predicted；v1 限定线性永续合约与指定币种的 quote notional，同时保存同步 mark price、采样周期和来源血缘。公式先换算 base-equivalent exposure，避免把价格造成的名义 OI 增长误判为增仓；predicted 序列会降低置信度。缺失或同类型多份输入会在 planning 阶段失败。
 
 ## 项目结构
 
@@ -48,6 +54,7 @@ market-cell/
 │   ├── polyglot_architecture.md # 多语言仓库和契约边界
 │   ├── runtime_architecture.md # Rust 热路径和 Python 冷路径
 │   ├── cell_protocol.md       # Cell 开发协议
+│   ├── cell_validation.md     # Cell 公式、验证样例和误判记录
 │   ├── data_contract.md       # 输入输出数据契约
 │   ├── data_source_strategy.md # K 线和行情数据源策略
 │   ├── storage_layer_design.md # Parquet/DuckDB 存储适配
@@ -80,6 +87,8 @@ market-cell/
 │       └── tests/              # Python 测试
 ├── examples/
 │   └── btc_usd_sample.json    # 示例输入
+├── validation/
+│   └── cells/                 # 新 Cell 的机器可读验证与误判样例
 └── crates/
     ├── market_data_core/       # Rust 行情领域原语和质量函数
     └── realtime_core/          # Rust 实时模块预留
@@ -175,21 +184,26 @@ MarketCell 输出的是分析结果和风险解释，不是投资建议，也不
 - 每次分析可以复盘
 - 每套公式可以版本化
 - 每次保存的输入快照可以重新执行并比较漂移
-- 回放会分别报告结果、公式版本和 Graph 版本漂移
+- 回放会比较完整决策树，并分别报告字段路径、树哈希、公式版本和 Graph 版本漂移；子 Cell 证据或 metadata 漂移不能伪装成稳定结果
 - 数据源选择可以根据健康趋势、源等级和业务偏好审计
 - 实际数据源路由顺序可以从选择计划显式生成和复盘
 - 每次分析运行可以保存数据源选择和路由计划审计信息
-- 运行记录遵守 `analysis_run.v1` 契约，便于后续跨语言和服务化复盘
+- 运行记录遵守 `analysis_run.v2` 契约，完整保存本次使用的全部 InputSnapshot，同时兼容旧 v1 回放
 - Cell 组合遵守 `cell_graph_definition.v1`，Registry 只注册实现，Graph 独立定义 leaf、aggregator、root 和 Organ
 - Graph 不包含服务位置；`cell_graph_validation.v1` 在 planning 前拒绝非法依赖、Organ 或未注册能力
-- Cell 执行计划遵守 `cell_execution_plan.v3` 契约，使用唯一 node_id、显式 binding_id 和 payload-free input references 对齐 DAG、服务与输入
+- Cell 执行计划遵守 `cell_execution_plan.v5` 契约，使用唯一 node_id、primary/fallback binding、`required_input_kinds` 和 payload-free input references 对齐 DAG、服务与输入
 - `input_snapshot.v1` 保存可回放逻辑输入，`input_reference.v1` 只携带地址、来源、版本、哈希和大小，计划不复制 K 线 payload
+- `cell_input_bundle.v1` 把每个节点声明的输入精确组合后交给 Cell；订单簿使用 `order_book_snapshot.v1`，衍生品定位使用 `funding_open_interest_snapshot.v1`，两者共享 `data_provenance.v1`，都不塞入无类型 context
+- 默认图 `market.default_analysis@0.4.0` 将 `risk.volume_price_anomaly` 作为叶子、`risk.manipulation` 作为聚合器，避免 VolumeCell、异常检测和操纵风险重复承担职责
+- Registry 可以是 Graph 能力的超集；默认图保持额外市场快照可选，`market.liquidity_analysis@0.2.0` 显式组合 LiquidityCell，`market.derivatives_analysis@0.1.0` 显式组合 FundingOpenInterestCell
 - Coordinator 在一次 run 内对同一引用只执行一次实际解析，并用 `input_resolution_record.v1` 审计每个节点的解析状态和缓存命中
 - 本地 DAG 由 `PlanDrivenLocalCoordinator` 按稳定拓扑层执行，Registry 只解析实现，不决定运行顺序
 - 每次协调遵守 `plan_execution.v1` 契约，保存 execution_order、completed_node_ids 和 failed_node_id
 - 服务能力目录遵守 `service_capability_catalog.v2` 契约，一个 Cell 可有多个实现，一个服务也可承载多个 Cell
-- 每个 Cell 的实现选择会生成 `cell_placement_decision.v2` 审计记录，并基于优先级、历史失败率和 P95 延迟做稳定放置
+- 每个 Cell 的实现选择会生成 `cell_placement_decision.v3` 审计记录，并基于优先级、历史失败率和 P95 延迟生成 primary 与健康 fallback 顺序
 - `CellExecutor` 将计划与实际执行解耦；当前 `LocalCellExecutor` 会拒绝远程 binding，并校验 CellResult 与运行 trace 的一致性
+- `ExecutorRouter` 可按精确 `service_id` 优先、`runtime` 兜底，把同一执行计划派发给不同 executor；它不会隐式降级，并会拒绝与计划上下文不一致的下游 trace
+- `FailureControlledExecutor` 统一执行 attempt、幂等键、deadline、retry、backpressure、cancellation 和计划内 fallback，结果写入 `execution_control_record.v1`
 - 每个 Cell 节点会生成 `cell_runtime_trace.v1` 运行轨迹，记录服务、状态和耗时
 - 每次运行会生成 `cell_runtime_summary.v1` 性能摘要，按 Cell、公式版本、实现、服务和运行时聚合耗时与失败信息
 - `runtime_summary_snapshot.v1` 从跨运行 trace 生成明确时间窗口，保留 P50/P95/P99、失败率、重试率和最近状态供 placement 使用

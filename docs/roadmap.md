@@ -1,4 +1,4 @@
-# MarketCell 实施路线图 v0.6
+# MarketCell 实施路线图 v1.0
 
 ## 1. 文档职责
 
@@ -38,11 +38,17 @@
 - `ServiceCapabilityCatalog` 和 `CellPlacementDecision`
 - `RuntimeAwarePlacementPolicy`
 - `CellExecutor` 和严格的 `LocalCellExecutor`
+- `ExecutorRouter`、确定性 service/runtime 路由和路由失败审计
 - `PlanDrivenLocalCoordinator` 和 `plan_execution.v1` 运行审计
 - `CellGraphDefinition`、命名 Organ 子图和 `cell_graph_validation.v1`
 - ExecutionPlan v2：node_id 与 cell_id 分离，节点显式引用 binding_id
 - ExecutionPlan v3：计划保存 payload-free input references，节点显式引用输入身份
+- ExecutionPlan v4：节点显式保存已校验 fallback binding 顺序
+- ExecutionPlan v5：节点声明 required_input_kinds 并只绑定所需输入引用
 - InputSnapshot / InputReference / InputResolutionRecord 跨语言契约
+- `CellInputBundle` 类型化组合、精确基数校验和 trace 输入身份审计
+- `data_provenance.v1`、`order_book_snapshot.v1`、`funding_open_interest_snapshot.v1` 和对应跨语言身份向量
+- AnalysisRun v2 全量多输入持久化与 AnalysisRun v1 兼容回放
 - LocalInputResolver 完整性校验、幂等注册和运行内单次解析缓存
 - FeatureSnapshot 独立 schema、公式版本和 source input hash
 - Runtime Summary Store、显式时间窗口快照和跨运行 placement 历史
@@ -51,9 +57,10 @@
 - ExecutionPlan Validator：运行依赖、环、可达性、root、binding 和 input reference 一致性
 - plan / trace / CellResult 一致性校验
 - 成功和失败 AnalysisRun 的运行审计
+- `FailureControlledExecutor`、`execution_control_record.v1` 和稳定 attempt / idempotency identity
 - GitHub Actions Python / Rust CI
 
-## 3. 当前阶段：Foundation Hardening
+## 3. 当前阶段：Foundation Hardening（已完成）
 
 当前不以新增 Cell 数量为目标，而是让大量 Cell 和未来多服务运行时建立在可验证地基上。
 
@@ -130,6 +137,44 @@
 - 区分功能测试和 benchmark
 - Rust 热点迁移必须由 profile 证据驱动
 
+### P0.7 Executor Router（已完成）
+
+目标：让一次 ExecutionPlan 可以在不改变 DAG 语义的前提下派发到不同 executor，并准确记录实际执行位置。
+
+- 精确 `service_id` 路由优先，`runtime` 路由作为显式通用适配器
+- 不做隐式 fallback；降级必须由后续失败控制策略显式决定
+- 缺失路由和 dispatch 异常生成失败 trace，实际服务字段保持为空，计划 binding 保存在 metadata
+- delegate trace 同时校验 run、trace、plan、node、implementation、service 和 runtime
+- `AnalysisEngine` 可注入 `ServiceCapabilityCatalog`，生成本地与服务 binding 混合计划
+
+### P0.8 Failure Control Semantics（已完成）
+
+目标：让远程或不稳定 executor 的每次尝试都能确定性分类、限制和复盘。
+
+- ADR-0005 定义 attempt identity、幂等键和失败分类
+- 区分 routing、dispatch、execution、timeout、backpressure、canceled 和 contract failure
+- 超时预算取 node 与 binding 显式资源提示中的更严格值，不能由 transport 私自放宽
+- 只对明确可重试失败重试，并保存每次 attempt 和最终 retry_count
+- fallback 必须生成显式决策和审计，不能隐藏在 Router 内
+- stateful binding 只有声明 `idempotent_execution` capability 才能在歧义失败后 retry / fallback
+- 取消和背压在 Cell 启动前或安全边界生效
+- `execution_control_record.v1` 保存每次 attempt、retry、fallback 和最终失败分类
+- 跨语言 `execution_identity_v1` 固定幂等键和 attempt identity 算法
+
+### P0.9 Typed Multi-Input Composition（已完成）
+
+目标：在 LiquidityCell 之前建立可声明、可验证、可回放的多输入边界。
+
+- Cell Manifest 显式声明 `required_input_kinds`，且 analysis_request 始终必需
+- v1 每种 input kind 恰好一份快照；多 venue / 多窗口留给未来 slot/cardinality 协议
+- Planner 只给节点绑定所需 InputReference，缺失或同类型歧义在 planning 阶段失败
+- ExecutionPlan Validator 检查声明类型与实际引用精确一致
+- Coordinator 组合 `cell_input_bundle.v1`，Executor 优先调用 `analyze_inputs`
+- 普通 Cell 通过默认适配继续使用 `analyze(request, child_results)`
+- 订单簿、数据血缘、排序、spread、sequence 和完整性校验形成正式契约
+- AnalysisRun v2 保存全部 InputSnapshot，ReplayRunner 重建多输入并兼容 v1
+- trace 保存 bundle schema、input kinds 和 snapshot ids，不复制 payload
+
 ## 4. Foundation 退出标准
 
 以下条件全部满足后，才进入大规模 Cell 扩展：
@@ -138,25 +183,28 @@
 - 本地执行由 plan 驱动，Registry 不再隐式决定拓扑。（已完成）
 - 至少一个多级 aggregator 图可以稳定运行和回放。（已完成）
 - ExecutionPlan 不携带 K 线 payload，Input Resolver 可校验并审计输入。（已完成）
-- 关闭或更换 executor 时，trace 仍能准确表达实际位置。
+- 关闭或更换 executor 时，trace 仍能准确表达实际位置。（已完成）
 - placement 能消费跨运行历史窗口。（已完成）
-- 失败、超时、重试和降级拥有明确审计结构。
+- 失败、超时、重试和降级拥有明确审计结构。（已完成）
+- 多输入节点只能获得声明的数据，并能完整保存、篡改检测和稳定回放。（已完成）
 - 固定样例具备性能基线。（已完成）
+
+Foundation 退出标准已经全部满足；v0.3 首批 Cell 能力扩展已经完成，下一项进入 v0.4 多周期请求边界。
 
 ## 5. 后续阶段
 
-### v0.3 Cell 能力扩展
+### v0.3 Cell 能力扩展（已完成首批基线）
 
-- SupportResistanceCell
-- BreakoutCell
-- LiquidityCell
-- VolumePriceAnomalyCell
-- FundingOpenInterestCell
+- SupportResistanceCell（已完成，experimental）
+- BreakoutCell（已完成，experimental）
+- LiquidityCell（已完成，experimental；消费正式 OrderBookSnapshot，只在显式 liquidity graph 中启用）
+- VolumePriceAnomalyCell（已完成，experimental；稳健量价基线并作为 ManipulationRiskCell 的显式依赖）
+- FundingOpenInterestCell（已完成，experimental；消费正式资金费率/OI/mark-price 时间序列，只在显式 derivatives graph 中启用）
 - 每个新 Cell 必须有验证数据、误判记录和公式版本
 
 ### v0.4 多周期和多 Organ
 
-- MultiHorizonRequest
+- MultiHorizonRequest（下一项）
 - HorizonDecisionCell
 - 多周期冲突检测
 - Organ 组合和共享 Cell
@@ -189,8 +237,8 @@
 
 - FastAPI Gateway
 - AnalysisTask
-- Executor Router
-- Python / Rust remote executor
+- Python / Rust remote executor 接入现有 Executor Router
+- 集群调度和远程传输适配
 - Report、Run 和 Cell API
 - 服务发现、超时、重试和背压
 

@@ -1,4 +1,18 @@
 from market_cell.data.cache import CandleCache, FileSystemCandleCache
+from market_cell.data.provenance import (
+    DATA_PROVENANCE_SCHEMA_VERSION,
+    DataProvenance,
+    MarketType,
+)
+from market_cell.data.derivatives import (
+    FUNDING_OPEN_INTEREST_SNAPSHOT_SCHEMA_VERSION,
+    MAX_ABSOLUTE_FUNDING_RATE,
+    MAX_FUNDING_INTERVAL_HOURS,
+    DerivativesContractType,
+    FundingOpenInterestPoint,
+    FundingOpenInterestSnapshot,
+    FundingRateType,
+)
 from market_cell.data.health import (
     HealthGrade,
     ProviderReliabilitySummary,
@@ -16,6 +30,11 @@ from market_cell.data.monitoring import (
     SourceComparisonReport,
     SourceQualityMonitor,
     SourceQualityReport,
+)
+from market_cell.data.order_book import (
+    ORDER_BOOK_SNAPSHOT_SCHEMA_VERSION,
+    OrderBookLevel,
+    OrderBookSnapshot,
 )
 from market_cell.data.provider_selection import (
     ProviderRole,
@@ -53,6 +72,8 @@ from market_cell.data.storage import (
 from market_cell.data.timeframes import interval_to_millis, timestamp_to_ms
 
 __all__ = [
+    "DATA_PROVENANCE_SCHEMA_VERSION",
+    "FUNDING_OPEN_INTEREST_SNAPSHOT_SCHEMA_VERSION",
     "CandleBatch",
     "CandleCache",
     "CandleQuery",
@@ -61,13 +82,24 @@ __all__ = [
     "CachedCandleSource",
     "FileCandleSource",
     "FileSystemCandleCache",
+    "FundingOpenInterestPoint",
+    "FundingOpenInterestSnapshot",
+    "FundingRateType",
     "MarketDataRouter",
+    "MarketType",
+    "MAX_ABSOLUTE_FUNDING_RATE",
+    "MAX_FUNDING_INTERVAL_HOURS",
+    "ORDER_BOOK_SNAPSHOT_SCHEMA_VERSION",
+    "OrderBookLevel",
+    "OrderBookSnapshot",
     "SourceProfile",
     "CandleQualityReport",
     "CandleRow",
     "DataQualityIssue",
     "DataQualityRecord",
     "DataQualityStore",
+    "DataProvenance",
+    "DerivativesContractType",
     "DuckDBCandleSource",
     "FileSystemDataQualityStore",
     "HealthGrade",

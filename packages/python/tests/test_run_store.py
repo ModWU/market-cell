@@ -60,7 +60,7 @@ class RunStoreTests(unittest.TestCase):
             )
             saved_run = store.load_run(report.run_id or "")
 
-        self.assertEqual(saved_run["schema_version"], "analysis_run.v1")
+        self.assertEqual(saved_run["schema_version"], "analysis_run.v2")
         self.assertEqual(saved_run["metadata"]["operator"]["source"], "unit_test")
         self.assertEqual(saved_run["metadata"]["data_quality"]["score"], 98)
 

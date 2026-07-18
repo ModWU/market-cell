@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/replay_comparison.schema.json",
+  "title": "MarketCell ReplayComparison",
+  "type": "object",
+  "required": [
+    "report_id",
+    "original_run_id",
+    "replay_run_id",
+    "target",
+    "horizon",
+    "input_hash_matches",
+    "result_stable",
+    "drift_fields",
+    "decision_tree_stable",
+    "decision_tree_drift_paths",
+    "original_decision_tree_hash",
+    "replayed_decision_tree_hash",
+    "score_delta",
+    "formula_version_changes",
+    "graph_definition_changes",
+    "original_decision",
+    "replayed_decision",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "report_id": {"type": "string", "minLength": 1},
+    "original_run_id": {"type": ["string", "null"]},
+    "replay_run_id": {"type": ["string", "null"]},
+    "target": {"type": "string", "minLength": 1},
+    "horizon": {"type": "string", "minLength": 1},
+    "input_hash_matches": {"type": "boolean"},
+    "result_stable": {"type": "boolean"},
+    "drift_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "decision_tree_stable": {"type": "boolean"},
+    "decision_tree_drift_paths": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "original_decision_tree_hash": {"$ref": "#/$defs/hash"},
+    "replayed_decision_tree_hash": {"$ref": "#/$defs/hash"},
+    "score_delta": {"type": "number"},
+    "formula_version_changes": {"$ref": "#/$defs/change_map"},
+    "graph_definition_changes": {"$ref": "#/$defs/change_map"},
+    "original_decision": {"$ref": "#/$defs/decision_summary"},
+    "replayed_decision": {"$ref": "#/$defs/decision_summary"},
+    "schema_version": {"const": "replay_comparison.v1"}
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "change_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["old", "new"],
+        "additionalProperties": false,
+        "properties": {
+          "old": {"type": ["string", "null"]},
+          "new": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "decision_summary": {
+      "type": "object",
+      "required": [
+        "cell_id",
+        "direction",
+        "score",
+        "strength",
+        "confidence",
+        "risk_level",
+        "action_posture"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cell_id": {"type": ["string", "null"]},
+        "direction": {"type": ["string", "null"]},
+        "score": {"type": "number"},
+        "strength": {"type": "number"},
+        "confidence": {"type": "number"},
+        "risk_level": {"type": ["string", "null"]},
+        "action_posture": {"type": ["string", "null"]}
+      }
+    }
+  }
+}
