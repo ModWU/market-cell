@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/horizon_decision.schema.json",
+  "title": "MarketCell HorizonDecision",
+  "type": "object",
+  "required": [
+    "decision_id",
+    "decision_hash",
+    "source_batch_id",
+    "request_id",
+    "request_hash",
+    "target",
+    "as_of_ms",
+    "horizon_order",
+    "source_signals",
+    "direction",
+    "structural_direction",
+    "structural_score",
+    "strength",
+    "confidence",
+    "volatility_risk",
+    "manipulation_risk",
+    "urgency",
+    "risk_level",
+    "action_posture",
+    "risk_breakdown",
+    "alignment_status",
+    "conflict_type",
+    "conflict_score",
+    "band_decisions",
+    "evidence",
+    "explanation",
+    "source_graph_id",
+    "source_graph_version",
+    "source_graph_content_hash",
+    "source_formula_versions",
+    "policy",
+    "formula_version",
+    "created_at",
+    "source_schema_version",
+    "schema_version",
+    "metadata",
+    "disclaimer"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "decision_id": {
+      "type": "string",
+      "pattern": "^horizon-decision:[a-f0-9]{24}$"
+    },
+    "decision_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_batch_id": {
+      "type": "string",
+      "pattern": "^multi-horizon:[a-f0-9]{32}$"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^multi-horizon-request:[a-f0-9]{24}$"
+    },
+    "request_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "target": {"type": "string", "minLength": 1},
+    "as_of_ms": {"type": "integer", "minimum": 0},
+    "horizon_order": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/horizon"}
+    },
+    "source_signals": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/signal"}
+    },
+    "direction": {"$ref": "#/$defs/direction"},
+    "structural_direction": {
+      "enum": ["bullish", "bearish", "neutral"]
+    },
+    "structural_score": {"type": "number", "minimum": -100, "maximum": 100},
+    "strength": {"$ref": "#/$defs/percentage"},
+    "confidence": {"$ref": "#/$defs/percentage"},
+    "volatility_risk": {"$ref": "#/$defs/percentage"},
+    "manipulation_risk": {"$ref": "#/$defs/percentage"},
+    "urgency": {"$ref": "#/$defs/percentage"},
+    "risk_level": {"$ref": "#/$defs/risk_level"},
+    "action_posture": {"$ref": "#/$defs/action_posture"},
+    "risk_breakdown": {
+      "type": "object",
+      "required": ["volatility_risk", "manipulation_risk"],
+      "additionalProperties": false,
+      "properties": {
+        "volatility_risk": {"$ref": "#/$defs/risk_level"},
+        "manipulation_risk": {"$ref": "#/$defs/risk_level"}
+      }
+    },
+    "alignment_status": {"$ref": "#/$defs/alignment_status"},
+    "conflict_type": {"$ref": "#/$defs/conflict_type"},
+    "conflict_score": {"$ref": "#/$defs/percentage"},
+    "band_decisions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/band_decision"}
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/evidence"}
+    },
+    "explanation": {"type": "string", "minLength": 1},
+    "source_graph_id": {"type": "string", "minLength": 1},
+    "source_graph_version": {"type": "string", "minLength": 1},
+    "source_graph_content_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "source_formula_versions": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "string", "minLength": 1}
+    },
+    "policy": {"$ref": "#/$defs/policy"},
+    "formula_version": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "minLength": 1},
+    "source_schema_version": {"const": "multi_horizon_analysis.v1"},
+    "schema_version": {"const": "horizon_decision.v1"},
+    "metadata": {"type": "object", "additionalProperties": true},
+    "disclaimer": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "horizon": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*(s|m|h|d|w|M)$"
+    },
+    "percentage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "direction": {
+      "enum": ["bullish", "bearish", "neutral", "conflict"]
+    },
+    "signal": {
+      "type": "object",
+      "required": [
+        "horizon",
+        "direction",
+        "score",
+        "strength",
+        "confidence",
+        "volatility_risk",
+        "manipulation_risk"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "horizon": {"$ref": "#/$defs/horizon"},
+        "direction": {"$ref": "#/$defs/direction"},
+        "score": {"type": "number", "minimum": -100, "maximum": 100},
+        "strength": {"$ref": "#/$defs/percentage"},
+        "confidence": {"$ref": "#/$defs/percentage"},
+        "volatility_risk": {"$ref": "#/$defs/percentage"},
+        "manipulation_risk": {"$ref": "#/$defs/percentage"}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "formula_version",
+        "short_band_max_ms",
+        "long_band_min_ms",
+        "band_authority",
+        "minimum_direction_score",
+        "minimum_direction_strength",
+        "minimum_direction_confidence",
+        "volatility_thresholds",
+        "manipulation_thresholds"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "formula_version": {"type": "string", "minLength": 1},
+        "short_band_max_ms": {"type": "integer", "minimum": 1},
+        "long_band_min_ms": {"type": "integer", "minimum": 1},
+        "band_authority": {
+          "type": "object",
+          "required": ["short", "medium", "long"],
+          "additionalProperties": false,
+          "properties": {
+            "short": {"type": "number", "exclusiveMinimum": 0},
+            "medium": {"type": "number", "exclusiveMinimum": 0},
+            "long": {"type": "number", "exclusiveMinimum": 0}
+          }
+        },
+        "minimum_direction_score": {"$ref": "#/$defs/percentage"},
+        "minimum_direction_strength": {"$ref": "#/$defs/percentage"},
+        "minimum_direction_confidence": {"$ref": "#/$defs/percentage"},
+        "volatility_thresholds": {"$ref": "#/$defs/risk_thresholds"},
+        "manipulation_thresholds": {"$ref": "#/$defs/risk_thresholds"}
+      }
+    },
+    "risk_thresholds": {
+      "type": "object",
+      "required": ["medium", "high", "extreme"],
+      "additionalProperties": false,
+      "properties": {
+        "medium": {"$ref": "#/$defs/percentage"},
+        "high": {"$ref": "#/$defs/percentage"},
+        "extreme": {"$ref": "#/$defs/percentage"}
+      }
+    },
+    "risk_level": {
+      "enum": ["low", "medium", "high", "extreme"]
+    },
+    "action_posture": {
+      "enum": [
+        "observe",
+        "wait_for_confirmation",
+        "cautious_follow",
+        "reduce_exposure",
+        "avoid_chasing"
+      ]
+    },
+    "alignment_status": {
+      "enum": ["aligned", "partial", "conflicted", "indeterminate"]
+    },
+    "conflict_type": {
+      "enum": [
+        "none",
+        "intra_band",
+        "short_vs_higher",
+        "medium_vs_long",
+        "lower_vs_long",
+        "broad"
+      ]
+    },
+    "band_decision": {
+      "type": "object",
+      "required": [
+        "band",
+        "horizons",
+        "qualified_horizons",
+        "anchor_horizon",
+        "direction",
+        "structural_score",
+        "strength",
+        "confidence",
+        "volatility_risk",
+        "manipulation_risk",
+        "risk_level",
+        "alignment_status",
+        "conflict_score"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "band": {"enum": ["short", "medium", "long"]},
+        "horizons": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/horizon"}
+        },
+        "qualified_horizons": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/horizon"}
+        },
+        "anchor_horizon": {"$ref": "#/$defs/horizon"},
+        "direction": {"$ref": "#/$defs/direction"},
+        "structural_score": {
+          "type": "number",
+          "minimum": -100,
+          "maximum": 100
+        },
+        "strength": {"$ref": "#/$defs/percentage"},
+        "confidence": {"$ref": "#/$defs/percentage"},
+        "volatility_risk": {"$ref": "#/$defs/percentage"},
+        "manipulation_risk": {"$ref": "#/$defs/percentage"},
+        "risk_level": {"$ref": "#/$defs/risk_level"},
+        "alignment_status": {"$ref": "#/$defs/alignment_status"},
+        "conflict_score": {"$ref": "#/$defs/percentage"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["source", "summary", "weight", "freshness", "reliability"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {"type": "string", "minLength": 1},
+        "summary": {"type": "string", "minLength": 1},
+        "weight": {"type": "number", "minimum": 0},
+        "freshness": {"$ref": "#/$defs/percentage"},
+        "reliability": {"$ref": "#/$defs/percentage"}
+      }
+    }
+  }
+}

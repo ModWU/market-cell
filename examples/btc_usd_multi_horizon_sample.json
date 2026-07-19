@@ -1,0 +1,136 @@
+{
+  "target": "BTC/USD",
+  "as_of_ms": 1721235600000,
+  "requests": [
+    {
+      "target": "BTC/USD",
+      "horizon": "15m",
+      "candles": [
+        {
+          "timestamp": "1721232900000",
+          "open": 63940,
+          "high": 64080,
+          "low": 63870,
+          "close": 64000,
+          "volume": 1200
+        },
+        {
+          "timestamp": "1721233800000",
+          "open": 64000,
+          "high": 64160,
+          "low": 63930,
+          "close": 64080,
+          "volume": 2400
+        },
+        {
+          "timestamp": "1721234700000",
+          "open": 64080,
+          "high": 64230,
+          "low": 64010,
+          "close": 64150,
+          "volume": 3600
+        },
+        {
+          "timestamp": "1721235600000",
+          "open": 64150,
+          "high": 64300,
+          "low": 64080,
+          "close": 64220,
+          "volume": 4800
+        }
+      ],
+      "events": [],
+      "context": {
+        "source": "example"
+      }
+    },
+    {
+      "target": "BTC/USD",
+      "horizon": "1h",
+      "candles": [
+        {
+          "timestamp": "1721224800000",
+          "open": 63940,
+          "high": 64080,
+          "low": 63870,
+          "close": 64000,
+          "volume": 1200
+        },
+        {
+          "timestamp": "1721228400000",
+          "open": 64000,
+          "high": 64160,
+          "low": 63930,
+          "close": 64080,
+          "volume": 2400
+        },
+        {
+          "timestamp": "1721232000000",
+          "open": 64080,
+          "high": 64230,
+          "low": 64010,
+          "close": 64150,
+          "volume": 3600
+        },
+        {
+          "timestamp": "1721235600000",
+          "open": 64150,
+          "high": 64300,
+          "low": 64080,
+          "close": 64220,
+          "volume": 4800
+        }
+      ],
+      "events": [],
+      "context": {
+        "source": "example"
+      }
+    },
+    {
+      "target": "BTC/USD",
+      "horizon": "4h",
+      "candles": [
+        {
+          "timestamp": "1721192400000",
+          "open": 63940,
+          "high": 64080,
+          "low": 63870,
+          "close": 64000,
+          "volume": 1200
+        },
+        {
+          "timestamp": "1721206800000",
+          "open": 64000,
+          "high": 64160,
+          "low": 63930,
+          "close": 64080,
+          "volume": 2400
+        },
+        {
+          "timestamp": "1721221200000",
+          "open": 64080,
+          "high": 64230,
+          "low": 64010,
+          "close": 64150,
+          "volume": 3600
+        },
+        {
+          "timestamp": "1721235600000",
+          "open": 64150,
+          "high": 64300,
+          "low": 64080,
+          "close": 64220,
+          "volume": 4800
+        }
+      ],
+      "events": [],
+      "context": {
+        "source": "example"
+      }
+    }
+  ],
+  "schema_version": "multi_horizon_request.v1",
+  "metadata": {
+    "scenario": "btc-usd-multi-horizon-example"
+  }
+}

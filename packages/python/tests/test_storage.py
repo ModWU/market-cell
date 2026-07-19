@@ -75,8 +75,15 @@ class StorageTests(unittest.TestCase):
         self.assertEqual(timestamp_to_ms("1720000000"), 1720000000000)
         self.assertEqual(timestamp_to_ms("2026-07-09T00:00:00Z"), 1783555200000)
         self.assertEqual(interval_to_millis("1m"), 60_000)
+        self.assertEqual(interval_to_millis("30s"), 30_000)
         self.assertEqual(interval_to_millis("4h"), 14_400_000)
         self.assertEqual(interval_to_millis("1d"), 86_400_000)
+        self.assertEqual(interval_to_millis("1M"), 2_592_000_000)
+        self.assertEqual(interval_to_millis("0m"), 0)
+        self.assertEqual(interval_to_millis("-1h"), 0)
+        self.assertEqual(interval_to_millis("01m"), 0)
+        self.assertEqual(interval_to_millis("+1m"), 0)
+        self.assertEqual(interval_to_millis("1 m"), 0)
         self.assertEqual(interval_to_millis("bad"), 0)
 
     def test_optional_storage_dependency_error_is_explicit(self):

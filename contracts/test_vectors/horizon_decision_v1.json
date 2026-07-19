@@ -1,0 +1,136 @@
+{
+  "schema_version": "horizon_decision_test_vector.v1",
+  "identity_payload": {
+    "source_schema_version": "multi_horizon_analysis.v1",
+    "request_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "target": "TEST/USD",
+    "as_of_ms": 1721235600000,
+    "horizon_order": ["15m", "4h", "1w"],
+    "graph_id": "market.test_analysis",
+    "graph_version": "1.0.0",
+    "graph_content_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "source_formula_versions": {
+      "root.decision": "decision_weighted_score_v0.5"
+    },
+    "signals": [
+      {
+        "horizon": "15m",
+        "direction": "bullish",
+        "score": 24.0,
+        "strength": 40.0,
+        "confidence": 72.0,
+        "volatility_risk": 18.0,
+        "manipulation_risk": 12.0
+      },
+      {
+        "horizon": "4h",
+        "direction": "bullish",
+        "score": 32.0,
+        "strength": 54.0,
+        "confidence": 78.0,
+        "volatility_risk": 22.0,
+        "manipulation_risk": 14.0
+      },
+      {
+        "horizon": "1w",
+        "direction": "bullish",
+        "score": 40.0,
+        "strength": 68.0,
+        "confidence": 84.0,
+        "volatility_risk": 25.0,
+        "manipulation_risk": 16.0
+      }
+    ],
+    "policy": {
+      "formula_version": "horizon_structure_alignment_v0.1",
+      "short_band_max_ms": 14400000,
+      "long_band_min_ms": 604800000,
+      "band_authority": {
+        "short": 0.2,
+        "medium": 0.3,
+        "long": 0.5
+      },
+      "minimum_direction_score": 12.0,
+      "minimum_direction_strength": 15.0,
+      "minimum_direction_confidence": 45.0,
+      "volatility_thresholds": {
+        "medium": 35.0,
+        "high": 55.0,
+        "extreme": 75.0
+      },
+      "manipulation_thresholds": {
+        "medium": 25.0,
+        "high": 35.0,
+        "extreme": 65.0
+      }
+    },
+    "decision": {
+      "direction": "bullish",
+      "structural_direction": "bullish",
+      "structural_score": 34.4,
+      "strength": 58.48,
+      "confidence": 63.84,
+      "volatility_risk": 25.0,
+      "manipulation_risk": 16.0,
+      "urgency": 58.48,
+      "risk_level": "low",
+      "action_posture": "cautious_follow",
+      "alignment_status": "aligned",
+      "conflict_type": "none",
+      "conflict_score": 0.0,
+      "band_decisions": [
+        {
+          "band": "short",
+          "horizons": ["15m"],
+          "qualified_horizons": ["15m"],
+          "anchor_horizon": "15m",
+          "direction": "bullish",
+          "structural_score": 24.0,
+          "strength": 40.8,
+          "confidence": 57.6,
+          "volatility_risk": 18.0,
+          "manipulation_risk": 12.0,
+          "risk_level": "low",
+          "alignment_status": "partial",
+          "conflict_score": 0.0
+        },
+        {
+          "band": "medium",
+          "horizons": ["4h"],
+          "qualified_horizons": ["4h"],
+          "anchor_horizon": "4h",
+          "direction": "bullish",
+          "structural_score": 32.0,
+          "strength": 54.4,
+          "confidence": 62.4,
+          "volatility_risk": 22.0,
+          "manipulation_risk": 14.0,
+          "risk_level": "low",
+          "alignment_status": "partial",
+          "conflict_score": 0.0
+        },
+        {
+          "band": "long",
+          "horizons": ["1w"],
+          "qualified_horizons": ["1w"],
+          "anchor_horizon": "1w",
+          "direction": "bullish",
+          "structural_score": 40.0,
+          "strength": 68.0,
+          "confidence": 67.2,
+          "volatility_risk": 25.0,
+          "manipulation_risk": 16.0,
+          "risk_level": "low",
+          "alignment_status": "partial",
+          "conflict_score": 0.0
+        }
+      ],
+      "risk_breakdown": {
+        "volatility_risk": "low",
+        "manipulation_risk": "low"
+      }
+    }
+  },
+  "expected_decision_hash": "6ac5a865efefe03b8e8fde5302de5a52aee9ebc2838c1011cb6bbd1da7698b25",
+  "expected_decision_id": "horizon-decision:6ac5a865efefe03b8e8fde53"
+}

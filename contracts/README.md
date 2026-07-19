@@ -4,7 +4,7 @@ This directory contains language-neutral contracts shared by all MarketCell runt
 
 Current contracts are split by runtime path:
 
-- JSON Schema for analysis requests, reports, replayable multi-input analysis runs, replay comparisons, input snapshots and references, typed Cell input bundles, order-book snapshots, funding/open-interest snapshots, data provenance, feature snapshots, Cell execution plans, service capability catalogs, placement decisions, execution-control records, Cell runtime traces, and Cell runtime summaries.
+- JSON Schema for single- and multi-horizon analysis requests/results, versioned horizon decisions, replayable multi-input analysis runs, replay comparisons, input snapshots and references, typed Cell input bundles, order-book snapshots, funding/open-interest snapshots, data provenance, feature snapshots, Cell execution plans, service capability catalogs, placement decisions, execution-control records, Cell runtime traces, and Cell runtime summaries.
 - Protobuf for realtime market-data events.
 - Parquet schema notes for historical and replayable candle storage.
 
@@ -12,6 +12,10 @@ Directory policy:
 
 - `json_schema/analysis_request.schema.json`: external input accepted by the analysis runtime.
 - `json_schema/analysis_report.schema.json`: stable report shape emitted by the analysis runtime.
+- `json_schema/multi_horizon_request.schema.json`: same-target, explicit-as-of envelope containing two to eight ordered AnalysisRequests.
+- `json_schema/multi_horizon_analysis.schema.json`: ordered per-horizon reports with one graph/formula identity and no premature aggregate decision.
+- `json_schema/multi_horizon_execution_error.schema.json`: structured fail-fast batch errors with completed and failed horizon boundaries.
+- `json_schema/horizon_decision.schema.json`: normalized source signals, hierarchical direction, structural direction, band decisions, typed conflicts, risk posture, evidence, and source identity.
 - `json_schema/analysis_run.schema.json`: run metadata, input snapshots, formula versions, and data-source audit records.
 - `json_schema/replay_comparison.schema.json`: input identity, complete decision-tree drift paths and hashes, formula drift, and Graph drift for one replay.
 - `json_schema/input_snapshot.schema.json`: immutable logical input payload with content hash, provenance, data version, and size.
@@ -44,6 +48,8 @@ Directory policy:
 - `test_vectors/execution_identity_v1.json`: shared idempotency-key and attempt-id identity vector for every executor runtime.
 - `test_vectors/order_book_snapshot_v1.json`: shared order-book payload hash, size, snapshot identity, and reference identity vector.
 - `test_vectors/funding_open_interest_snapshot_v1.json`: shared derivatives-positioning payload hash, size, snapshot identity, and reference identity vector.
+- `test_vectors/multi_horizon_request_v1.json`: shared normalized multi-horizon request hash, size, and deterministic request identity vector.
+- `test_vectors/horizon_decision_v1.json`: shared policy-input plus normalized-result payload and deterministic horizon decision identity vector.
 
 Future language modules must depend on these contracts instead of duplicating private data shapes.
 

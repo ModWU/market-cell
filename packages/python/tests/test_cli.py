@@ -1,10 +1,16 @@
 from contextlib import redirect_stdout
 from io import StringIO
 import json
+from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
 from market_cell.cli import main
+from market_cell.reports import FileSystemReportStore
+
+
+ROOT = Path(__file__).resolve().parents[3]
 
 
 class BenchmarkCliTests(unittest.TestCase):
@@ -23,6 +29,83 @@ class BenchmarkCliTests(unittest.TestCase):
         code, _ = _run(_Result(performance_failures=[{"code": "slow"}]))
 
         self.assertEqual(code, 3)
+
+
+class MultiHorizonCliTests(unittest.TestCase):
+    def test_analyze_multi_outputs_unaggregated_horizon_reports(self):
+        output = StringIO()
+        with redirect_stdout(output):
+            code = main(
+                [
+                    "analyze-multi",
+                    str(ROOT / "examples" / "btc_usd_multi_horizon_sample.json"),
+                ]
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["schema_version"], "multi_horizon_analysis.v1")
+        self.assertEqual(payload["horizon_order"], ["15m", "1h", "4h"])
+        self.assertEqual(payload["aggregation_status"], "not_computed")
+        self.assertNotIn("direction", payload)
+
+    def test_analyze_multi_decide_outputs_versioned_horizon_decision(self):
+        output = StringIO()
+        with redirect_stdout(output):
+            code = main(
+                [
+                    "analyze-multi",
+                    str(
+                        ROOT
+                        / "examples"
+                        / "btc_usd_multi_horizon_sample.json"
+                    ),
+                    "--decide",
+                ]
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["schema_version"], "horizon_decision.v1")
+        self.assertEqual(
+            payload["formula_version"],
+            "horizon_structure_alignment_v0.1",
+        )
+        self.assertEqual(payload["horizon_order"], ["15m", "1h", "4h"])
+        self.assertEqual(
+            [item["horizon"] for item in payload["source_signals"]],
+            payload["horizon_order"],
+        )
+        self.assertIn(
+            payload["alignment_status"],
+            {"aligned", "partial", "conflicted", "indeterminate"},
+        )
+        self.assertEqual(
+            [item["band"] for item in payload["band_decisions"]],
+            ["short", "medium"],
+        )
+
+    def test_analyze_multi_save_persists_each_child_report(self):
+        output = StringIO()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with redirect_stdout(output):
+                code = main(
+                    [
+                        "analyze-multi",
+                        str(
+                            ROOT
+                            / "examples"
+                            / "btc_usd_multi_horizon_sample.json"
+                        ),
+                        "--save",
+                        "--report-dir",
+                        temp_dir,
+                    ]
+                )
+            report_ids = FileSystemReportStore(temp_dir).list_reports()
+
+        self.assertEqual(code, 0)
+        self.assertEqual(len(report_ids), 3)
 
 
 class _Result:

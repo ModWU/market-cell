@@ -1,4 +1,4 @@
-# MarketCell 系统架构基线 v1.0
+# MarketCell 系统架构基线 v1.2
 
 ## 1. 文档职责
 
@@ -8,7 +8,7 @@
 - 当前代码已经落到哪一层。
 - 地基阶段还有哪些结构性缺口。
 
-详细执行协议见 `cell_execution_fabric.md`，多语言边界见 `polyglot_architecture.md` 和 `runtime_architecture.md`，实施顺序只以 `roadmap.md` 为准。
+详细执行协议见 `cell_execution_fabric.md`，多周期边界见 `multi_horizon_design.md`，多语言边界见 `polyglot_architecture.md` 和 `runtime_architecture.md`，实施顺序只以 `roadmap.md` 为准。
 
 ## 2. 架构目标
 
@@ -43,6 +43,12 @@ Trading Gateway 只能消费分析结果，不能反向污染 Cell。
 flowchart TD
     Input["CLI / JSON Input"] --> Validate["Input Validator"]
     Validate --> Engine["AnalysisEngine"]
+    MultiInput["MultiHorizonRequest"] --> MultiValidate["Multi-Horizon Validator"]
+    MultiValidate --> MultiAnalyzer["MultiHorizonAnalyzer"]
+    MultiAnalyzer -->|"one child at a time"| Engine
+    MultiAnalyzer --> MultiAnalysis["MultiHorizonAnalysis"]
+    MultiAnalysis --> HorizonDecisionCell["HorizonDecisionCell"]
+    HorizonDecisionCell --> HorizonDecision["HorizonDecision"]
     Engine --> Snapshot["InputSnapshot"]
     Snapshot --> InputStore["InputSnapshotStore"]
     InputStore --> InputRef["InputReference"]
@@ -83,14 +89,14 @@ flowchart TD
     Rust["Rust Market Data / Realtime Core"] -. shared contracts .-> Data
 ```
 
-当前运行仍是同步单进程，但 planner、coordinator、binding、failure control、router、executor 和 trace 已经分层。`FailureControlledExecutor` 负责 attempt、deadline、retry、admission、cancellation 和计划内 fallback；这个阶段仍不引入消息队列、服务发现或生产远程协议。
+当前运行仍是同步单进程，但 planner、coordinator、binding、failure control、router、executor 和 trace 已经分层。`FailureControlledExecutor` 负责 attempt、deadline、retry、admission、cancellation 和计划内 fallback。MultiHorizonAnalyzer 位于单周期 Engine 之上，只负责时间对齐、同 Graph/公式预检和确定性 fan-out；HorizonDecisionCell 再消费完整 MultiHorizonAnalysis。两者都不进入单周期 Cell DAG；这个阶段仍不引入消息队列、服务发现或生产远程协议。
 
 ## 5. 分层和依赖方向
 
 | 层 | 当前职责 | 允许依赖 | 不应承担 |
 |---|---|---|---|
 | Interface | CLI、JSON 输入输出 | Application、Contracts | 分析公式、服务放置 |
-| Application | Engine、Planner、Replay、运行编排 | Domain、Execution、Storage ports | 具体指标公式 |
+| Application | Engine、MultiHorizonAnalyzer、HorizonDecisionCell、Planner、Replay、运行编排 | Domain、Execution、Storage ports | 具体指标公式、未版本化跨周期投票 |
 | Domain | Cell、Manifest、Graph、Organ、Result、Evidence、DecisionPolicy | 基础数据模型 | 网络、数据库、任务队列、服务位置 |
 | Execution | Catalog、Placement、Plan、Input Resolver ports、Executor、Telemetry | Domain contracts | 用户报告语义、行情采集 |
 | Data / Feature | 数据源、质量、缓存、基础特征 | Domain data contracts | Cell 决策聚合 |
@@ -105,9 +111,12 @@ flowchart TD
 这些对象应优先版本化并保持向后兼容：
 
 - `AnalysisRequest`
+- `MultiHorizonRequest`
 - `CellManifest`
 - `CellResult`
 - `AnalysisReport`
+- `MultiHorizonAnalysis`
+- `HorizonDecision`
 - `AnalysisRun`
 - `CellGraphDefinition`
 - `InputSnapshot`
@@ -186,6 +195,10 @@ CellExecutionPlan  描述本次运行选择的实现和服务
 这些缺口不阻塞本地 v0.3 Cell 扩展，但必须在生产远程执行或大规模输入分片前解决。
 
 ## 9. 数据和输入边界
+
+`MultiHorizonRequest` 是应用层包络，不是新的 InputKind。它通过同一 target、显式 as-of、短到长顺序和 K 线新鲜度约束，把 2–8 个完整 AnalysisRequest 交给独立单周期运行。每个 child 继续拥有自己的 analysis_request InputSnapshot、ExecutionPlan、AnalysisRun 和 ReplayRunner 证据；批次只在 child metadata 中增加 request/batch identity 和 horizon order。
+
+MultiHorizonAnalyzer 在任何 child Cell 启动前比较 Graph id/version/content hash 和公式版本集合。成功结果只输出有序 AnalysisReport，并固定 `aggregation_status=not_computed`。HorizonDecisionCell 作为独立应用层聚合 Cell，按周期层级和结构权威生成 HorizonDecision；它不修改 source analysis，也不注册到单周期 Registry/DAG。
 
 当前 `AnalysisRequest` 仍直接携带 candles、events 和 context，作为本地入口和 `AnalysisRun.input_snapshot` 的完整回放载荷。执行边界已经区分：
 
@@ -272,5 +285,7 @@ Runtime State   服务健康、容量和短期状态
 - Runtime summary 可以跨运行聚合并进入 placement。（已完成）
 - 有最小性能基线和回归阈值。（已完成）
 - 失败运行、重试和降级都有可复盘记录。（已完成）
+- 多周期请求能在同一 as-of 下拒绝陈旧/未来数据、Graph/公式漂移和部分成功伪装。（已完成）
+- 多周期决策能区分结构方向、层内/层间冲突和风险覆盖，并具有稳定身份与验证向量。（已完成，experimental）
 
 具体实施顺序只维护在 `roadmap.md`。

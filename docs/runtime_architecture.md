@@ -1,4 +1,4 @@
-# MarketCell 运行时架构 v0.9
+# MarketCell 运行时架构 v1.0
 
 ## 1. 目标
 
@@ -64,6 +64,8 @@ contracts/protobuf/        # 实时事件契约
 Python 负责静态数据分析和研究效率。
 
 适合放在 Python 的内容：
+
+- MultiHorizonRequest 校验、Graph/公式预检、低频 fan-out 和 HorizonDecisionPolicy
 
 - AnalysisRequest / AnalysisReport
 - Cell 编排和参考实现
@@ -134,6 +136,10 @@ Realtime events   -> contracts/protobuf/market_data.proto
 Historical batch  -> contracts/parquet/candle_schema.md
 Analysis input    -> contracts/json_schema/analysis_request.schema.json
 Analysis output   -> contracts/json_schema/analysis_report.schema.json
+Multi request     -> contracts/json_schema/multi_horizon_request.schema.json
+Multi analysis    -> contracts/json_schema/multi_horizon_analysis.schema.json
+Horizon decision -> contracts/json_schema/horizon_decision.schema.json
+Multi failure     -> contracts/json_schema/multi_horizon_execution_error.schema.json
 Analysis run/audit -> contracts/json_schema/analysis_run.schema.json
 Input snapshot    -> contracts/json_schema/input_snapshot.schema.json
 Input reference   -> contracts/json_schema/input_reference.schema.json
@@ -160,7 +166,7 @@ Perf result      -> contracts/json_schema/performance_benchmark_result.schema.js
 
 ## 7. 当前推进顺序
 
-冷热路径、共享契约、Rust 行情原语、Python 回放、数据源审计、CellGraphDefinition、Organ、ExecutionPlan、Input Resolver、placement、plan-driven coordinator、executor、运行遥测、Runtime Summary Store 和固定性能基线已经建立参考实现。
+冷热路径、共享契约、Rust 行情原语、Python 回放、多周期请求 fan-out、分层多周期决策、数据源审计、CellGraphDefinition、Organ、ExecutionPlan、Input Resolver、placement、plan-driven coordinator、executor、运行遥测、Runtime Summary Store 和固定性能基线已经建立参考实现。
 
 当前运行时地基已经具备本地参考失败控制语义；生产远程阶段仍需跨进程幂等结果存储、transport 级强制 deadline/cancellation 和 worker admission adapter。
 

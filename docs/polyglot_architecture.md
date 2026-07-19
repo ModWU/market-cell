@@ -40,6 +40,10 @@ contracts/
 ├── json_schema/
 │   ├── analysis_request.schema.json
 │   ├── analysis_report.schema.json
+│   ├── multi_horizon_request.schema.json
+│   ├── multi_horizon_analysis.schema.json
+│   ├── multi_horizon_execution_error.schema.json
+│   ├── horizon_decision.schema.json
 │   ├── analysis_run.schema.json
 │   ├── input_snapshot.schema.json
 │   ├── input_snapshot_audit.schema.json
@@ -67,7 +71,9 @@ contracts/
 │   └── candle_schema.md
 └── test_vectors/
     ├── input_identity_v1.json
-    └── execution_identity_v1.json
+    ├── execution_identity_v1.json
+    ├── multi_horizon_request_v1.json
+    └── horizon_decision_v1.json
 ```
 
 所有语言模块都必须围绕 `contracts/` 对齐输入输出。
@@ -87,6 +93,7 @@ contracts/
 - Cell 运行 summary 走 JSON Schema，后续调度器、容量规划和性能回归测试必须基于同一类聚合口径，并保留 implementation 维度避免多实现性能混淆。
 - 报告必须带 `schema_version`，避免历史报告无法解释。
 - 公式版本和引擎版本必须进入报告或运行记录。
+- 多周期 request/decision identity 必须使用共享 canonical JSON 向量；运行时 metadata、batch id 和 report id 不得污染行为身份。
 
 ## 4. 目标仓库结构
 

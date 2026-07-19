@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import re
+
+
+CANONICAL_MONTH_MILLIS = 30 * 86_400_000
+_INTERVAL_PATTERN = re.compile(r"^(?P<amount>[1-9][0-9]*)(?P<unit>[smhdwM])$")
 
 
 def timestamp_to_ms(value: str) -> int:
@@ -20,18 +25,18 @@ def timestamp_to_ms(value: str) -> int:
 
 def interval_to_millis(interval: str) -> int:
     text = interval.strip()
-    if len(text) < 2:
+    match = _INTERVAL_PATTERN.fullmatch(text)
+    if match is None:
         return 0
-    unit = text[-1]
-    try:
-        amount = int(text[:-1])
-    except ValueError:
-        return 0
+    amount = int(match.group("amount"))
+    unit = match.group("unit")
 
     multipliers = {
+        "s": 1_000,
         "m": 60_000,
         "h": 3_600_000,
         "d": 86_400_000,
         "w": 604_800_000,
+        "M": CANONICAL_MONTH_MILLIS,
     }
     return amount * multipliers.get(unit, 0)

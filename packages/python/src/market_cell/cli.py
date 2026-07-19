@@ -4,6 +4,11 @@ import sys
 from pathlib import Path
 
 from market_cell.engine import AnalysisEngine
+from market_cell.horizons import (
+    HorizonDecisionCell,
+    MultiHorizonAnalyzer,
+    MultiHorizonRequest,
+)
 from market_cell.models import AnalysisRequest
 from market_cell.performance import run_performance_benchmark
 from market_cell.registry import default_registry
@@ -20,6 +25,40 @@ def create_parser() -> argparse.ArgumentParser:
     analyze.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
     analyze.add_argument("--save", action="store_true", help="Save report and run metadata for replay.")
     analyze.add_argument("--report-dir", type=Path, default=Path("reports"), help="Report storage directory.")
+
+    analyze_multi = subparsers.add_parser(
+        "analyze-multi",
+        help="Run an ordered multi-horizon request from a JSON file.",
+    )
+    analyze_multi.add_argument(
+        "file",
+        type=Path,
+        help="Path to the multi-horizon input JSON.",
+    )
+    analyze_multi.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print JSON output.",
+    )
+    analyze_multi.add_argument(
+        "--save",
+        action="store_true",
+        help="Save every child horizon report and run for replay.",
+    )
+    analyze_multi.add_argument(
+        "--decide",
+        action="store_true",
+        help=(
+            "Apply the versioned HorizonDecisionCell after all horizons "
+            "succeed."
+        ),
+    )
+    analyze_multi.add_argument(
+        "--report-dir",
+        type=Path,
+        default=Path("reports"),
+        help="Child report storage directory.",
+    )
 
     cells = subparsers.add_parser("cells", help="List registered MarketCell analyzers.")
     cells.add_argument("--pretty", action="store_true", help="Pretty-print JSON output.")
@@ -64,6 +103,11 @@ def load_request(path: Path) -> AnalysisRequest:
     return AnalysisRequest.from_dict(data)
 
 
+def load_multi_horizon_request(path: Path) -> MultiHorizonRequest:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return MultiHorizonRequest.from_dict(data)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = create_parser()
     args = parser.parse_args(argv)
@@ -79,6 +123,26 @@ def main(argv: list[str] | None = None) -> int:
 
         indent = 2 if args.pretty else None
         print(json.dumps(report.to_dict(), ensure_ascii=False, indent=indent))
+        return 0
+
+    if args.command == "analyze-multi":
+        try:
+            request = load_multi_horizon_request(args.file)
+            store = FileSystemReportStore(args.report_dir) if args.save else None
+            analysis = MultiHorizonAnalyzer(
+                engine_factory=lambda _: AnalysisEngine(report_store=store)
+            ).run(request)
+            output = (
+                HorizonDecisionCell().analyze(analysis)
+                if args.decide
+                else analysis
+            )
+        except Exception as exc:
+            print(f"多周期分析失败：{exc}", file=sys.stderr)
+            return 1
+
+        indent = 2 if args.pretty else None
+        print(json.dumps(output.to_dict(), ensure_ascii=False, indent=indent))
         return 0
 
     if args.command == "cells":

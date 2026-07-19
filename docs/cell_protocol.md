@@ -1,4 +1,4 @@
-# MarketCell Cell 协议 v0.5
+# MarketCell Cell 协议 v0.6
 
 ## 1. Cell 是什么
 
@@ -32,6 +32,8 @@ analyze_inputs(input_bundle, child_results) -> CellResult
 叶子 Cell 可以忽略 `child_results`。
 
 父 Cell 必须通过 `child_results` 聚合结果。
+
+`HorizonDecisionCell` 是唯一已定义的应用层类型化聚合 Cell 例外：它消费完整 `MultiHorizonAnalysis` 并返回 `HorizonDecision`，不进入单周期 CellRegistry、Graph 或 ExecutionPlan。这个例外不能被普通 Cell 用来绕过 AnalysisRequest / CellInputBundle；详细边界见 `horizon_decision_design.md` 和 ADR-0008。
 
 ## 3. Manifest 要求
 
@@ -166,6 +168,8 @@ deprecated
 - 添加测试
 - 添加公式版本
 - 输出 evidence
+
+应用层聚合 Cell 还必须显式说明为何不能使用单周期 scope，并提供独立输入/输出 schema、稳定身份和执行边界；在建立对应计划协议前不得注册进单周期 Registry。
 
 ## 9. 重要边界
 

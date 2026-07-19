@@ -23,6 +23,7 @@ from market_cell.graph import (
     default_analysis_graph,
     validate_cell_graph_definition,
 )
+from market_cell.hashing import stable_json_hash
 from market_cell.features import build_feature_snapshot
 from market_cell.inputs import (
     CellInputBundle,
@@ -30,6 +31,16 @@ from market_cell.inputs import (
     InputResolutionRecord,
     InputSnapshot,
     ResolvedCellInput,
+)
+from market_cell.horizons import (
+    HorizonAlignmentStatus,
+    HorizonBand,
+    HorizonConflictType,
+    HorizonDecisionCell,
+    MultiHorizonAnalyzer,
+    MultiHorizonExecutionCode,
+    MultiHorizonExecutionError,
+    MultiHorizonRequest,
 )
 from market_cell.models import AnalysisRequest, Candle
 from market_cell.performance import (
@@ -197,6 +208,156 @@ class ContractTests(unittest.TestCase):
             "funding_open_interest_snapshot.schema.json",
             derivatives.to_dict(),
             "funding_open_interest_snapshot.v1",
+        )
+
+    def test_multi_horizon_request_identity_matches_shared_contract_vector(self):
+        vector = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "test_vectors"
+                / "multi_horizon_request_v1.json"
+            ).read_text(encoding="utf-8")
+        )
+        request = MultiHorizonRequest.from_dict(vector["request"])
+
+        self.assertEqual(request.content_hash, vector["expected_content_hash"])
+        self.assertEqual(
+            request.payload_size_bytes,
+            vector["expected_payload_size_bytes"],
+        )
+        self.assertEqual(request.request_id, vector["expected_request_id"])
+        _assert_contract_fields(
+            self,
+            "multi_horizon_request.schema.json",
+            request.to_dict(),
+            "multi_horizon_request.v1",
+        )
+
+    def test_multi_horizon_analysis_contains_contract_required_fields(self):
+        vector = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "test_vectors"
+                / "multi_horizon_request_v1.json"
+            ).read_text(encoding="utf-8")
+        )
+        request = MultiHorizonRequest.from_dict(vector["request"])
+
+        analysis = MultiHorizonAnalyzer().run(request)
+
+        _assert_contract_fields(
+            self,
+            "multi_horizon_analysis.schema.json",
+            analysis.to_dict(),
+            "multi_horizon_analysis.v1",
+        )
+        self.assertEqual(analysis.aggregation_status, "not_computed")
+        self.assertNotIn("direction", analysis.to_dict())
+
+    def test_multi_horizon_execution_error_matches_contract_codes(self):
+        vector = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "test_vectors"
+                / "multi_horizon_request_v1.json"
+            ).read_text(encoding="utf-8")
+        )
+        request = MultiHorizonRequest.from_dict(vector["request"])
+        error = MultiHorizonExecutionError(
+            "planned failure",
+            code="analysis_failure",
+            batch_id=f"multi-horizon:{'a' * 32}",
+            request=request,
+            failed_horizon="1h",
+        )
+
+        _assert_contract_fields(
+            self,
+            "multi_horizon_execution_error.schema.json",
+            error.to_dict(),
+            "multi_horizon_execution_error.v1",
+        )
+        schema = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "json_schema"
+                / "multi_horizon_execution_error.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            set(schema["properties"]["code"]["enum"]),
+            set(get_args(MultiHorizonExecutionCode)),
+        )
+
+    def test_horizon_decision_identity_matches_shared_contract_vector(self):
+        vector = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "test_vectors"
+                / "horizon_decision_v1.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        decision_hash = stable_json_hash(vector["identity_payload"])
+
+        self.assertEqual(
+            decision_hash,
+            vector["expected_decision_hash"],
+        )
+        self.assertEqual(
+            f"horizon-decision:{decision_hash[:24]}",
+            vector["expected_decision_id"],
+        )
+
+    def test_horizon_decision_contains_contract_fields_and_enum_parity(self):
+        vector = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "test_vectors"
+                / "multi_horizon_request_v1.json"
+            ).read_text(encoding="utf-8")
+        )
+        analysis = MultiHorizonAnalyzer().run(
+            MultiHorizonRequest.from_dict(vector["request"])
+        )
+
+        decision = HorizonDecisionCell().analyze(analysis)
+
+        _assert_contract_fields(
+            self,
+            "horizon_decision.schema.json",
+            decision.to_dict(),
+            "horizon_decision.v1",
+        )
+        schema = json.loads(
+            (
+                ROOT
+                / "contracts"
+                / "json_schema"
+                / "horizon_decision.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            set(schema["$defs"]["alignment_status"]["enum"]),
+            set(get_args(HorizonAlignmentStatus)),
+        )
+        self.assertEqual(
+            set(schema["$defs"]["conflict_type"]["enum"]),
+            set(get_args(HorizonConflictType)),
+        )
+        self.assertEqual(
+            set(
+                schema["$defs"]["band_decision"]["properties"]["band"][
+                    "enum"
+                ]
+            ),
+            set(get_args(HorizonBand)),
         )
 
     def test_cell_input_bundle_audit_contains_contract_required_fields(self):

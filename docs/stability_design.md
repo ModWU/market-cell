@@ -1,4 +1,4 @@
-# MarketCell 稳定性设计 v1.0
+# MarketCell 稳定性设计 v1.2
 
 ## 1. 目标
 
@@ -18,6 +18,12 @@
 当前结构：
 
 ```text
+MultiHorizonRequest
+→ validate target/as-of/order/freshness
+→ preflight Graph content hash + formula versions
+→ ordered child AnalysisRequest runs
+→ MultiHorizonAnalysis(aggregation_status=not_computed)
+
 AnalysisRequest
 → validate_request
 → CellGraphDefinition
@@ -40,6 +46,7 @@ AnalysisRequest
 - Graph 定义组合，Planner 选择实现和服务，Coordinator 负责运行图语义，Executor 负责单节点真实执行。
 - AnalysisReport 不包含服务、重试或队列信息。
 - 新数据源必须经过标准数据契约进入分析。
+- 多周期比较前必须证明 child 使用同一 Graph 内容和公式集合；MultiHorizonAnalysis 永不输出总体方向，只有版本化 HorizonDecisionCell 可以生成独立决策。
 
 当前 Graph、Registry、ExecutionPlan 和 Coordinator 已经分层。默认图与自定义多级图使用同一校验、规划和执行路径。
 
@@ -200,6 +207,8 @@ reference.payload_size_bytes     = resolved_snapshot.payload_size_bytes
 - `test_execution_placement.py`：多服务候选和运行时感知 placement。
 - `test_replay.py`：输入快照重跑、公式漂移和 Graph 身份 / 版本 / 内容漂移。
 - `test_funding_open_interest.py`：衍生品输入单位、线性合约边界、价格调整后的 OI 暴露、cadence/quality 失败关闭、显式 Graph 和多输入稳定回放。
+- `test_multi_horizon.py`：稳定请求身份、as-of 新鲜度、短到长顺序、等价周期拒绝、同 Graph/公式预检、fail-fast 边界和 child 独立回放。
+- `test_horizon_decision.py`：分层边界、结构方向、冲突分类、风险覆盖、稳定身份、输出不变量和应用层 Registry 边界。
 - `test_run_store.py`：报告与运行记录。
 - `test_decision_policy.py`：方向和风险分层。
 - `test_registry_validation.py`：输入边界。
@@ -215,5 +224,6 @@ make test
 当前仍需补齐：
 
 1. 生产远程 Executor 的 transport adapter、跨进程幂等结果存储和强制 deadline/cancellation。
+2. MultiHorizonAnalysis / HorizonDecision 的父级运行持久化、历史走势标签和概率校准；在完成前 HorizonDecisionCell 保持 experimental，不能直接驱动交易。
 
 顺序以 `roadmap.md` 为准。

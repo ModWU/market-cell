@@ -1,0 +1,204 @@
+{
+  "schema_version": "horizon_decision_validation_fixture.v1",
+  "cell_id": "horizon.decision",
+  "formula_version": "horizon_structure_alignment_v0.1",
+  "cases": [
+    {
+      "case_id": "short_medium_long_aligned_bullish",
+      "case_type": "positive",
+      "signals": [
+        {"horizon": "15m", "direction": "bullish", "score": 24, "strength": 40, "confidence": 72, "volatility_risk": 18, "manipulation_risk": 12},
+        {"horizon": "4h", "direction": "bullish", "score": 32, "strength": 54, "confidence": 78, "volatility_risk": 22, "manipulation_risk": 14},
+        {"horizon": "1w", "direction": "bullish", "score": 40, "strength": 68, "confidence": 84, "volatility_risk": 25, "manipulation_risk": 16}
+      ],
+      "expected": {
+        "direction": "bullish",
+        "structural_direction": "bullish",
+        "alignment_status": "aligned",
+        "conflict_type": "none",
+        "risk_level": "low",
+        "action_posture": "cautious_follow"
+      }
+    },
+    {
+      "case_id": "aligned_bearish_with_medium_risk_waits",
+      "case_type": "positive",
+      "signals": [
+        {"horizon": "1h", "direction": "bearish", "score": -22, "strength": 38, "confidence": 70, "volatility_risk": 30, "manipulation_risk": 12},
+        {"horizon": "1d", "direction": "bearish", "score": -31, "strength": 53, "confidence": 76, "volatility_risk": 40, "manipulation_risk": 15},
+        {"horizon": "1M", "direction": "bearish", "score": -38, "strength": 65, "confidence": 82, "volatility_risk": 36, "manipulation_risk": 18}
+      ],
+      "expected": {
+        "direction": "bearish",
+        "structural_direction": "bearish",
+        "alignment_status": "aligned",
+        "conflict_type": "none",
+        "risk_level": "medium",
+        "action_posture": "wait_for_confirmation"
+      }
+    },
+    {
+      "case_id": "short_countertrend_does_not_hide_higher_structure",
+      "case_type": "boundary",
+      "signals": [
+        {"horizon": "15m", "direction": "bearish", "score": -25, "strength": 43, "confidence": 74, "volatility_risk": 20, "manipulation_risk": 10},
+        {"horizon": "4h", "direction": "bullish", "score": 30, "strength": 51, "confidence": 78, "volatility_risk": 24, "manipulation_risk": 12},
+        {"horizon": "1w", "direction": "bullish", "score": 36, "strength": 61, "confidence": 82, "volatility_risk": 26, "manipulation_risk": 14}
+      ],
+      "expected": {
+        "direction": "conflict",
+        "structural_direction": "bullish",
+        "alignment_status": "conflicted",
+        "conflict_type": "short_vs_higher",
+        "risk_level": "low",
+        "action_posture": "wait_for_confirmation"
+      }
+    },
+    {
+      "case_id": "lower_horizons_counter_long_structure",
+      "case_type": "boundary",
+      "signals": [
+        {"horizon": "1h", "direction": "bearish", "score": -28, "strength": 48, "confidence": 75, "volatility_risk": 22, "manipulation_risk": 12},
+        {"horizon": "1d", "direction": "bearish", "score": -34, "strength": 58, "confidence": 80, "volatility_risk": 25, "manipulation_risk": 14},
+        {"horizon": "1w", "direction": "bullish", "score": 39, "strength": 66, "confidence": 84, "volatility_risk": 28, "manipulation_risk": 16}
+      ],
+      "expected": {
+        "direction": "conflict",
+        "structural_direction": "bullish",
+        "alignment_status": "conflicted",
+        "conflict_type": "lower_vs_long",
+        "risk_level": "low",
+        "action_posture": "wait_for_confirmation"
+      }
+    },
+    {
+      "case_id": "medium_diverges_from_short_and_long",
+      "case_type": "boundary",
+      "signals": [
+        {"horizon": "1h", "direction": "bullish", "score": 24, "strength": 41, "confidence": 72, "volatility_risk": 20, "manipulation_risk": 10},
+        {"horizon": "1d", "direction": "bearish", "score": -32, "strength": 54, "confidence": 79, "volatility_risk": 26, "manipulation_risk": 13},
+        {"horizon": "1w", "direction": "bullish", "score": 37, "strength": 63, "confidence": 83, "volatility_risk": 28, "manipulation_risk": 15}
+      ],
+      "expected": {
+        "direction": "conflict",
+        "structural_direction": "bullish",
+        "alignment_status": "conflicted",
+        "conflict_type": "medium_vs_long",
+        "risk_level": "low",
+        "action_posture": "wait_for_confirmation"
+      }
+    },
+    {
+      "case_id": "short_band_internal_opposition_is_explicit",
+      "case_type": "boundary",
+      "signals": [
+        {"horizon": "15m", "direction": "bullish", "score": 26, "strength": 44, "confidence": 76, "volatility_risk": 24, "manipulation_risk": 12},
+        {"horizon": "1h", "direction": "bearish", "score": -29, "strength": 49, "confidence": 78, "volatility_risk": 26, "manipulation_risk": 14},
+        {"horizon": "4h", "direction": "neutral", "score": 0, "strength": 10, "confidence": 60, "volatility_risk": 22, "manipulation_risk": 10}
+      ],
+      "expected": {
+        "direction": "conflict",
+        "structural_direction": "neutral",
+        "alignment_status": "conflicted",
+        "conflict_type": "intra_band",
+        "risk_level": "low",
+        "action_posture": "wait_for_confirmation"
+      }
+    },
+    {
+      "case_id": "high_risk_overrides_posture_not_direction",
+      "case_type": "known_false_positive_guard",
+      "signals": [
+        {"horizon": "1h", "direction": "bullish", "score": 25, "strength": 43, "confidence": 74, "volatility_risk": 58, "manipulation_risk": 20},
+        {"horizon": "4h", "direction": "bullish", "score": 33, "strength": 56, "confidence": 79, "volatility_risk": 62, "manipulation_risk": 24},
+        {"horizon": "1w", "direction": "bullish", "score": 40, "strength": 68, "confidence": 84, "volatility_risk": 60, "manipulation_risk": 22}
+      ],
+      "expected": {
+        "direction": "bullish",
+        "structural_direction": "bullish",
+        "alignment_status": "aligned",
+        "conflict_type": "none",
+        "risk_level": "high",
+        "action_posture": "reduce_exposure"
+      },
+      "false_positive_note": "方向一致不等于适合追涨；高波动风险必须覆盖行动姿态，但不能篡改方向事实。"
+    },
+    {
+      "case_id": "low_confidence_short_reversal_is_not_a_conflict",
+      "case_type": "known_false_positive_guard",
+      "signals": [
+        {"horizon": "15m", "direction": "bearish", "score": -25, "strength": 45, "confidence": 30, "volatility_risk": 20, "manipulation_risk": 10},
+        {"horizon": "4h", "direction": "bullish", "score": 31, "strength": 53, "confidence": 78, "volatility_risk": 24, "manipulation_risk": 12},
+        {"horizon": "1w", "direction": "bullish", "score": 38, "strength": 65, "confidence": 84, "volatility_risk": 26, "manipulation_risk": 14}
+      ],
+      "expected": {
+        "direction": "bullish",
+        "structural_direction": "bullish",
+        "alignment_status": "partial",
+        "conflict_type": "none",
+        "risk_level": "low",
+        "action_posture": "cautious_follow"
+      },
+      "false_positive_note": "低置信度短周期反向噪音不能与已确认的中长周期结构等权制造冲突。"
+    },
+    {
+      "case_id": "simultaneous_band_and_cross_band_conflict_is_broad",
+      "case_type": "boundary",
+      "signals": [
+        {"horizon": "15m", "direction": "bullish", "score": 23, "strength": 39, "confidence": 72, "volatility_risk": 22, "manipulation_risk": 10},
+        {"horizon": "1h", "direction": "bearish", "score": -27, "strength": 46, "confidence": 76, "volatility_risk": 24, "manipulation_risk": 12},
+        {"horizon": "4h", "direction": "bullish", "score": 31, "strength": 53, "confidence": 79, "volatility_risk": 26, "manipulation_risk": 14},
+        {"horizon": "1w", "direction": "bearish", "score": -37, "strength": 63, "confidence": 83, "volatility_risk": 28, "manipulation_risk": 16}
+      ],
+      "expected": {
+        "direction": "conflict",
+        "structural_direction": "bearish",
+        "alignment_status": "conflicted",
+        "conflict_type": "broad",
+        "risk_level": "low",
+        "action_posture": "wait_for_confirmation"
+      }
+    },
+    {
+      "case_id": "all_neutral_remains_indeterminate",
+      "case_type": "boundary",
+      "signals": [
+        {"horizon": "1h", "direction": "neutral", "score": 0, "strength": 8, "confidence": 58, "volatility_risk": 18, "manipulation_risk": 8},
+        {"horizon": "4h", "direction": "neutral", "score": 0, "strength": 10, "confidence": 62, "volatility_risk": 20, "manipulation_risk": 10},
+        {"horizon": "1w", "direction": "neutral", "score": 0, "strength": 12, "confidence": 66, "volatility_risk": 22, "manipulation_risk": 12}
+      ],
+      "expected": {
+        "direction": "neutral",
+        "structural_direction": "neutral",
+        "alignment_status": "indeterminate",
+        "conflict_type": "none",
+        "risk_level": "low",
+        "action_posture": "observe"
+      }
+    },
+    {
+      "case_id": "long_horizon_conflict_blocks_lower_consensus",
+      "case_type": "known_false_positive_guard",
+      "signals": [
+        {"horizon": "1h", "direction": "bullish", "score": 24, "strength": 41, "confidence": 72, "volatility_risk": 22, "manipulation_risk": 10},
+        {"horizon": "4h", "direction": "bullish", "score": 31, "strength": 53, "confidence": 78, "volatility_risk": 25, "manipulation_risk": 12},
+        {"horizon": "1w", "direction": "conflict", "score": 6, "strength": 58, "confidence": 82, "volatility_risk": 32, "manipulation_risk": 18}
+      ],
+      "expected": {
+        "direction": "conflict",
+        "structural_direction": "neutral",
+        "alignment_status": "conflicted",
+        "conflict_type": "intra_band",
+        "risk_level": "low",
+        "action_posture": "wait_for_confirmation"
+      },
+      "false_positive_note": "长周期自身存在高置信度冲突时，短中周期同向也不能被包装成完整结构一致。"
+    }
+  ],
+  "known_limitations": [
+    "周期分层使用固定名义时长，不处理交易所 session 和日历月边界。",
+    "公式只聚合同一 Graph 和公式集合下的结构化子报告，不证明未来收益。",
+    "长周期结构权威是风险保守规则，不等于长周期永远比短周期更准确。",
+    "当前结果尚未建立独立父运行持久化和历史走势标签校准。"
+  ]
+}

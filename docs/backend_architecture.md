@@ -1,4 +1,4 @@
-# MarketCell 后端架构文档 v1.0
+# MarketCell 后端架构文档 v1.2
 
 ## 1. 架构阶段
 
@@ -86,6 +86,8 @@ flowchart TD
 - `PlanDrivenLocalCoordinator`
 - `InputSnapshot` / `InputReference` / `InputResolutionRecord`
 - `CellInputBundle` / `OrderBookSnapshot` / `FundingOpenInterestSnapshot` / `DataProvenance`
+- `MultiHorizonRequest` / `MultiHorizonAnalyzer` / `MultiHorizonAnalysis`
+- `HorizonDecisionCell` / `HorizonDecisionPolicy` / `HorizonDecision`
 - `LocalInputResolver` / `InputSnapshotStore`
 - `CellExecutor` / `LocalCellExecutor`
 - `ExecutorRouter` 和混合 capability catalog 计划入口
@@ -97,6 +99,8 @@ flowchart TD
 - CLI `reports`
 - CLI `replay`
 - `ReplayRunner`
+
+MultiHorizonAnalyzer 位于 AnalysisEngine 上层。它不创建跨周期 Cell DAG，而是先验证同 target/as-of、时间顺序、Graph content hash 和公式集合，再调用多个独立 AnalysisEngine。HorizonDecisionCell 只在全部 child 成功后消费完整结果，按版本化 policy 输出结构方向、分层结果和冲突类型。这样未来服务化可以并行 child run，同时保持每个运行原有的 plan、trace、failure control 和 replay 契约。
 
 当前不立即实现复杂消息队列。Graph、plan-driven DAG、类型化多输入组合、Input Resolver、跨运行 Runtime Summary Store、固定性能基线、Executor Router 和失败控制状态机已经完成。生产远程阶段仍需 transport adapter、跨进程幂等结果存储和强制 deadline/cancellation。
 

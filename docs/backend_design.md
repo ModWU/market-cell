@@ -1,4 +1,4 @@
-# MarketCell 后端设计文档 v0.9
+# MarketCell 后端设计文档 v1.0
 
 ## 1. 后端目标
 
@@ -56,6 +56,7 @@ flowchart TD
 | `validation.py` | 校验输入数据 |
 | `registry.py` | 注册并按 cell_id 确定性解析一个本地 Cell 实现，不保存拓扑角色 |
 | `graph/` | Graph、Organ、默认组合、共享拓扑算法和结构校验 |
+| `horizons/` | MultiHorizonRequest 身份与校验、同 Graph/公式预检、顺序 fan-out、HorizonDecisionPolicy 和结构化冲突 |
 | `inputs/` | InputSnapshot、InputReference、解析协议、本地存储和完整性校验 |
 | `engine.py` | 编排规划、协调、报告和运行审计，不持有图执行细节 |
 | `execution/models.py` | 执行计划、binding、trace 和 summary 数据对象 |
@@ -152,7 +153,7 @@ PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --store
 
 ## 6. 后端扩展顺序
 
-扩展顺序只以 `roadmap.md` 为准。当前 Foundation Hardening 与 v0.3 首批 Cell 能力基线已完成，下一步进入 v0.4 MultiHorizonRequest 边界。生产远程 transport、跨进程幂等结果存储和强制 cancellation 保留到服务化阶段。
+扩展顺序只以 `roadmap.md` 为准。当前 Foundation Hardening、v0.3 首批 Cell 能力和多周期请求/决策闭环已完成，下一步进入 Organ 组合和共享 Cell。生产远程 transport、跨进程幂等结果存储和强制 cancellation 保留到服务化阶段。
 
 ## 7. 错误处理原则
 
@@ -160,6 +161,7 @@ PYTHONPATH=packages/python/src python3 -m market_cell replay <report_id> --store
 - Cell 内部不要吞掉严重错误。
 - 可解释的业务异常要进入报告。
 - 数据结构错误要直接失败。
+- 多周期 Graph/公式不一致必须在任何 child Cell 启动前失败；运行中失败要保存 completed/failed horizon 边界。
 - 服务化前就应逐步分类 validation、planning、binding、execution、contract、data_source 和 persistence 错误。
 - 失败 AnalysisRun 必须保留 execution_order、completed_node_ids、failed_node_id、已完成 trace、失败 trace 和 summary。
 - 输入解析失败必须保留 snapshot audit 和 input resolution records，且任何 Cell 不得绕过 resolver 自行读取计划外 payload。

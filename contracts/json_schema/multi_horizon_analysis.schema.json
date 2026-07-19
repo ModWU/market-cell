@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/multi_horizon_analysis.schema.json",
+  "title": "MarketCell MultiHorizonAnalysis",
+  "type": "object",
+  "required": [
+    "batch_id",
+    "request_id",
+    "request_hash",
+    "target",
+    "as_of_ms",
+    "horizon_order",
+    "reports",
+    "graph_id",
+    "graph_version",
+    "graph_content_hash",
+    "formula_versions",
+    "created_at",
+    "aggregation_status",
+    "schema_version",
+    "metadata"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "batch_id": {
+      "type": "string",
+      "pattern": "^multi-horizon:[a-f0-9]{32}$"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^multi-horizon-request:[a-f0-9]{24}$"
+    },
+    "request_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "target": {"type": "string", "minLength": 1},
+    "as_of_ms": {"type": "integer", "minimum": 0},
+    "horizon_order": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[1-9][0-9]*(s|m|h|d|w|M)$"
+      }
+    },
+    "reports": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 8,
+      "items": {
+        "$ref": "https://marketcell.local/schemas/analysis_report.schema.json"
+      }
+    },
+    "graph_id": {"type": "string", "minLength": 1},
+    "graph_version": {"type": "string", "minLength": 1},
+    "graph_content_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "formula_versions": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "string", "minLength": 1}
+    },
+    "created_at": {"type": "string", "minLength": 1},
+    "aggregation_status": {"const": "not_computed"},
+    "schema_version": {"const": "multi_horizon_analysis.v1"},
+    "metadata": {"type": "object", "additionalProperties": true}
+  }
+}

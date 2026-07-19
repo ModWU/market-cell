@@ -1,4 +1,4 @@
-# MarketCell Cell 字典 v0.2
+# MarketCell Cell 字典 v0.3
 
 ## 技术结构类
 
@@ -60,5 +60,5 @@
 ## 决策类
 
 - DecisionCell：根节点聚合
-- HorizonDecisionCell：多周期判断
+- HorizonDecisionCell（experimental）：消费完整 `multi_horizon_analysis.v1`，按 short `<4h`、medium `4h–1w`、long `>=1w` 分层，以较高周期结构权威、方向质量门槛和显式冲突类型生成 `horizon_decision.v1`；公式 `horizon_structure_alignment_v0.1`。它是应用层类型化聚合 Cell，不注册进单周期 Registry/DAG；验证与误判记录见 `validation/cells/horizon_decision_v0.1.json`。
 - StrategyModeCell：当前适合短线、波段、观望还是风险规避

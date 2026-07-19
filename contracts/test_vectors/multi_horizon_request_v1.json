@@ -1,0 +1,62 @@
+{
+  "schema_version": "multi_horizon_request_test_vector.v1",
+  "request": {
+    "target": "BTC/USD",
+    "as_of_ms": 1721235600000,
+    "requests": [
+      {
+        "target": "BTC/USD",
+        "horizon": "15m",
+        "candles": [
+          {
+            "timestamp": "1721234700000",
+            "open": 64000.0,
+            "high": 64120.0,
+            "low": 63950.0,
+            "close": 64080.0,
+            "volume": 1250.0
+          },
+          {
+            "timestamp": "1721235600000",
+            "open": 64080.0,
+            "high": 64200.0,
+            "low": 64020.0,
+            "close": 64150.0,
+            "volume": 1380.0
+          }
+        ],
+        "events": [],
+        "context": {"source": "contract-vector"}
+      },
+      {
+        "target": "BTC/USD",
+        "horizon": "1h",
+        "candles": [
+          {
+            "timestamp": "1721232000000",
+            "open": 63800.0,
+            "high": 64120.0,
+            "low": 63720.0,
+            "close": 64080.0,
+            "volume": 4800.0
+          },
+          {
+            "timestamp": "1721235600000",
+            "open": 64080.0,
+            "high": 64220.0,
+            "low": 63980.0,
+            "close": 64150.0,
+            "volume": 5100.0
+          }
+        ],
+        "events": [],
+        "context": {"source": "contract-vector"}
+      }
+    ],
+    "schema_version": "multi_horizon_request.v1",
+    "metadata": {"scenario": "identity-vector"}
+  },
+  "expected_content_hash": "6a25e9ebed5ee5a61cdfa221d6c4b79e5da91e1bb8bceb8cc9b82228efd44438",
+  "expected_payload_size_bytes": 725,
+  "expected_request_id": "multi-horizon-request:6a25e9ebed5ee5a61cdfa221"
+}

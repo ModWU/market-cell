@@ -27,20 +27,22 @@
 | 主题 | 文档 | 状态 |
 |---|---|---|
 | 文档治理 | `documentation_architecture.md` | baseline v0.2 |
-| 产品定位 | `product_design.md` | baseline v0.2 |
-| 系统基线 | `system_architecture.md` | baseline v1.0 |
-| 实施顺序 | `roadmap.md` | baseline v1.0 |
-| 后端模块 | `backend_design.md` | baseline v0.9 |
-| 服务化演进 | `backend_architecture.md` | baseline v1.0 |
-| Cell 协议 | `cell_protocol.md` | baseline v0.5 |
+| 产品定位 | `product_design.md` | baseline v0.4 |
+| 系统基线 | `system_architecture.md` | baseline v1.2 |
+| 实施顺序 | `roadmap.md` | baseline v1.2 |
+| 后端模块 | `backend_design.md` | baseline v1.0 |
+| 服务化演进 | `backend_architecture.md` | baseline v1.2 |
+| Cell 协议 | `cell_protocol.md` | baseline v0.6 |
 | Cell 公式与验证 | `cell_validation.md` | baseline |
 | Cell 执行织网 | `cell_execution_fabric.md` | baseline v1.0 |
-| 数据契约 | `data_contract.md`, `../contracts/` | baseline v1.0 |
-| Python / Rust 运行时 | `runtime_architecture.md` | baseline |
+| 数据契约 | `data_contract.md`, `../contracts/` | baseline v1.2 |
+| 多周期请求 | `multi_horizon_design.md` | baseline v0.1 |
+| 多周期决策 | `horizon_decision_design.md` | baseline v0.1 |
+| Python / Rust 运行时 | `runtime_architecture.md` | baseline v1.0 |
 | 多语言仓库 | `polyglot_architecture.md` | baseline |
-| 稳定性 | `stability_design.md` | baseline v1.0 |
-| 评估方法 | `evaluation_strategy.md` | baseline |
-| 风险治理 | `risk_and_governance.md` | baseline v0.2 |
+| 稳定性 | `stability_design.md` | baseline v1.2 |
+| 评估方法 | `evaluation_strategy.md` | baseline v0.4 |
+| 风险治理 | `risk_and_governance.md` | baseline v0.4 |
 
 路线和版本只维护在 `roadmap.md`，其他文档不得复制独立版本计划。
 
@@ -51,6 +53,8 @@
 - `source_quality_monitoring.md`：缺口、陈旧、异常和跨源偏差。
 - `storage_layer_design.md`：Parquet / DuckDB 存储边界。
 - `feature_layer_design.md`：基础特征计算和版本化。
+- `multi_horizon_design.md`：多周期请求、as-of 对齐、批次预检和未聚合结果边界。
+- `horizon_decision_design.md`：周期分层、结构方向、冲突类型、风险覆盖和稳定身份。
 
 ## 研究和参考
 
@@ -68,13 +72,14 @@
 - `adr/0004-performance-baseline.md`：固定输入、宽松 CI 阈值、失败分类和热点迁移证据。
 - `adr/0005-execution-failure-control.md`：attempt identity、幂等、deadline、retry、backpressure、cancellation 和显式 fallback。
 - `adr/0006-typed-cell-input-composition.md`：Cell 输入类型声明、ExecutionPlan v5 精确引用绑定、CellInputBundle 和多输入回放。
+- `adr/0007-multi-horizon-request-boundary.md`：多周期应用层包络、时间对齐、同图同公式预检、fail-fast 和未聚合结果。
+- `adr/0008-horizon-decision-boundary.md`：应用层决策 Cell、结构权威、显式冲突、风险覆盖和身份边界。
 
 ## 未来专项
 
 达到对应阶段时再创建：
 
 - `factor_graph_design.md`
-- `multi_horizon_design.md`
 - `ai_explainer_design.md`
 - `trading_gateway_design.md`
 

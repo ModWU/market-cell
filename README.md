@@ -34,6 +34,8 @@ v0.3 能力扩展已经形成首批完整基线：`SupportResistanceCell` 与 `B
 
 `FundingOpenInterestCell` 同样不污染默认图。需要衍生品定位分析时，调用方显式选择 `derivatives_analysis_graph()`，并提供 `funding_open_interest_snapshot.v1`。快照把资金费率统一为“每个 funding interval 的小数费率”，并显式区分 settled / predicted；v1 限定线性永续合约与指定币种的 quote notional，同时保存同步 mark price、采样周期和来源血缘。公式先换算 base-equivalent exposure，避免把价格造成的名义 OI 增长误判为增仓；predicted 序列会降低置信度。缺失或同类型多份输入会在 planning 阶段失败。
 
+v0.4 已完成多周期分析闭环：`MultiHorizonRequest` 在同一 target/as-of 下安全执行 2–8 个周期，`HorizonDecisionCell` 再按 short / medium / long 分层、长周期结构权威、有效方向门槛和显式冲突类型输出 `horizon_decision.v1`。总体 direction、structural_direction 和 risk/action posture 相互独立，不使用多数票或直接平均掩盖周期冲突。
+
 ## 项目结构
 
 ```text
@@ -45,7 +47,7 @@ market-cell/
 │   └── test_vectors/           # 跨语言哈希和身份算法固定向量
 ├── docs/
 │   ├── adr/                    # 重大架构决策记录
-│   ├── product_design.md      # 产品设计文档 v0.2
+│   ├── product_design.md      # 产品设计文档 v0.4
 │   ├── system_architecture.md # 当前系统架构基线和地基缺口
 │   ├── documentation_architecture.md # 文档权威边界和维护规则
 │   ├── external_architecture_research.md # 外部成熟系统架构研究
@@ -55,6 +57,8 @@ market-cell/
 │   ├── runtime_architecture.md # Rust 热路径和 Python 冷路径
 │   ├── cell_protocol.md       # Cell 开发协议
 │   ├── cell_validation.md     # Cell 公式、验证样例和误判记录
+│   ├── multi_horizon_design.md # 多周期请求、时间对齐和批次执行边界
+│   ├── horizon_decision_design.md # 周期分层、结构权威、冲突和风险覆盖
 │   ├── data_contract.md       # 输入输出数据契约
 │   ├── data_source_strategy.md # K 线和行情数据源策略
 │   ├── storage_layer_design.md # Parquet/DuckDB 存储适配
@@ -77,6 +81,7 @@ market-cell/
 │       │   ├── engine.py       # 分析执行器
 │       │   ├── execution/      # 能力目录、放置、计划、协调、执行和运行遥测
 │       │   ├── graph/          # Cell 组合图、Organ、默认图和结构校验
+│       │   ├── horizons/       # 多周期请求、fan-out、分层决策和冲突策略
 │       │   ├── inputs/         # 输入快照、轻量引用、解析器和完整性校验
 │       │   ├── features/       # K 线基础特征快照
 │       │   ├── models.py       # 核心数据结构
@@ -86,7 +91,8 @@ market-cell/
 │       │   └── cells/          # 第一批分析 Cell
 │       └── tests/              # Python 测试
 ├── examples/
-│   └── btc_usd_sample.json    # 示例输入
+│   ├── btc_usd_sample.json    # 单周期示例输入
+│   └── btc_usd_multi_horizon_sample.json # 多周期示例输入
 ├── validation/
 │   └── cells/                 # 新 Cell 的机器可读验证与误判样例
 └── crates/
@@ -108,6 +114,24 @@ market-cell analyze examples/btc_usd_sample.json --pretty
 
 ```bash
 PYTHONPATH=packages/python/src python3 -m market_cell analyze examples/btc_usd_sample.json --pretty
+```
+
+运行多周期 fan-out（当前只返回独立周期报告，不做总体决策）：
+
+```bash
+PYTHONPATH=packages/python/src python3 -m market_cell analyze-multi examples/btc_usd_multi_horizon_sample.json --pretty
+```
+
+在全部 child 成功后执行版本化多周期决策：
+
+```bash
+PYTHONPATH=packages/python/src python3 -m market_cell analyze-multi examples/btc_usd_multi_horizon_sample.json --decide --pretty
+```
+
+保存每个周期的报告和运行记录以便独立回放：
+
+```bash
+PYTHONPATH=packages/python/src python3 -m market_cell analyze-multi examples/btc_usd_multi_horizon_sample.json --save --pretty
 ```
 
 如果要启用 Parquet/DuckDB 本地行情存储扩展：
@@ -189,6 +213,11 @@ MarketCell 输出的是分析结果和风险解释，不是投资建议，也不
 - 实际数据源路由顺序可以从选择计划显式生成和复盘
 - 每次分析运行可以保存数据源选择和路由计划审计信息
 - 运行记录遵守 `analysis_run.v2` 契约，完整保存本次使用的全部 InputSnapshot，同时兼容旧 v1 回放
+- `multi_horizon_request.v1` 是 AnalysisEngine 之上的应用层包络，不是新的 Cell input kind；每个周期继续拥有独立 InputSnapshot、ExecutionPlan、AnalysisRun 和回放证据
+- 多周期请求必须共享 target 和显式 as-of，按有效时长从短到长排列；所有周期在执行前必须通过同一 Graph 内容哈希和公式版本预检
+- `multi_horizon_analysis.v1` 始终保持未聚合；只有 `HorizonDecisionCell` 可以把完整结果转换为 `horizon_decision.v1`
+- `HorizonDecisionCell` 不进入单周期 Registry/DAG，不新增 InputKind；它按 short `<4h`、medium `4h–1w`、long `>=1w` 分层，并分别保存总体 direction 与 structural_direction
+- 多周期冲突必须显式区分层内、短线逆高周期、中线逆长线和短中共同逆长线；高风险只覆盖 action posture，不篡改方向事实
 - Cell 组合遵守 `cell_graph_definition.v1`，Registry 只注册实现，Graph 独立定义 leaf、aggregator、root 和 Organ
 - Graph 不包含服务位置；`cell_graph_validation.v1` 在 planning 前拒绝非法依赖、Organ 或未注册能力
 - Cell 执行计划遵守 `cell_execution_plan.v5` 契约，使用唯一 node_id、primary/fallback binding、`required_input_kinds` 和 payload-free input references 对齐 DAG、服务与输入

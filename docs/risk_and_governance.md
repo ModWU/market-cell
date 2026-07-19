@@ -1,4 +1,4 @@
-# MarketCell 风险治理文档 v0.2
+# MarketCell 风险治理文档 v0.4
 
 ## 1. 文档目的
 
@@ -35,6 +35,10 @@ MarketCell 输出的是结构化分析，不是投资建议。
 多周期冲突
 等待确认
 ```
+
+`MultiHorizonAnalysis v1` 只提供独立周期报告，不能用多数票、平均 score 或最高 confidence 直接生成总体方向。`HorizonDecisionCell` 使用 `horizon_structure_alignment_v0.1` 区分层内冲突、短线逆高周期、中线逆长线和短中共同逆长线，并把总体 direction 与 structural_direction 分开保存。
+
+风险覆盖只允许改变 action posture：high risk → reduce_exposure，extreme risk → avoid_chasing。它不能把 bullish/bearish 事实改写为 neutral，也不能因为方向一致就放宽高风险姿态。
 
 ## 3. 操纵风险表达
 

@@ -1,4 +1,4 @@
-# MarketCell 产品设计文档 v0.2
+# MarketCell 产品设计文档 v0.4
 
 ## 1. 产品一句话
 
@@ -135,6 +135,8 @@ BTC/USD
 
 ### 6.2 多周期分析
 
+`MultiHorizonRequest v1` 已经完成同 target/as-of、短到长时间对齐和独立子运行边界；`HorizonDecisionCell` 再以版本化结构权威和冲突规则形成产品判断。未聚合事实仍保留在 MultiHorizonAnalysis，不能被覆盖。
+
 同一个资产同时分析：
 
 ```text
@@ -240,7 +242,7 @@ MarketCell 必须允许这种结论存在：
 
 单一周期很容易误判。
 
-后期系统必须支持：
+多周期请求与决策已经支持以下名义时长分层：
 
 ```text
 短线：15m / 1h
@@ -249,6 +251,19 @@ MarketCell 必须允许这种结论存在：
 ```
 
 多周期之间要输出冲突关系。
+
+当前正式输出同时包含：
+
+```text
+direction              总体多周期方向
+structural_direction   最高有效层级结构方向
+alignment_status       aligned / partial / conflicted / indeterminate
+conflict_type          层内或层间冲突类型
+band_decisions         short / medium / long 分层证据
+risk + action_posture  风险上位约束
+```
+
+短线逆长线时不能只返回长线方向，也不能把正负分数平均成 neutral；总体 direction 应为 conflict，同时保留 structural_direction。
 
 ### 7.5 回放和复盘
 

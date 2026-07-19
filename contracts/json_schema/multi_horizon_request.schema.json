@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/multi_horizon_request.schema.json",
+  "title": "MarketCell MultiHorizonRequest",
+  "type": "object",
+  "required": [
+    "target",
+    "as_of_ms",
+    "requests",
+    "schema_version",
+    "metadata"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "target": {"type": "string", "minLength": 1},
+    "as_of_ms": {"type": "integer", "minimum": 0},
+    "requests": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 8,
+      "items": {
+        "allOf": [
+          {
+            "$ref": "https://marketcell.local/schemas/analysis_request.schema.json"
+          },
+          {
+            "properties": {
+              "horizon": {
+                "pattern": "^[1-9][0-9]*(s|m|h|d|w|M)$"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "schema_version": {"const": "multi_horizon_request.v1"},
+    "metadata": {"type": "object", "additionalProperties": true}
+  }
+}

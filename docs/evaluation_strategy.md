@@ -1,4 +1,4 @@
-# MarketCell 评估与验证策略 v0.2
+# MarketCell 评估与验证策略 v0.4
 
 ## 1. 为什么需要评估策略
 
@@ -192,6 +192,32 @@ make benchmark
 ```
 
 固定基准同时校验 input hash、公式版本和稳定决策字段，再分别评估总运行 P95 与每个 node 的 P95。correctness failure 与 performance failure 必须分开报告。基准阈值是 CI 数量级守护，不是生产 SLA，也不能单独作为迁移 Rust 的依据。
+
+## 8.2 多周期请求与决策验证
+
+MultiHorizonRequest 至少守护：
+
+- target/as-of 一致性与短到长顺序
+- 等价周期、未来 K 线和陈旧 K 线拒绝
+- 请求 canonical hash 与 metadata 无关
+- 全批次 Graph content hash 和 formula versions 预检
+- fail-fast 时 completed / failed horizon 边界准确
+- 每个 child AnalysisRun 可独立回放
+- MultiHorizonAnalysis 不出现总体 direction 或简单投票结果
+
+HorizonDecisionCell 至少守护：
+
+- short / medium / long 边界和较高周期权威稳定
+- 方向必须通过 score、strength 和 confidence 门槛
+- aligned、partial、conflicted 和 indeterminate 可区分
+- intra_band、short_vs_higher、medium_vs_long、lower_vs_long 和 broad 枚举与 schema 一致
+- 低置信度短线反向噪音不制造假冲突
+- long 自身冲突不能被低层级共识覆盖
+- high/extreme risk 只覆盖 posture，不改写方向
+- decision identity 与 batch/run/report metadata 无关，但覆盖所有公式输入和 policy 参数
+- 每个 horizon 保留 Evidence，band decisions 完整分区 source horizon order
+
+固定验证位于 `validation/cells/horizon_decision_v0.1.json`，跨语言身份向量位于 `contracts/test_vectors/horizon_decision_v1.json`。
 
 ## 9. 进入 validated 的标准
 

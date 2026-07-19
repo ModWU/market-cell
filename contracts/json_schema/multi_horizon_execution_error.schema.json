@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketcell.local/schemas/multi_horizon_execution_error.schema.json",
+  "title": "MarketCell MultiHorizonExecutionError",
+  "type": "object",
+  "required": [
+    "error_type",
+    "code",
+    "batch_id",
+    "request_id",
+    "request_hash",
+    "target",
+    "as_of_ms",
+    "horizon_order",
+    "completed_horizons",
+    "failed_horizon",
+    "error",
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "error_type": {"const": "multi_horizon_execution"},
+    "code": {
+      "enum": [
+        "engine_factory_failure",
+        "graph_mismatch",
+        "formula_version_mismatch",
+        "analysis_failure",
+        "report_scope_mismatch",
+        "report_formula_mismatch"
+      ]
+    },
+    "batch_id": {
+      "type": "string",
+      "pattern": "^multi-horizon:[a-f0-9]{32}$"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^multi-horizon-request:[a-f0-9]{24}$"
+    },
+    "request_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "target": {"type": "string", "minLength": 1},
+    "as_of_ms": {"type": "integer", "minimum": 0},
+    "horizon_order": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[1-9][0-9]*(s|m|h|d|w|M)$"
+      }
+    },
+    "completed_horizons": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[1-9][0-9]*(s|m|h|d|w|M)$"
+      }
+    },
+    "failed_horizon": {
+      "type": ["string", "null"],
+      "pattern": "^[1-9][0-9]*(s|m|h|d|w|M)$"
+    },
+    "error": {"type": "string", "minLength": 1},
+    "schema_version": {"const": "multi_horizon_execution_error.v1"}
+  }
+}

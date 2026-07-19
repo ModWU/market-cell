@@ -12,6 +12,8 @@ It owns:
 - Robust VolumePriceAnomalyCell baselines using bounded median/MAD statistics and positive-volume coverage guards, with anomaly evidence composed into ManipulationRiskCell
 - Typed LiquidityCell analysis for near-book spread, 100bps quote depth, imbalance, concentration guards, and deterministic provenance quality
 - Typed FundingOpenInterestCell analysis for normalized funding, robust open-interest change, synchronized mark-price alignment, cadence guards, and leverage-crowding risk
+- MultiHorizonRequest validation with explicit as-of alignment, stable request identity, same-Graph/formula preflight, deterministic fail-fast fan-out, and unaggregated ordered reports
+- Versioned HorizonDecisionCell policy with short/medium/long bands, structural direction, typed conflicts, risk posture overrides, and deterministic decision identity
 - Decision policies
 - Report and run metadata handling
 - Versioned replay comparison from saved inputs, complete decision-tree paths/hashes, formula versions, and Graph identity
@@ -52,6 +54,12 @@ Execution code is split by responsibility:
 - `graph/defaults.py`: stable default composition plus explicit order-book and derivatives-data graphs, independent of Registry order
 - `graph/validation.py`: Graph, Organ, and registered-capability validation
 - `graph/topology.py`: shared deterministic topology algorithms
+- `horizons/models.py`: versioned multi-horizon request and unaggregated analysis envelopes
+- `horizons/validation.py`: same-target, short-to-long, parseable-time, and as-of freshness guards
+- `horizons/runner.py`: batch preflight, child-run audit metadata, sequential fan-out, and structured failures
+- `horizons/policy.py`: hierarchical horizon bands, direction qualification, conflict classification, and risk posture
+- `horizons/decision.py`: application-level HorizonDecisionCell and stable decision identity
+- `horizons/decision_models.py`: versioned band and overall horizon decision contracts
 - `execution/models.py`: stable execution data objects
 - `execution/catalog.py`: service capability discovery model
 - `execution/coordinator.py`: plan-driven topology execution and node state
